@@ -24,9 +24,10 @@ import Html.Attributes as A
 import Json.Decode as Decode exposing (Decoder)
 import Keyboard.Layout as Layout exposing (Layout)
 import Keyboard.View
-import Language exposing (Language)
+import Language exposing (Language(..))
 import Ports
 import Progress exposing (Progress)
+import Project
 import Random
 import Settings exposing (Settings)
 import Texts exposing (Texts)
@@ -624,8 +625,38 @@ view model =
             , focus = screen.keyboard
             , flash = Maybe.map (\f -> { key = f.key, ok = f.ok }) model.flash
             }
+        , Html.nav [ A.class "footer-links" ]
+            [ Html.a [ A.href Project.pixelEditorUrl, A.target "_blank", A.rel "noopener" ] [ Html.text texts.drawPictures ]
+            , Html.a [ A.href (Project.proposeEditUrl (screenName model)), A.target "_blank", A.rel "noopener" ] [ Html.text texts.suggestChange ]
+            ]
         , Html.p [ A.class "footer" ] [ Html.text texts.footer ]
         ]
+
+
+{-| Which screen a change proposal is about, written in English for whoever
+reads the issue, with the language the player had chosen.
+-}
+screenName : Model -> String
+screenName model =
+    let
+        chapterLabel id =
+            "Chapter " ++ String.fromInt (ChapterId.number id) ++ ": " ++ ((Texts.forLanguage English).chapter id).name
+
+        where_ =
+            case model.screen of
+                Title ->
+                    "Title screen"
+
+                Playing chapter ->
+                    chapterLabel (chapterId chapter)
+
+                Results id _ ->
+                    "Results of " ++ chapterLabel id
+
+                TheEnd ->
+                    "End screen"
+    in
+    where_ ++ " (" ++ Language.toCode model.settings.language ++ ")"
 
 
 {-| Title, results and the end: a card over the empty hall.

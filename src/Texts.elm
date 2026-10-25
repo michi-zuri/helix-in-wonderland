@@ -34,6 +34,8 @@ type alias Texts =
     , soundOff : String
     , continueHint : String
     , footer : String
+    , drawPictures : String
+    , suggestChange : String
     , keyboardLegend : String
     , space : String
     , nextKey : String -> String -> String
@@ -214,6 +216,8 @@ english =
     , soundOn = "Sound on"
     , soundOff = "Sound off"
     , continueHint = "Enter ↵ to continue"
+    , drawPictures = "Draw pictures for the game"
+    , suggestChange = "Suggest a change to this screen"
     , footer = "Story and characters from Lewis Carroll's Alice's Adventures in Wonderland (1865), which is in the public domain. Helix is a free, open-source editor; this game is not affiliated with it."
     , keyboardLegend = "Each colour is one finger. Matching colours, matching finger."
     , space = "space"
@@ -432,6 +436,8 @@ german =
     , soundOn = "Ton an"
     , soundOff = "Ton aus"
     , continueHint = "Enter ↵ zum Weiterlesen"
+    , drawPictures = "Bilder fürs Spiel zeichnen"
+    , suggestChange = "Änderung für diese Seite vorschlagen"
     , footer = "Geschichte und Figuren aus Lewis Carrolls Alice im Wunderland (1865), gemeinfrei. Helix ist ein freier Open-Source-Editor; dieses Spiel gehört nicht zum Helix-Projekt."
     , keyboardLegend = "Jede Farbe ist ein Finger. Gleiche Farbe, gleicher Finger."
     , space = "Leertaste"

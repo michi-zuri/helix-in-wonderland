@@ -20,6 +20,7 @@ import Html.Events as E
 import Json.Decode as Decode
 import Pixel.Sprite as Sprite
 import Pixel.Sprites as Sprites
+import Project
 import Svg
 import Svg.Attributes as SA
 import Url
@@ -33,13 +34,6 @@ main =
         , view = view
         , subscriptions = \_ -> Sub.none
         }
-
-
-{-| Where proposals are sent.
--}
-newIssueUrl : String
-newIssueUrl =
-    "https://github.com/michi-zuri/helix-in-wonderland/issues/new"
 
 
 transparent : Char
@@ -195,7 +189,7 @@ in (GitHub fills form fields from the link's query parameters).
 -}
 proposalLink : Model -> String
 proposalLink model =
-    newIssueUrl
+    Project.newIssueUrl
         ++ "?template=pixel-art.yml"
         ++ "&title="
         ++ Url.percentEncode ("Pixel art: " ++ model.picture)
@@ -244,6 +238,11 @@ view model =
             ]
         , Html.h2 [] [ Html.text "Your picture as text · Dein Bild als Text" ]
         , Html.pre [ A.class "text" ] [ Html.text (coloursText model ++ "\n\n" ++ rowsText model) ]
+        , Html.nav [ A.class "links" ]
+            [ Html.a [ A.href Project.gameUrl ] [ Html.text "← Back to the game · Zurück zum Spiel" ]
+            , Html.a [ A.href (Project.proposeEditUrl "Pixel editor"), A.target "_blank", A.rel "noopener" ]
+                [ Html.text "Suggest a change to this page · Änderung für diese Seite vorschlagen" ]
+            ]
         ]
 
 
