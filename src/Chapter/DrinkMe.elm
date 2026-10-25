@@ -345,8 +345,9 @@ viewHall texts model =
         label =
             texts.drinkMe.bottle
 
+        -- The label font is 7 px per character at 11 px.
         labelWidth =
-            toFloat (String.length label * 6 + 8)
+            toFloat (String.length label * 7 + 8)
 
         pixelSize =
             model.alicePixelSize

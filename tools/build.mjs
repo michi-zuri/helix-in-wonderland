@@ -31,6 +31,7 @@ ${body}</body>
 </html>
 `);
 copyFileSync('public/favicon.svg', 'dist/site/favicon.svg');
+copyFileSync('public/fonts/DepartureMono-LICENSE.txt', 'dist/site/font-license.txt');
 
 for (const file of ['dist/helix-wonderland.html', 'dist/site/index.html']) {
   console.log(`${file}  (${Math.round(statSync(file).size / 1024)} KB)`);
