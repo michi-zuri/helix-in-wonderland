@@ -7,7 +7,8 @@
     "test": "elm-test",
     "review": "elm-review",
     "format": "elm-format --yes src tests review/src",
-    "check": "elm-format --validate src tests review/src && elm-review && elm-test"
+    "check": "elm-format --validate src tests review/src && elm-review && elm-test",
+    "prepare": "git config core.hooksPath .githooks || true"
   },
   "license": "ISC",
   "devDependencies": {

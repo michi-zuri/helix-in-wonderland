@@ -1,0 +1,9 @@
+#!/bin/sh
+# Runs before every `git push`: formatting and all tests, so broken code
+# doesn't leave this computer. elm-review runs on GitHub for each pull request.
+# Installed by `npm install` (see "prepare" in package.json).
+# In an emergency: `git push --no-verify` skips it.
+set -e
+echo "pre-push: checking formatting and running the tests…"
+npx elm-format --validate src tests review/src >/dev/null
+npx elm-test
