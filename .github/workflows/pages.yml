@@ -1,22 +1,25 @@
-# On every push to main: run the tests, build the game, publish dist/site to GitHub Pages.
+# Every pull request and every push to main: check formatting, run elm-review
+# and all tests, and build. The "check" job is the required status check that
+# branch protection waits for before a pull request may be merged.
+# Pushes to main then also publish dist/site to GitHub Pages.
 name: Test and publish
 
 on:
+  pull_request:
   push:
     branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
-  group: pages
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build:
+  check:
+    name: check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -27,13 +30,21 @@ jobs:
       - run: npm ci
       - run: npm run check
       - run: npm run build
-      - uses: actions/upload-pages-artifact@v3
+      - if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v3
         with:
           path: dist/site
 
   deploy:
-    needs: build
+    if: github.event_name != 'pull_request'
+    needs: check
     runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    concurrency:
+      group: pages
+      cancel-in-progress: false
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

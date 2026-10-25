@@ -31,6 +31,11 @@ npm run format   # elm-format everything
 npm run check    # all of the above except build; run before every commit
 ```
 
+`npm install` also installs a git pre-push hook (`.githooks/pre-push`) that
+checks formatting and runs the tests before every push. Every pull request is
+checked again on GitHub (format, elm-review, tests, build), and `main` only
+accepts pull requests whose check passed.
+
 `npm run build` writes two outputs: `dist/site/` is a complete static website
 (open `dist/site/index.html` in a browser, or host it anywhere), and
 `dist/helix-wonderland.html` is the same game as a page fragment for
