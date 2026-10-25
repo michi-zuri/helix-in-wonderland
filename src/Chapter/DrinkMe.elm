@@ -461,14 +461,20 @@ viewWord model index word =
                     ]
                     [ Html.text (String.fromChar char) ]
 
-            spaceCell =
-                if model.waitingForSpace then
-                    [ Html.span [ A.classList [ ( "current", True ), ( "wrong", model.lastKeyWrong ) ] ] [ Html.text "\u{00A0}" ] ]
-
-                else
-                    []
+            -- The space bar's place is always there, drawn inside the gap after
+            -- the word, so the line never changes width. Only its underline
+            -- appears when it is time to press space.
+            spaceSlot =
+                Html.span
+                    [ A.classList
+                        [ ( "space-slot", True )
+                        , ( "current", model.waitingForSpace )
+                        , ( "wrong", model.waitingForSpace && model.lastKeyWrong )
+                        ]
+                    ]
+                    [ Html.text "\u{00A0}" ]
         in
-        Html.span [ A.class "word now" ] (List.indexedMap letter (String.toList word) ++ spaceCell)
+        Html.span [ A.class "word now" ] (List.indexedMap letter (String.toList word) ++ [ spaceSlot ])
 
 
 
