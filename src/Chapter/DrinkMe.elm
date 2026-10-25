@@ -180,42 +180,46 @@ typeKey texts key model =
             ( model, [] )
 
 
+{-| A right key: a letter moves along the word, space moves to the next
+word. The last word needs no space: its last letter is the last sip.
+-}
 typedRight : List String -> Char -> Model -> ( Model, List Effect )
 typedRight words char model =
     if model.waitingForSpace then
-        let
-            sipped =
-                { model
-                    | waitingForSpace = False
-                    , wordIndex = model.wordIndex + 1
-                    , letterIndex = 0
-                    , correct = model.correct + 1
-                    , lastKeyWrong = False
-                }
-        in
-        if sipped.wordIndex >= List.length words then
-            -- The last sip: Alice walks to the door, then the closing story.
-            ( { sipped | walk = Just 0 }, [ PlaySound PickupSound, FlashKey " " True ] )
-
-        else
-            ( sipped, [ PlaySound CorrectSound, FlashKey " " True ] )
+        ( { model
+            | waitingForSpace = False
+            , wordIndex = model.wordIndex + 1
+            , letterIndex = 0
+            , correct = model.correct + 1
+            , lastKeyWrong = False
+          }
+        , [ PlaySound CorrectSound, FlashKey " " True ]
+        )
 
     else
         let
             letterIndex =
                 model.letterIndex + 1
 
-            wordLength =
-                words |> List.drop model.wordIndex |> List.head |> Maybe.map String.length |> Maybe.withDefault 0
+            wordDone =
+                letterIndex >= (words |> List.drop model.wordIndex |> List.head |> Maybe.map String.length |> Maybe.withDefault 0)
+
+            lastWord =
+                model.wordIndex == List.length words - 1
+
+            typed =
+                { model | letterIndex = letterIndex, correct = model.correct + 1, lastKeyWrong = False }
         in
-        ( { model
-            | letterIndex = letterIndex
-            , waitingForSpace = letterIndex >= wordLength
-            , correct = model.correct + 1
-            , lastKeyWrong = False
-          }
-        , [ PlaySound TickSound, FlashKey (String.fromChar char) True ]
-        )
+        if wordDone && lastWord then
+            -- The last sip: Alice walks to the door, then the closing story.
+            ( { typed | wordIndex = model.wordIndex + 1, letterIndex = 0, walk = Just 0 }
+            , [ PlaySound PickupSound, FlashKey (String.fromChar char) True ]
+            )
+
+        else
+            ( { typed | waitingForSpace = wordDone }
+            , [ PlaySound TickSound, FlashKey (String.fromChar char) True ]
+            )
 
 
 frame : Texts -> Float -> Model -> ( Model, List Effect )

@@ -44,11 +44,11 @@ wait =
     Playthrough.sendAll (DrinkMe.update context) (List.repeat 100 (DrinkMe.Frame 50))
 
 
+{-| All the words with a space between them, and none after the last.
+-}
 allWords : String
 allWords =
-    (Texts.forLanguage English).drinkMe.words
-        |> List.map (\word -> word ++ " ")
-        |> String.concat
+    String.join " " (Texts.forLanguage English).drinkMe.words
 
 
 start : Run DrinkMe.Model
@@ -82,6 +82,13 @@ suite =
                     |> readStory
                     |> Playthrough.finishedWith
                     |> Expect.equal (Just 1)
+        , test "the last letter of the last word ends the chapter, no space needed" <|
+            \_ ->
+                start
+                    |> typeSteadily allWords
+                    |> .model
+                    |> (\model -> ( model.walk /= Nothing, model.waitingForSpace ))
+                    |> Expect.equal ( True, False )
         , test "the space bar only counts once the word is complete" <|
             \_ ->
                 start
