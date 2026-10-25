@@ -8,7 +8,7 @@ body:
       value: |
         Thanks for drawing! The easiest way is the pixel editor: it fills in this form for you.
         Danke fürs Zeichnen! Am einfachsten geht es mit dem Pixel-Editor: er füllt dieses Formular für dich aus.
-        https://lindenlion.github.io/helix-wonderland/pixel-editor.html
+        https://michi-zuri.github.io/helix-in-wonderland/pixel-editor.html
   - type: input
     id: picture
     attributes:

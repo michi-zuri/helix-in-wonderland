@@ -7,7 +7,7 @@ suggest new ones or improve the old ones.
 
 ## The quick way: the pixel editor
 
-1. Open the **pixel editor**: <https://lindenlion.github.io/helix-wonderland/pixel-editor.html>
+1. Open the **pixel editor**: <https://michi-zuri.github.io/helix-in-wonderland/pixel-editor.html>
 2. Pick a picture at the top (for example `tart` or `caterpillar`).
 3. Choose a colour on the right and paint by clicking or dragging on the big grid.
    - The `.` button is the eraser: it makes a pixel see-through.
@@ -63,7 +63,7 @@ kannst neue vorschlagen oder alte verbessern.
 
 ## Am schnellsten: der Pixel-Editor
 
-1. Öffne den **Pixel-Editor**: <https://lindenlion.github.io/helix-wonderland/pixel-editor.html>
+1. Öffne den **Pixel-Editor**: <https://michi-zuri.github.io/helix-in-wonderland/pixel-editor.html>
 2. Wähl oben ein Bild aus (zum Beispiel `tart` oder `caterpillar`).
 3. Wähl rechts eine Farbe und mal mit Klicken oder Ziehen auf dem grossen Raster.
    - Der Knopf `.` ist der Radierer: der Pixel wird durchsichtig.

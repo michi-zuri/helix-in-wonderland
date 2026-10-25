@@ -39,7 +39,7 @@ main =
 -}
 newIssueUrl : String
 newIssueUrl =
-    "https://github.com/lindenlion/helix-wonderland/issues/new"
+    "https://github.com/michi-zuri/helix-in-wonderland/issues/new"
 
 
 transparent : Char
