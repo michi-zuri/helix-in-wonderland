@@ -1,7 +1,13 @@
-module Pixel.Sprites exposing (alice, aliceFalling, aliceStepping, aliceSwimming, caterpillar, goldenKey, mouse, tart, whiteRabbit)
+module Pixel.Sprites exposing (alice, aliceFalling, aliceStepping, aliceSwimming, catalogue, caterpillar, goldenKey, mouse, tart, whiteRabbit)
 
 {-| The game's characters and props. Original pixel art, in the spirit of the
 1865 book rather than any film.
+
+Every picture is written as text: one line per row of pixels, one letter
+per pixel, and `.` for "nothing here". The list at the start of each
+picture says which letter is which colour. See ART.md for how to propose
+changes.
+
 -}
 
 import Pixel.Sprite as Sprite exposing (Sprite)
@@ -196,3 +202,20 @@ tart =
         , "..cjjjjjjjjc.."
         , "...BBBBBBBB..."
         ]
+
+
+{-| Every picture, by the name used in this file. The pixel editor
+(`src/PixelEditor.elm`) shows these, so it always matches the game.
+-}
+catalogue : List { name : String, sprite : Sprite }
+catalogue =
+    [ { name = "alice", sprite = alice }
+    , { name = "aliceStepping", sprite = aliceStepping }
+    , { name = "aliceFalling", sprite = aliceFalling }
+    , { name = "aliceSwimming", sprite = aliceSwimming }
+    , { name = "whiteRabbit", sprite = whiteRabbit }
+    , { name = "caterpillar", sprite = caterpillar }
+    , { name = "mouse", sprite = mouse }
+    , { name = "goldenKey", sprite = goldenKey }
+    , { name = "tart", sprite = tart }
+    ]

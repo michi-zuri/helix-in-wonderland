@@ -1,6 +1,7 @@
 // Build the game into two outputs from public/index.html:
 //   dist/helix-wonderland.html  a page fragment for claude.ai artifacts (they add the <html> wrapper)
-//   dist/site/                  a complete static website for Netlify or any other host
+//   dist/site/                  a complete static website for Netlify or any other host,
+//                               including the pixel editor (dist/site/pixel-editor.html)
 import { execFileSync } from 'node:child_process';
 import { copyFileSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 
@@ -36,3 +37,11 @@ copyFileSync('public/fonts/DepartureMono-LICENSE.txt', 'dist/site/font-license.t
 for (const file of ['dist/helix-wonderland.html', 'dist/site/index.html']) {
   console.log(`${file}  (${Math.round(statSync(file).size / 1024)} KB)`);
 }
+
+// The pixel editor for art proposals: a separate small Elm program.
+const editorCompiled = 'build/pixel-editor.js';
+execFileSync('npx', ['elm', 'make', 'src/PixelEditor.elm', '--optimize', `--output=${editorCompiled}`], { stdio: 'inherit' });
+const editorScript = readFileSync(editorCompiled, 'utf8').replaceAll('</script', '<\\/script');
+writeFileSync('dist/site/pixel-editor.html',
+  readFileSync('public/pixel-editor.html', 'utf8').replace('<!-- ELM -->', () => `<script>\n${editorScript}\n</script>`));
+console.log(`dist/site/pixel-editor.html  (${Math.round(statSync('dist/site/pixel-editor.html').size / 1024)} KB)`);

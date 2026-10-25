@@ -16,7 +16,9 @@ Keyboards: German and Swiss QWERTZ, US QWERTY, French AZERTY.
 Each chapter earns up to three tarts. A chapter opens once the one before it
 has at least one; a button on the title screen opens everything for grown-ups.
 
-Written in [Elm](https://elm-lang.org).
+Written in [Elm](https://elm-lang.org). Want to draw pictures for the game?
+See [ART.md](ART.md): there is a pixel editor that turns drawings into
+GitHub proposals.
 
 ## Commands
 
@@ -60,6 +62,7 @@ src/
   Texts.elm                 every word the player reads, per language
   Language.elm, Settings.elm, Progress.elm, Speaker.elm
   Pixel/Sprite.elm          pixel art from text; Pixel/Sprites.elm holds the art
+  PixelEditor.elm           the pixel editor page for art proposals (see ART.md)
   Ui/                       dialog box, title, results and end cards, checklist, header
   Ports.elm                 the only doors to JavaScript
 public/index.html           page shell, CSS, and the JS side of the ports

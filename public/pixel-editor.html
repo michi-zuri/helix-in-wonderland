@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pixel Editor · Helix in Wonderland</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<style>
+/* The pixel editor: same colours as the game, plain system font so labels read easily. */
+:root{color-scheme:dark;--deep:#1a0f22;--revolver:#281733;--midnight:#3b224c;--plum:#4d2d63;--lilac:#dbbfef;--muted:#9a86b0;--honey:#efba5d;--ink:#120a18}
+body{margin:0;background:var(--deep);color:var(--lilac);font:16px/1.5 system-ui,sans-serif}
+.editor-page{max-width:980px;margin:0 auto;padding:16px max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:14px;user-select:none}
+h1{margin:0;font-size:26px;color:var(--honey)}
+h2{margin:0;font-size:15px;color:var(--muted);font-weight:600}
+.intro{margin:0;color:var(--muted)}
+button,a.send{font:inherit;color:inherit;cursor:pointer;background:var(--midnight);border:2px solid var(--plum);padding:6px 10px;text-decoration:none}
+.pictures{display:flex;flex-wrap:wrap;gap:6px}
+.picture.chosen{border-color:var(--honey);color:var(--honey)}
+.workspace{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:700px){.workspace{grid-template-columns:1fr}}
+.grid{display:grid;gap:1px;background:var(--plum);border:2px solid var(--plum);max-width:100%;
+  background-image:linear-gradient(45deg,#2e1d3b 25%,transparent 25%,transparent 75%,#2e1d3b 75%),linear-gradient(45deg,#2e1d3b 25%,transparent 25%,transparent 75%,#2e1d3b 75%);
+  background-size:16px 16px;background-position:0 0,8px 8px;background-color:#241631}
+.pixel{min-width:0;aspect-ratio:1;cursor:crosshair}
+.pixel:hover{outline:2px solid var(--honey);outline-offset:-2px}
+.side{display:flex;flex-direction:column;gap:10px}
+.palette{display:flex;flex-direction:column;gap:6px}
+.swatch{display:flex;align-items:center;gap:8px}
+.swatch button{width:44px;height:36px;font-family:ui-monospace,monospace;font-weight:700;color:var(--ink);text-shadow:0 0 2px #fff}
+.swatch.chosen button{border-color:var(--honey);outline:2px solid var(--honey)}
+.swatch input{width:44px;height:36px;padding:0;border:0;background:none}
+.eraser{background:var(--revolver)!important;color:var(--lilac)!important;text-shadow:none!important}
+.preview{background:var(--revolver);padding:12px;display:flex;justify-content:center}
+.actions{display:flex;flex-wrap:wrap;gap:10px}
+a.send{background:var(--honey);color:var(--ink);border-color:var(--honey);font-weight:600}
+.text{margin:0;background:var(--revolver);padding:10px;font:14px/1.3 ui-monospace,monospace;overflow-x:auto;user-select:text}
+</style>
+</head>
+<body>
+<div id="editor"></div>
+<!-- ELM -->
+<script>Elm.PixelEditor.init({ node: document.getElementById('editor') });</script>
+</body>
+</html>

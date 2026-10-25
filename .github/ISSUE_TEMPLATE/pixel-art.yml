@@ -1,0 +1,36 @@
+name: Pixel art proposal
+description: Suggest a new or changed picture for the game. Vorschlag für ein neues oder geändertes Bild.
+title: "Pixel art: "
+labels: ["pixel art"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for drawing! The easiest way is the pixel editor: it fills in this form for you.
+        Danke fürs Zeichnen! Am einfachsten geht es mit dem Pixel-Editor: er füllt dieses Formular für dich aus.
+        https://michi-zuri.github.io/helix-in-wonderland/pixel-editor.html
+  - type: input
+    id: picture
+    attributes:
+      label: Which picture? · Welches Bild?
+      description: The name from the editor (e.g. tart, alice, caterpillar), or "new" for something new.
+    validations:
+      required: true
+  - type: textarea
+    id: rows
+    attributes:
+      label: The picture · Das Bild
+      description: One line per row of pixels, one letter per pixel, "." for empty.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: colours
+    attributes:
+      label: Colours · Farben
+      description: Which letter is which colour, one per line, like "c #f4c15d".
+      render: text
+  - type: textarea
+    id: why
+    attributes:
+      label: What did you change, and why? · Was hast du geändert, und warum?

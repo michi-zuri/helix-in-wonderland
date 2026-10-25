@@ -1,4 +1,4 @@
-module Pixel.Sprite exposing (Sprite, fromRows, size, view, viewAt)
+module Pixel.Sprite exposing (Sprite, fromRows, palette, rows, size, view, viewAt)
 
 {-| Pixel art drawn from text, one character per pixel.
 
@@ -22,6 +22,8 @@ type Sprite
         { width : Int
         , height : Int
         , runs : List Run
+        , rows : List String
+        , palette : List ( Char, String )
         }
 
 
@@ -30,18 +32,34 @@ type alias Run =
 
 
 fromRows : List ( Char, String ) -> List String -> Sprite
-fromRows palette rows =
+fromRows colours pixelRows =
     let
         colors =
-            Dict.fromList palette
+            Dict.fromList colours
     in
     Sprite
-        { width = rows |> List.map String.length |> List.maximum |> Maybe.withDefault 0
-        , height = List.length rows
+        { width = pixelRows |> List.map String.length |> List.maximum |> Maybe.withDefault 0
+        , height = List.length pixelRows
         , runs =
-            List.indexedMap (\y row -> rowRuns (\c -> Dict.get c colors) y row) rows
+            List.indexedMap (\y row -> rowRuns (\c -> Dict.get c colors) y row) pixelRows
                 |> List.concat
+        , rows = pixelRows
+        , palette = colours
         }
+
+
+{-| The picture as text, one string per row (used by the pixel editor).
+-}
+rows : Sprite -> List String
+rows (Sprite s) =
+    s.rows
+
+
+{-| Which letter stands for which colour.
+-}
+palette : Sprite -> List ( Char, String )
+palette (Sprite s) =
+    s.palette
 
 
 rowRuns : (Char -> Maybe String) -> Int -> String -> List Run
