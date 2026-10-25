@@ -175,15 +175,24 @@ goldenKey =
 
 
 {-| The Queen of Hearts' tarts are the game's stars: up to three per chapter.
+A golden fluted crust, bright jam with a shine, and a heart on top.
 -}
 tart : Sprite
 tart =
     Sprite.fromRows
-        [ ( 'c', "#d9a05b" ), ( 'j', "#c8344e" ), ( 'w', "#ffb3c1" ), ( 'C', "#9c6a32" ) ]
-        [ "..cccccc.."
-        , ".cjjjjjjc."
-        , "cjjwjjjjjc"
-        , "cjjjjjjjjc"
-        , "cccccccccc"
-        , ".CCCCCCCC."
+        [ ( 'c', "#f4c15d" ) -- crust
+        , ( 'C', "#d9952f" ) -- crust flutes
+        , ( 'B', "#b9772a" ) -- crust underneath
+        , ( 'j', "#e8203f" ) -- jam
+        , ( 'w', "#ffe0e6" ) -- shine on the jam
+        , ( 'p', "#ff9fc2" ) -- the heart
+        ]
+        [ "...cCcCcCcC..."
+        , "..cjjjjjjjjc.."
+        , ".cjwjppjppjjc."
+        , "cjjjjpppppjjjc"
+        , "cjjjjjpppjjjjc"
+        , ".cjjjjjpjjjjc."
+        , "..cjjjjjjjjc.."
+        , "...BBBBBBBB..."
         ]

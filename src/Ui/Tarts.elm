@@ -17,7 +17,7 @@ view sizeClass earned =
         (List.map
             (\index ->
                 Svg.svg
-                    [ SA.viewBox "0 0 10 6"
+                    [ SA.viewBox "0 0 14 8"
                     , SA.class
                         (if index < earned then
                             "tart"
