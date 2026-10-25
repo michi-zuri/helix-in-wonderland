@@ -27,22 +27,30 @@ start =
 
 {-| A player who reads the story and always presses the letter of the jar
 to catch next. `mistakeEvery` presses a wrong key now and then (0 = never).
-Stops when the chapter reports its score, or after `fuel` moves.
+After the goal they practise until `practiceJars` more jars are caught,
+then press Esc to land. Stops when the chapter reports its score, or after
+`fuel` moves.
 -}
-play : Layout -> Int -> Int -> Run RabbitHole.Model -> Run RabbitHole.Model
-play layout mistakeEvery fuel run =
+play : Layout -> Int -> Int -> Int -> Run RabbitHole.Model -> Run RabbitHole.Model
+play layout mistakeEvery practiceJars fuel run =
     let
         send =
             Playthrough.send (RabbitHole.update (contextFor layout))
 
         jarToCatch =
             run.model.jars |> List.sortBy .y |> List.head
+
+        next =
+            play layout mistakeEvery practiceJars (fuel - 1)
     in
     if fuel <= 0 || Playthrough.finishedWith run /= Nothing then
         run
 
     else if Story.isTalking run.model.story then
-        play layout mistakeEvery (fuel - 1) (send (RabbitHole.KeyPressed "Enter") run)
+        next (send (RabbitHole.KeyPressed "Enter") run)
+
+    else if run.model.practising && run.model.practiceCatches >= practiceJars then
+        next (send (RabbitHole.KeyPressed "Escape") run)
 
     else
         case jarToCatch of
@@ -55,10 +63,38 @@ play layout mistakeEvery fuel run =
                         else
                             identity
                 in
-                play layout mistakeEvery (fuel - 1) (run |> withMistake |> send (RabbitHole.KeyPressed (String.fromChar jar.letter)))
+                next (run |> withMistake |> send (RabbitHole.KeyPressed (String.fromChar jar.letter)))
 
             Nothing ->
-                play layout mistakeEvery (fuel - 1) (send (RabbitHole.Frame 50) run)
+                next (send (RabbitHole.Frame 50) run)
+
+
+{-| Play up to the goal and stop there, without landing.
+-}
+toTheGoal : Run RabbitHole.Model -> Run RabbitHole.Model
+toTheGoal run =
+    playUntil (\model -> model.practising) 5000 run
+
+
+playUntil : (RabbitHole.Model -> Bool) -> Int -> Run RabbitHole.Model -> Run RabbitHole.Model
+playUntil done fuel run =
+    let
+        send =
+            Playthrough.send (RabbitHole.update (contextFor UsQwerty))
+    in
+    if fuel <= 0 || done run.model then
+        run
+
+    else if Story.isTalking run.model.story then
+        playUntil done (fuel - 1) (send (RabbitHole.KeyPressed "Enter") run)
+
+    else
+        case run.model.jars |> List.sortBy .y |> List.head of
+            Just jar ->
+                playUntil done (fuel - 1) (send (RabbitHole.KeyPressed (String.fromChar jar.letter)) run)
+
+            Nothing ->
+                playUntil done (fuel - 1) (send (RabbitHole.Frame 50) run)
 
 
 lettersSeen : Layout -> List Char
@@ -85,7 +121,11 @@ lettersSeen layout =
                                 Nothing ->
                                     send (RabbitHole.Frame 50) run
                 in
-                collect (fuel - 1) next (List.map .letter run.model.jars ++ seen)
+                if run.model.practising then
+                    seen
+
+                else
+                    collect (fuel - 1) next (List.map .letter run.model.jars ++ seen)
     in
     collect 5000 start []
 
@@ -96,20 +136,51 @@ suite =
         [ test "catching every jar without a mistake earns three tarts" <|
             \_ ->
                 start
-                    |> play SwissQwertz 0 5000
+                    |> play SwissQwertz 0 0 5000
                     |> Playthrough.finishedWith
                     |> Expect.equal (Just 3)
-        , test "all forty jars must be caught to land" <|
+        , test "reaching the goal opens a practice round instead of ending" <|
             \_ ->
                 start
-                    |> play SwissQwertz 0 5000
+                    |> toTheGoal
+                    |> (\run -> ( run.model.hits, run.model.practising, Playthrough.finishedWith run ))
+                    |> Expect.equal ( 40, True, Nothing )
+        , test "the jars rise faster and faster, also in practice" <|
+            \_ ->
+                let
+                    speedAfter catches =
+                        start
+                            |> playUntil (\model -> model.hits >= catches && not (List.isEmpty model.jars)) 8000
+                            |> .model
+                            |> .jars
+                            |> List.map .speed
+                            |> List.minimum
+                            |> Maybe.withDefault 0
+                in
+                Expect.all
+                    [ \_ -> Expect.greaterThan (speedAfter 0 * 1.5) (speedAfter 30)
+                    , \_ -> Expect.greaterThan (speedAfter 30) (speedAfter 70)
+                    ]
+                    ()
+        , test "mistakes while practising don't cost tarts, and Esc lands" <|
+            \_ ->
+                start
+                    |> toTheGoal
+                    |> Playthrough.sendAll (RabbitHole.update (contextFor UsQwerty)) (List.repeat 20 (RabbitHole.KeyPressed "z"))
+                    |> play UsQwerty 0 5 5000
+                    |> Playthrough.finishedWith
+                    |> Expect.equal (Just 3)
+        , test "all forty jars must be caught to reach the goal" <|
+            \_ ->
+                start
+                    |> play SwissQwertz 0 0 5000
                     |> .model
                     |> .hits
                     |> Expect.equal 40
         , test "frequent wrong keys cost tarts" <|
             \_ ->
                 start
-                    |> play SwissQwertz 3 5000
+                    |> play SwissQwertz 3 0 5000
                     |> Playthrough.finishedWith
                     |> Expect.equal (Just 1)
         , test "a Swiss keyboard practises ö, never ;" <|

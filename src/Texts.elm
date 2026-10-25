@@ -78,6 +78,7 @@ type alias ResultTexts =
     , wordsPerMinute : String
     , wrongDeletions : String
     , backspaces : String
+    , practiceJars : String
     , yes : String
     , notYet : String
     }
@@ -105,6 +106,10 @@ type alias RabbitHoleTexts =
     , allEight : String
     , stretch : String -> String -> String
     , stage : Int -> Int -> String
+    , goalReached : String
+    , practice : String
+    , practiceLabel : String
+    , speed : String
     , landing1 : String
     , landing2 : String
     }
@@ -297,6 +302,7 @@ english =
         , wordsPerMinute = "Words per minute"
         , wrongDeletions = "Wrong deletions"
         , backspaces = "Backspaces"
+        , practiceJars = "Practice jars"
         , yes = "yes"
         , notYet = "not yet"
         }
@@ -317,6 +323,10 @@ english =
         , allEight = "All eight together. This is the home row. Your fingers live here."
         , stretch = \a b -> a ++ " and " ++ b ++ ": your index fingers stretch one key inward, then come home."
         , stage = \current total -> "Stage " ++ String.fromInt current ++ " of " ++ String.fromInt total
+        , goalReached = "Goal reached! Keep catching to practise, or press Esc to land."
+        , practice = "Practice with all keys: the jars get faster and faster. Press Esc to land."
+        , practiceLabel = "Practice · all keys"
+        , speed = "Speed"
         , landing1 = "Thump! Thump! Down Alice came upon a heap of sticks and dry leaves, and the fall was over."
         , landing2 = "Your fingers know the home row now. The keys h j k l live there too, and you will need them in the next chapter."
         }
@@ -510,6 +520,7 @@ german =
         , wordsPerMinute = "Wörter pro Minute"
         , wrongDeletions = "Falsch gelöscht"
         , backspaces = "Rücktaste"
+        , practiceJars = "Übungsgläser"
         , yes = "ja"
         , notYet = "noch nicht"
         }
@@ -530,6 +541,10 @@ german =
         , allEight = "Alle acht zusammen. Das ist die Grundreihe. Hier wohnen deine Finger."
         , stretch = \a b -> a ++ " und " ++ b ++ ": die Zeigefinger strecken sich eine Taste nach innen und kommen zurück."
         , stage = \current total -> "Stufe " ++ String.fromInt current ++ " von " ++ String.fromInt total
+        , goalReached = "Ziel erreicht! Fang weiter, um zu üben, oder drück Esc zum Landen."
+        , practice = "Üben mit allen Tasten: die Gläser werden immer schneller. Esc zum Landen."
+        , practiceLabel = "Üben · alle Tasten"
+        , speed = "Tempo"
         , landing1 = "Plumps! Plumps! Alice landete auf einem Haufen Zweige und trockener Blätter, und der Fall war vorbei."
         , landing2 = "Deine Finger kennen jetzt die Grundreihe. Auch h j k l wohnen dort, und die brauchst du im nächsten Kapitel."
         }

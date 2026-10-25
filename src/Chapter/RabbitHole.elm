@@ -4,6 +4,11 @@ module Chapter.RabbitHole exposing (Jar, Model, Msg(..), init, update, view)
 shelves; jars float up with a letter on their label, and pressing that
 letter catches the jar. Six stages introduce the fingers pair by pair.
 
+Every catch makes the game a little faster. After the goal (40 jars) the
+player may keep practising with all keys, faster and faster, and presses
+Esc to land. The tarts are decided at the goal, so practising never costs
+anything.
+
 The stages come from the keyboard layout, so a Swiss child practises
 `a s d f · j k l ö` and a French child `q s d f · j k l m`.
 
@@ -100,6 +105,8 @@ stageAt layout index =
     stages layout |> List.drop index |> List.head
 
 
+{-| The jars needed to reach the goal.
+-}
 totalCatches : Int
 totalCatches =
     stages Layout.UsQwerty |> List.map .catches |> List.sum
@@ -107,18 +114,31 @@ totalCatches =
 
 
 -- TUNING
+-- The pace depends only on how many jars have been caught so far, so the game
+-- speeds up with every catch, in practice too, without limit.
 
 
-maxJarsAtOnce : Int
-maxJarsAtOnce =
-    3
+{-| How fast jars rise, in pixels per millisecond: about 5 seconds to cross
+the screen at the start, about 2.5 at the goal, and quicker after that.
+-}
+jarSpeed : Int -> Float
+jarSpeed catches =
+    (18 + 0.7 * toFloat catches) / 1000
 
 
-{-| Jars appear a little faster in later stages, but never closer than this.
+{-| The pause between two jars: 1.5 seconds at first, shrinking with every
+catch, but never below 0.3 seconds.
 -}
 spawnMilliseconds : Int -> Float
-spawnMilliseconds stage =
-    max 1300 (2500 - toFloat stage * 180)
+spawnMilliseconds catches =
+    max 300 (1500 * (0.97 ^ toFloat catches))
+
+
+{-| Three jars at once to begin with, one more every 25 catches, at most six.
+-}
+maxJarsAtOnce : Int -> Int
+maxJarsAtOnce catches =
+    min 6 (3 + catches // 25)
 
 
 jarStartY : Float
@@ -166,6 +186,9 @@ type alias Model =
     , nextJarId : Int
     , hits : Int
     , errors : Int
+    , practising : Bool
+    , practiceCatches : Int
+    , accuracyAtGoal : Maybe Float
     , streak : Int
     , bestStreak : Int
     , spawnIn : Float
@@ -213,6 +236,9 @@ init seed =
     , nextJarId = 0
     , hits = 0
     , errors = 0
+    , practising = False
+    , practiceCatches = 0
+    , accuracyAtGoal = Nothing
     , streak = 0
     , bestStreak = 0
     , spawnIn = 400
@@ -221,6 +247,29 @@ init seed =
     , wobble = 0
     , fallen = 0
     , clock = 0
+    }
+
+
+{-| The stage being played; after the goal, the practice round with all keys.
+-}
+currentStage : Layout -> Model -> Maybe Stage
+currentStage layout model =
+    if model.practising then
+        Just (practiceStage layout)
+
+    else
+        stageAt layout model.stage
+
+
+practiceStage : Layout -> Stage
+practiceStage layout =
+    let
+        home =
+            Layout.homeKeys layout
+    in
+    { keys = home.left ++ Layout.stretchKeys layout ++ home.right
+    , catches = 0
+    , describe = .rabbitHole >> .practice
     }
 
 
@@ -307,7 +356,7 @@ floatJars milliseconds model =
 
 
 {-| A missed jar frees its place, so a stage always ends after its number of
-catches, however many jars float away.
+catches, however many jars float away. Practice has no end.
 -}
 spawnJar : Layout -> Float -> Model -> Model
 spawnJar layout milliseconds model =
@@ -315,23 +364,25 @@ spawnJar layout milliseconds model =
         countdown =
             model.spawnIn - milliseconds
     in
-    case stageAt layout model.stage of
+    case currentStage layout model of
         Just stage ->
             let
                 hasRoom =
-                    List.length model.jars < maxJarsAtOnce && model.caughtThisStage + List.length model.jars < stage.catches
+                    List.length model.jars
+                        < maxJarsAtOnce model.hits
+                        && (model.practising || model.caughtThisStage + List.length model.jars < stage.catches)
             in
             if countdown <= 0 && hasRoom then
                 let
                     ( jar, seed ) =
-                        Random.step (jarGenerator model.nextJarId model.stage stage.keys model.lastLetter) model.seed
+                        Random.step (jarGenerator model.nextJarId (jarSpeed model.hits) stage.keys model.lastLetter) model.seed
                 in
                 { model
                     | jars = model.jars ++ [ jar ]
                     , seed = seed
                     , nextJarId = model.nextJarId + 1
                     , lastLetter = Just jar.letter
-                    , spawnIn = spawnMilliseconds model.stage
+                    , spawnIn = spawnMilliseconds model.hits
                 }
 
             else
@@ -341,20 +392,22 @@ spawnJar layout milliseconds model =
             model
 
 
-jarGenerator : Int -> Int -> List Char -> Maybe Char -> Random.Generator Jar
-jarGenerator id stage keys lastLetter =
+{-| A new jar at the bottom, at a random place, rising at about `speed`.
+-}
+jarGenerator : Int -> Float -> List Char -> Maybe Char -> Random.Generator Jar
+jarGenerator id speed keys lastLetter =
     Random.map3
-        (\letter x extraSpeed ->
+        (\letter x variation ->
             { id = id
             , letter = letter
             , x = x
             , y = jarStartY
-            , speed = (13 + toFloat stage * 1.3 + extraSpeed) / 1000
+            , speed = speed * variation
             }
         )
         (letterGenerator keys lastLetter)
         (Random.float 72 222)
-        (Random.float 0 3)
+        (Random.float 1 1.15)
 
 
 {-| Usually a different letter than last time, so the same finger isn't
@@ -387,6 +440,15 @@ letterGenerator keys lastLetter =
 
 catch : Layout -> String -> Model -> ( Model, List Effect )
 catch layout key model =
+    if key == "Escape" && model.practising then
+        land model
+
+    else
+        catchLetter layout key model
+
+
+catchLetter : Layout -> String -> Model -> ( Model, List Effect )
+catchLetter layout key model =
     case String.toList (String.toLower key) of
         [ letter ] ->
             if letter == ' ' then
@@ -423,11 +485,16 @@ caught layout jar model =
             [ PlaySound CorrectSound, FlashKey (String.fromChar jar.letter) True ]
 
         stageDone =
-            stageAt layout model.stage
-                |> Maybe.map (\stage -> catcher.caughtThisStage >= stage.catches)
-                |> Maybe.withDefault False
+            not model.practising
+                && (stageAt layout model.stage
+                        |> Maybe.map (\stage -> catcher.caughtThisStage >= stage.catches)
+                        |> Maybe.withDefault False
+                   )
     in
-    if stageDone then
+    if model.practising then
+        ( { catcher | practiceCatches = model.practiceCatches + 1 }, effects )
+
+    else if stageDone then
         nextStage layout catcher effects
 
     else
@@ -443,14 +510,28 @@ nextStage layout model effects =
             )
 
         Nothing ->
+            -- The goal: the score is fixed now, and practice begins.
             ( { model
-                | jars = []
-                , story =
-                    Story.conclude (Dialog.say Narrator (.rabbitHole >> .landing1))
-                        [ Dialog.say Narrator (.rabbitHole >> .landing2) ]
+                | practising = True
+                , accuracyAtGoal = Just (accuracy model)
+                , jars = []
+                , spawnIn = 800
               }
-            , effects ++ [ PlaySound PickupSound ]
+            , effects ++ [ PlaySound PickupSound, ShowToast (.rabbitHole >> .goalReached) ]
             )
+
+
+land : Model -> ( Model, List Effect )
+land model =
+    ( { model
+        | jars = []
+        , practising = False
+        , story =
+            Story.conclude (Dialog.say Narrator (.rabbitHole >> .landing1))
+                [ Dialog.say Narrator (.rabbitHole >> .landing2) ]
+      }
+    , [ PlaySound PickupSound ]
+    )
 
 
 accuracy : Model -> Float
@@ -467,16 +548,22 @@ percent fraction =
     String.fromInt (round (fraction * 100)) ++ "%"
 
 
+{-| Jars caught towards the goal (practice jars not included).
+-}
 caughtSoFar : Layout -> Model -> Int
 caughtSoFar layout model =
-    (stages layout |> List.take model.stage |> List.map .catches |> List.sum) + model.caughtThisStage
+    if model.accuracyAtGoal /= Nothing then
+        totalCatches
+
+    else
+        (stages layout |> List.take model.stage |> List.map .catches |> List.sum) + model.caughtThisStage
 
 
 score : Model -> Contract.Score
 score model =
     let
         fraction =
-            accuracy model
+            Maybe.withDefault (accuracy model) model.accuracyAtGoal
     in
     { tarts =
         if fraction >= 0.95 then
@@ -491,6 +578,7 @@ score model =
         [ { label = .results >> .accuracy, value = \_ -> percent fraction }
         , { label = .results >> .jarsCaught, value = \_ -> String.fromInt model.hits }
         , { label = .results >> .bestStreak, value = \_ -> String.fromInt model.bestStreak }
+        , { label = .results >> .practiceJars, value = \_ -> String.fromInt model.practiceCatches }
         ]
     }
 
@@ -506,7 +594,14 @@ view context model =
             nextJar model.jars
 
         stage =
-            stageAt context.layout model.stage
+            currentStage context.layout model
+
+        practiceKeys =
+            if model.practising then
+                [ "Escape" ]
+
+            else
+                []
     in
     { stage =
         Html.div [ A.class "stage-scene" ]
@@ -523,11 +618,20 @@ view context model =
         { mode = "INS"
         , file = file
         , pendingKeys = ""
-        , position = String.fromInt (caughtSoFar context.layout model) ++ "/" ++ String.fromInt totalCatches
+        , position =
+            String.fromInt (caughtSoFar context.layout model)
+                ++ "/"
+                ++ String.fromInt totalCatches
+                ++ (if model.practising then
+                        " +" ++ String.fromInt model.practiceCatches
+
+                    else
+                        ""
+                   )
         }
     , keyboard =
         { target = Maybe.map .letter target
-        , helpers = stage |> Maybe.map (.keys >> List.map String.fromChar) |> Maybe.withDefault []
+        , helpers = (stage |> Maybe.map (.keys >> List.map String.fromChar) |> Maybe.withDefault []) ++ practiceKeys
         }
     }
 
@@ -583,7 +687,24 @@ viewPanel context model =
         stat label value =
             Html.span [] [ Html.text label, Html.b [] [ Html.text value ] ]
     in
-    case stageAt context.layout current of
+    if model.practising then
+        Html.div [ A.class "panel-content" ]
+            [ Html.span [ A.class "eyebrow" ] [ Html.text texts.rabbitHole.practiceLabel ]
+            , Html.p [ A.class "big" ] [ Html.text texts.rabbitHole.practice ]
+            , Html.div [ A.class "stats" ]
+                [ stat texts.results.practiceJars (String.fromInt model.practiceCatches)
+                , stat texts.results.bestStreak (String.fromInt model.bestStreak)
+                , stat texts.rabbitHole.speed (String.fromInt (round (jarSpeed model.hits * 1000)))
+                ]
+            ]
+
+    else
+        viewStagePanel texts model current allStages caughtCount stat
+
+
+viewStagePanel : Texts -> Model -> Int -> List Stage -> Int -> (String -> String -> Html msg) -> Html msg
+viewStagePanel texts model current allStages caughtCount stat =
+    case allStages |> List.drop current |> List.head of
         Just stage ->
             Html.div [ A.class "panel-content" ]
                 [ Html.span [ A.class "eyebrow" ]
