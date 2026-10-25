@@ -1,0 +1,23 @@
+name: Change proposal
+description: Suggest a change to something in the game (texts, story, how it plays). Vorschlag für eine Änderung im Spiel.
+title: "Change: "
+labels: ["proposal"]
+body:
+  - type: input
+    id: where
+    attributes:
+      label: Where in the game? · Wo im Spiel?
+      description: The link in the game fills this in for you.
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What should change? · Was soll sich ändern?
+      description: Write what you see now and what it should be instead.
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why? · Warum?
