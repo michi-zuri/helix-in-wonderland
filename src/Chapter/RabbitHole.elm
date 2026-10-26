@@ -1,13 +1,19 @@
-module Chapter.RabbitHole exposing (Jar, Model, Msg(..), init, update, view)
+module Chapter.RabbitHole exposing (Difficulty(..), Model, Msg(..), groundDepth, init, jarSpeed, update, view)
 
-{-| Chapter 1, "Down the Rabbit Hole": the home row. Alice falls past
-shelves; jars float up with a letter on their label, and pressing that
-letter catches the jar. Six stages introduce the fingers pair by pair.
+{-| Chapter 1, "Down the Rabbit Hole": the home row. Alice falls down the
+well; jars float up with a letter on their label, and pressing that letter
+catches the jar. Six stages introduce the fingers pair by pair.
 
-Every catch makes the game a little faster. After the goal (40 jars) the
-player may keep practising with all keys, faster and faster, and presses
-Esc to land. The tarts are decided at the goal, so practising never costs
-anything.
+The fall: every jar caught brings Alice one step closer to the ground.
+Every mistake, a wrong key or a jar that floats away, lifts her back up a
+little. The closer the ground, the faster the jars. Before falling, the
+player picks how deep the well is and how fast it gets: easy, fast or mad.
+Esc lets go at any moment and Alice lands where she is, in a heap of sticks
+and dry leaves.
+
+Tarts follow the depth Alice landed at: the easy ground gives one, the fast
+ground two, and only the mad ground three. Letting go before the easy ground
+earns none.
 
 The stages come from the keyboard layout, so a Swiss child practises
 `a s d f · j k l ö` and a French child `q s d f · j k l m`.
@@ -31,6 +37,7 @@ import Svg
 import Svg.Attributes as SA
 import Texts exposing (Texts)
 import Ui.Dialog as Dialog
+import Ui.Tarts as Tarts
 
 
 file : String
@@ -105,40 +112,147 @@ stageAt layout index =
     stages layout |> List.drop index |> List.head
 
 
-{-| The jars needed to reach the goal.
+{-| The jars of all six stages together.
 -}
-totalCatches : Int
-totalCatches =
+basicJars : Int
+basicJars =
     stages Layout.UsQwerty |> List.map .catches |> List.sum
+
+
+{-| After the six stages, jars come with all the home-row keys.
+-}
+allKeysStage : Layout -> Stage
+allKeysStage layout =
+    let
+        home =
+            Layout.homeKeys layout
+    in
+    { keys = home.left ++ Layout.stretchKeys layout ++ home.right
+    , catches = 0
+    , describe = .rabbitHole >> .allKeys
+    }
+
+
+
+-- DIFFICULTY
+
+
+type Difficulty
+    = Easy
+    | Fast
+    | Mad
+
+
+difficulties : List Difficulty
+difficulties =
+    [ Easy, Fast, Mad ]
+
+
+{-| How each difficulty plays.
+
+  - `ground`: how deep the well is, in jars. Easy ends with the basic jars,
+    fast adds a few seconds, mad nearly thirty seconds at full speed.
+  - `topSpeed`: how fast jars rise near the ground, in pixels per second.
+  - `shortestGap`: the pause between two jars near the ground, in ms.
+  - `mostJars`: how many jars may be on screen at once near the ground.
+  - `tarts`: what reaching this ground is worth.
+
+-}
+type alias Pace =
+    { ground : Int
+    , topSpeed : Float
+    , shortestGap : Float
+    , mostJars : Int
+    , tarts : Int
+    }
+
+
+pace : Difficulty -> Pace
+pace difficulty =
+    case difficulty of
+        Easy ->
+            { ground = basicJars, topSpeed = 40, shortestGap = 900, mostJars = 4, tarts = 1 }
+
+        Fast ->
+            { ground = basicJars + 8, topSpeed = 60, shortestGap = 650, mostJars = 5, tarts = 2 }
+
+        Mad ->
+            { ground = basicJars + 40, topSpeed = 95, shortestGap = 400, mostJars = 6, tarts = 3 }
+
+
+groundDepth : Difficulty -> Int
+groundDepth difficulty =
+    (pace difficulty).ground
+
+
+{-| Tarts for landing at a depth: one for every ground Alice got down to,
+counting only the grounds of the chosen difficulty and easier ones.
+-}
+tartsAt : Difficulty -> Int -> Int
+tartsAt chosen depth =
+    difficulties
+        |> List.filter (\d -> (pace d).tarts <= (pace chosen).tarts && depth >= (pace d).ground)
+        |> List.length
 
 
 
 -- TUNING
--- The pace depends only on how many jars have been caught so far, so the game
--- speeds up with every catch, in practice too, without limit.
+--
+-- Everything that changes during the fall follows `nearness`: 0 at the top
+-- of the well, 1 at the ground of the chosen difficulty.
 
 
-{-| How fast jars rise, in pixels per millisecond: about 5 seconds to cross
-the screen at the start, about 2.5 at the goal, and quicker after that.
+{-| How fast jars rise at the top of the well, in pixels per second.
 -}
-jarSpeed : Int -> Float
-jarSpeed catches =
-    (18 + 0.7 * toFloat catches) / 1000
+startSpeed : Float
+startSpeed =
+    18
 
 
-{-| The pause between two jars: 1.5 seconds at first, shrinking with every
-catch, but never below 0.3 seconds.
+{-| The pause between two jars at the top of the well, in ms.
 -}
-spawnMilliseconds : Int -> Float
-spawnMilliseconds catches =
-    max 300 (1500 * (0.97 ^ toFloat catches))
+longestGap : Float
+longestGap =
+    1500
 
 
-{-| Three jars at once to begin with, one more every 25 catches, at most six.
+fewestJars : Int
+fewestJars =
+    3
+
+
+{-| How many jars' worth of depth a mistake costs.
 -}
-maxJarsAtOnce : Int -> Int
-maxJarsAtOnce catches =
-    min 6 (3 + catches // 25)
+mistakeLift : Int
+mistakeLift =
+    3
+
+
+nearness : Difficulty -> Int -> Float
+nearness difficulty depth =
+    clamp 0 1 (toFloat depth / toFloat (pace difficulty).ground)
+
+
+between : Float -> Float -> Float -> Float
+between from to fraction =
+    from + (to - from) * fraction
+
+
+{-| How fast jars rise at a depth, in pixels per millisecond.
+-}
+jarSpeed : Difficulty -> Int -> Float
+jarSpeed difficulty depth =
+    between startSpeed (pace difficulty).topSpeed (nearness difficulty depth) / 1000
+
+
+spawnGap : Difficulty -> Int -> Float
+spawnGap difficulty depth =
+    between longestGap (pace difficulty).shortestGap (nearness difficulty depth)
+
+
+jarsAtOnce : Difficulty -> Int -> Int
+jarsAtOnce difficulty depth =
+    fewestJars + round (nearness difficulty depth * toFloat ((pace difficulty).mostJars - fewestJars))
 
 
 jarStartY : Float
@@ -163,14 +277,56 @@ wobbleMilliseconds =
     350
 
 
-fallPixelsPerMillisecond : Float
-fallPixelsPerMillisecond =
-    0.042
+{-| Enter must wait this long after the difficulty card appears, so a
+child hurrying through the story doesn't pick one by accident.
+-}
+choiceGuardMilliseconds : Float
+choiceGuardMilliseconds =
+    500
 
 
-alicePosition : { x : Float, y : Float }
-alicePosition =
-    { x = 148, y = 30 }
+{-| Where Alice is drawn: at the top of the well before the first catch,
+`lowestAliceY` just before the ground.
+-}
+topAliceY : Float
+topAliceY =
+    30
+
+
+lowestAliceY : Float
+lowestAliceY =
+    96
+
+
+aliceX : Float
+aliceX =
+    148
+
+
+{-| The landing: Alice drops into the heap after `impactMilliseconds`, the
+straw settles, and the closing story starts after `landingMilliseconds`.
+-}
+impactMilliseconds : Float
+impactMilliseconds =
+    550
+
+
+landingMilliseconds : Float
+landingMilliseconds =
+    1700
+
+
+{-| Alice's position resting in the heap, and the heap's top when it is
+fully in view.
+-}
+restingAliceY : Float
+restingAliceY =
+    130
+
+
+heapHeight : Float
+heapHeight =
+    44
 
 
 
@@ -179,23 +335,26 @@ alicePosition =
 
 type alias Model =
     { story : Story
+    , highlighted : Difficulty
+    , choiceShownAt : Float
+    , difficulty : Maybe Difficulty
     , stage : Int
     , caughtThisStage : Int
+    , depth : Int
     , jars : List Jar
     , flying : List FlyingJar
     , nextJarId : Int
     , hits : Int
     , errors : Int
-    , practising : Bool
-    , practiceCatches : Int
-    , accuracyAtGoal : Maybe Float
     , streak : Int
     , bestStreak : Int
     , spawnIn : Float
     , seed : Random.Seed
     , lastLetter : Maybe Char
     , wobble : Float
-    , fallen : Float
+    , aliceY : Float
+    , landing : Maybe Landing
+    , scroll : Float
     , clock : Float
     }
 
@@ -221,6 +380,16 @@ type alias FlyingJar =
     }
 
 
+{-| Alice let go (or reached the ground) at `depth`, from height `fromY`;
+`age` is the time since then.
+-}
+type alias Landing =
+    { depth : Int
+    , fromY : Float
+    , age : Float
+    }
+
+
 init : Random.Seed -> Model
 init seed =
     { story =
@@ -229,48 +398,40 @@ init seed =
             , Dialog.say Narrator (.rabbitHole >> .intro3)
             , Dialog.say Narrator (.rabbitHole >> .intro4)
             ]
+    , highlighted = Easy
+    , choiceShownAt = 0
+    , difficulty = Nothing
     , stage = 0
     , caughtThisStage = 0
+    , depth = 0
     , jars = []
     , flying = []
     , nextJarId = 0
     , hits = 0
     , errors = 0
-    , practising = False
-    , practiceCatches = 0
-    , accuracyAtGoal = Nothing
     , streak = 0
     , bestStreak = 0
     , spawnIn = 400
     , seed = seed
     , lastLetter = Nothing
     , wobble = 0
-    , fallen = 0
+    , aliceY = topAliceY
+    , landing = Nothing
+    , scroll = 0
     , clock = 0
     }
 
 
-{-| The stage being played; after the goal, the practice round with all keys.
+{-| The stage being played; after the six stages, all keys.
 -}
-currentStage : Layout -> Model -> Maybe Stage
+currentStage : Layout -> Model -> Stage
 currentStage layout model =
-    if model.practising then
-        Just (practiceStage layout)
-
-    else
-        stageAt layout model.stage
+    stageAt layout model.stage |> Maybe.withDefault (allKeysStage layout)
 
 
-practiceStage : Layout -> Stage
-practiceStage layout =
-    let
-        home =
-            Layout.homeKeys layout
-    in
-    { keys = home.left ++ Layout.stretchKeys layout ++ home.right
-    , catches = 0
-    , describe = .rabbitHole >> .practice
-    }
+isBeyondStages : Layout -> Model -> Bool
+isBeyondStages layout model =
+    model.stage >= List.length (stages layout)
 
 
 {-| The jar to catch next: the one that has floated highest.
@@ -278,6 +439,18 @@ practiceStage layout =
 nextJar : List Jar -> Maybe Jar
 nextJar jars =
     List.sortBy .y jars |> List.head
+
+
+{-| Where Alice should be drawn for her depth (she glides there smoothly).
+-}
+targetAliceY : Model -> Float
+targetAliceY model =
+    case model.difficulty of
+        Just difficulty ->
+            between topAliceY lowestAliceY (nearness difficulty model.depth)
+
+        Nothing ->
+            topAliceY
 
 
 
@@ -296,7 +469,15 @@ update context msg model =
             case Story.hear context.texts key model.story of
                 Story.NotTalking ->
                     if Story.isPlaying model.story then
-                        catch context.layout key model
+                        case ( model.difficulty, model.landing ) of
+                            ( Nothing, _ ) ->
+                                choose context.layout key model
+
+                            ( Just difficulty, Nothing ) ->
+                                fallingKey context.layout difficulty key model
+
+                            ( Just _, Just _ ) ->
+                                ( model, [] )
 
                     else
                         ( model, [] )
@@ -308,88 +489,280 @@ update context msg model =
                     ( { model | story = story }, [ PlaySound TickSound ] )
 
                 Story.IntroOver story ->
-                    ( { model | story = story }
-                    , stageAt context.layout 0 |> Maybe.map (\stage -> [ ShowToast stage.describe ]) |> Maybe.withDefault []
-                    )
+                    ( { model | story = story, choiceShownAt = model.clock }, [] )
 
                 Story.OutroOver story ->
                     ( { model | story = story }, [ Finish (score model) ] )
 
         Frame milliseconds ->
-            let
-                advanced =
-                    { model
-                        | clock = model.clock + milliseconds
-                        , fallen = model.fallen + milliseconds * fallPixelsPerMillisecond
-                        , wobble = max 0 (model.wobble - milliseconds)
-                        , flying =
-                            model.flying
-                                |> List.map (\jar -> { jar | age = jar.age + milliseconds })
-                                |> List.filter (\jar -> jar.age < flyMilliseconds)
-                        , story = Story.tick milliseconds model.story
-                    }
-            in
+            frame context.layout milliseconds model
+
+
+
+-- CHOOSING THE DIFFICULTY
+
+
+choose : Layout -> String -> Model -> ( Model, List Effect )
+choose layout key model =
+    let
+        move step =
+            ( { model | highlighted = shiftDifficulty step model.highlighted }, [ PlaySound TickSound ] )
+
+        enterAllowed =
+            model.clock - model.choiceShownAt >= choiceGuardMilliseconds
+    in
+    case key of
+        "j" ->
+            move 1
+
+        "ArrowDown" ->
+            move 1
+
+        "k" ->
+            move -1
+
+        "ArrowUp" ->
+            move -1
+
+        "1" ->
+            startFalling layout Easy model
+
+        "2" ->
+            startFalling layout Fast model
+
+        "3" ->
+            startFalling layout Mad model
+
+        "Enter" ->
+            if enterAllowed then
+                startFalling layout model.highlighted model
+
+            else
+                ( model, [] )
+
+        _ ->
+            ( model, [] )
+
+
+shiftDifficulty : Int -> Difficulty -> Difficulty
+shiftDifficulty step difficulty =
+    let
+        index =
+            difficulties
+                |> List.indexedMap Tuple.pair
+                |> List.filter (\( _, d ) -> d == difficulty)
+                |> List.head
+                |> Maybe.map Tuple.first
+                |> Maybe.withDefault 0
+
+        count =
+            List.length difficulties
+    in
+    difficulties
+        |> List.drop (modBy count (index + step))
+        |> List.head
+        |> Maybe.withDefault difficulty
+
+
+startFalling : Layout -> Difficulty -> Model -> ( Model, List Effect )
+startFalling layout difficulty model =
+    ( { model | difficulty = Just difficulty, highlighted = difficulty, spawnIn = 400 }
+    , PlaySound PickupSound
+        :: (stageAt layout 0 |> Maybe.map (\stage -> [ ShowToast stage.describe ]) |> Maybe.withDefault [])
+    )
+
+
+
+-- FALLING
+
+
+fallingKey : Layout -> Difficulty -> String -> Model -> ( Model, List Effect )
+fallingKey layout difficulty key model =
+    if key == "Escape" then
+        startLanding model
+
+    else
+        case String.toList (String.toLower key) of
+            [ letter ] ->
+                if letter == ' ' then
+                    ( model, [] )
+
+                else
+                    case List.filter (\jar -> jar.letter == letter) model.jars |> nextJar of
+                        Just jar ->
+                            caught layout difficulty jar model
+
+                        Nothing ->
+                            ( mistake 1 model, [ PlaySound ErrorSound, FlashKey (String.fromChar letter) False ] )
+
+            _ ->
+                ( model, [] )
+
+
+{-| Mistakes lift Alice back up, never above the top of the well.
+-}
+mistake : Int -> Model -> Model
+mistake count model =
+    { model
+        | errors = model.errors + count
+        , streak = 0
+        , wobble = wobbleMilliseconds
+        , depth = max 0 (model.depth - count * mistakeLift)
+    }
+
+
+caught : Layout -> Difficulty -> Jar -> Model -> ( Model, List Effect )
+caught layout difficulty jar model =
+    let
+        catcher =
+            { model
+                | jars = List.filter (\other -> other.id /= jar.id) model.jars
+                , flying = { letter = jar.letter, fromX = jar.x, fromY = jar.y, age = 0 } :: model.flying
+                , hits = model.hits + 1
+                , streak = model.streak + 1
+                , bestStreak = max model.bestStreak (model.streak + 1)
+                , caughtThisStage = model.caughtThisStage + 1
+                , depth = model.depth + 1
+            }
+
+        effects =
+            [ PlaySound CorrectSound, FlashKey (String.fromChar jar.letter) True ]
+
+        stageDone =
+            not (isBeyondStages layout model)
+                && (catcher.caughtThisStage >= (currentStage layout model).catches)
+    in
+    if catcher.depth >= groundDepth difficulty then
+        startLanding catcher |> Tuple.mapSecond ((++) effects)
+
+    else if stageDone then
+        nextStage layout catcher effects
+
+    else
+        ( catcher, effects )
+
+
+nextStage : Layout -> Model -> List Effect -> ( Model, List Effect )
+nextStage layout model effects =
+    let
+        advanced =
+            { model | stage = model.stage + 1, caughtThisStage = 0, jars = [], spawnIn = 800 }
+    in
+    ( advanced
+    , effects ++ [ PlaySound PickupSound, ShowToast (currentStage layout advanced).describe ]
+    )
+
+
+startLanding : Model -> ( Model, List Effect )
+startLanding model =
+    ( { model | jars = [], landing = Just { depth = model.depth, fromY = model.aliceY, age = 0 } }
+    , []
+    )
+
+
+frame : Layout -> Float -> Model -> ( Model, List Effect )
+frame layout milliseconds model =
+    let
+        advanced =
+            { model
+                | clock = model.clock + milliseconds
+                , wobble = max 0 (model.wobble - milliseconds)
+                , aliceY = model.aliceY + (targetAliceY model - model.aliceY) * min 1 (milliseconds * 0.006)
+                , scroll = model.scroll + milliseconds * scrollSpeed model
+                , flying =
+                    model.flying
+                        |> List.map (\jar -> { jar | age = jar.age + milliseconds })
+                        |> List.filter (\jar -> jar.age < flyMilliseconds)
+                , story = Story.tick milliseconds model.story
+            }
+    in
+    case ( advanced.landing, advanced.difficulty ) of
+        ( Just landing, _ ) ->
+            animateLanding milliseconds landing advanced
+
+        ( Nothing, Just difficulty ) ->
             if Story.isPlaying advanced.story then
-                ( advanced |> floatJars milliseconds |> spawnJar context.layout milliseconds, [] )
+                advanced
+                    |> spawnJar layout difficulty milliseconds
+                    |> floatJars milliseconds
 
             else
                 ( advanced, [] )
 
+        ( Nothing, Nothing ) ->
+            ( advanced, [] )
 
-floatJars : Float -> Model -> Model
+
+{-| How fast the walls slide past, in pixels per millisecond: faster the
+deeper Alice is, still once she has landed.
+-}
+scrollSpeed : Model -> Float
+scrollSpeed model =
+    case ( model.landing, model.difficulty ) of
+        ( Just landing, _ ) ->
+            if landing.age < impactMilliseconds then
+                0.12
+
+            else
+                0
+
+        ( Nothing, Just difficulty ) ->
+            between 0.026 0.08 (nearness difficulty model.depth)
+
+        ( Nothing, Nothing ) ->
+            0.026
+
+
+floatJars : Float -> Model -> ( Model, List Effect )
 floatJars milliseconds model =
     let
         ( stillVisible, missed ) =
             model.jars
                 |> List.map (\jar -> { jar | y = jar.y - jar.speed * milliseconds })
                 |> List.partition (\jar -> jar.y > jarGoneY)
-    in
-    { model
-        | jars = stillVisible
-        , streak =
-            if List.isEmpty missed then
-                model.streak
 
-            else
-                0
-    }
+        withVisible =
+            { model | jars = stillVisible }
+    in
+    if List.isEmpty missed then
+        ( withVisible, [] )
+
+    else
+        ( mistake (List.length missed) withVisible, [ PlaySound ErrorSound ] )
 
 
 {-| A missed jar frees its place, so a stage always ends after its number of
-catches, however many jars float away. Practice has no end.
+catches, however many jars float away. After the stages there is no limit.
 -}
-spawnJar : Layout -> Float -> Model -> Model
-spawnJar layout milliseconds model =
+spawnJar : Layout -> Difficulty -> Float -> Model -> Model
+spawnJar layout difficulty milliseconds model =
     let
         countdown =
             model.spawnIn - milliseconds
+
+        stage =
+            currentStage layout model
+
+        hasRoom =
+            List.length model.jars
+                < jarsAtOnce difficulty model.depth
+                && (isBeyondStages layout model || model.caughtThisStage + List.length model.jars < stage.catches)
     in
-    case currentStage layout model of
-        Just stage ->
-            let
-                hasRoom =
-                    List.length model.jars
-                        < maxJarsAtOnce model.hits
-                        && (model.practising || model.caughtThisStage + List.length model.jars < stage.catches)
-            in
-            if countdown <= 0 && hasRoom then
-                let
-                    ( jar, seed ) =
-                        Random.step (jarGenerator model.nextJarId (jarSpeed model.hits) stage.keys model.lastLetter) model.seed
-                in
-                { model
-                    | jars = model.jars ++ [ jar ]
-                    , seed = seed
-                    , nextJarId = model.nextJarId + 1
-                    , lastLetter = Just jar.letter
-                    , spawnIn = spawnMilliseconds model.hits
-                }
+    if countdown <= 0 && hasRoom then
+        let
+            ( jar, seed ) =
+                Random.step (jarGenerator model.nextJarId (jarSpeed difficulty model.depth) stage.keys model.lastLetter) model.seed
+        in
+        { model
+            | jars = model.jars ++ [ jar ]
+            , seed = seed
+            , nextJarId = model.nextJarId + 1
+            , lastLetter = Just jar.letter
+            , spawnIn = spawnGap difficulty model.depth
+        }
 
-            else
-                { model | spawnIn = countdown }
-
-        Nothing ->
-            model
+    else
+        { model | spawnIn = countdown }
 
 
 {-| A new jar at the bottom, at a random place, rising at about `speed`.
@@ -438,100 +811,44 @@ letterGenerator keys lastLetter =
             Random.constant 'f'
 
 
-catch : Layout -> String -> Model -> ( Model, List Effect )
-catch layout key model =
-    if key == "Escape" && model.practising then
-        land model
 
-    else
-        catchLetter layout key model
+-- LANDING
 
 
-catchLetter : Layout -> String -> Model -> ( Model, List Effect )
-catchLetter layout key model =
-    case String.toList (String.toLower key) of
-        [ letter ] ->
-            if letter == ' ' then
-                ( model, [] )
+{-| Alice drops, hits the heap ("Thump!"), the straw settles, then the
+closing story starts.
+-}
+animateLanding : Float -> Landing -> Model -> ( Model, List Effect )
+animateLanding milliseconds landing model =
+    let
+        age =
+            landing.age + milliseconds
+
+        thump =
+            if landing.age < impactMilliseconds && age >= impactMilliseconds then
+                [ PlaySound BumpSound ]
 
             else
-                case List.filter (\jar -> jar.letter == letter) model.jars |> nextJar of
-                    Just jar ->
-                        caught layout jar model
+                []
 
-                    Nothing ->
-                        ( { model | errors = model.errors + 1, streak = 0, wobble = wobbleMilliseconds }
-                        , [ PlaySound ErrorSound, FlashKey (String.fromChar letter) False ]
-                        )
-
-        _ ->
-            ( model, [] )
-
-
-caught : Layout -> Jar -> Model -> ( Model, List Effect )
-caught layout jar model =
-    let
-        catcher =
-            { model
-                | jars = List.filter (\other -> other.id /= jar.id) model.jars
-                , flying = { letter = jar.letter, fromX = jar.x, fromY = jar.y, age = 0 } :: model.flying
-                , hits = model.hits + 1
-                , streak = model.streak + 1
-                , bestStreak = max model.bestStreak (model.streak + 1)
-                , caughtThisStage = model.caughtThisStage + 1
-            }
-
-        effects =
-            [ PlaySound CorrectSound, FlashKey (String.fromChar jar.letter) True ]
-
-        stageDone =
-            not model.practising
-                && (stageAt layout model.stage
-                        |> Maybe.map (\stage -> catcher.caughtThisStage >= stage.catches)
-                        |> Maybe.withDefault False
-                   )
+        landed =
+            { model | landing = Just { landing | age = age } }
     in
-    if model.practising then
-        ( { catcher | practiceCatches = model.practiceCatches + 1 }, effects )
-
-    else if stageDone then
-        nextStage layout catcher effects
+    if age >= landingMilliseconds && Story.isPlaying model.story then
+        ( { landed
+            | story =
+                Story.conclude (Dialog.say Narrator (.rabbitHole >> .landing1))
+                    [ Dialog.say Narrator (.rabbitHole >> .landing2) ]
+          }
+        , thump
+        )
 
     else
-        ( catcher, effects )
+        ( landed, thump )
 
 
-nextStage : Layout -> Model -> List Effect -> ( Model, List Effect )
-nextStage layout model effects =
-    case stageAt layout (model.stage + 1) of
-        Just stage ->
-            ( { model | stage = model.stage + 1, caughtThisStage = 0, jars = [], spawnIn = 800 }
-            , effects ++ [ PlaySound PickupSound, ShowToast stage.describe ]
-            )
 
-        Nothing ->
-            -- The goal: the score is fixed now, and practice begins.
-            ( { model
-                | practising = True
-                , accuracyAtGoal = Just (accuracy model)
-                , jars = []
-                , spawnIn = 800
-              }
-            , effects ++ [ PlaySound PickupSound, ShowToast (.rabbitHole >> .goalReached) ]
-            )
-
-
-land : Model -> ( Model, List Effect )
-land model =
-    ( { model
-        | jars = []
-        , practising = False
-        , story =
-            Story.conclude (Dialog.say Narrator (.rabbitHole >> .landing1))
-                [ Dialog.say Narrator (.rabbitHole >> .landing2) ]
-      }
-    , [ PlaySound PickupSound ]
-    )
+-- SCORE
 
 
 accuracy : Model -> Float
@@ -548,37 +865,47 @@ percent fraction =
     String.fromInt (round (fraction * 100)) ++ "%"
 
 
-{-| Jars caught towards the goal (practice jars not included).
--}
-caughtSoFar : Layout -> Model -> Int
-caughtSoFar layout model =
-    if model.accuracyAtGoal /= Nothing then
-        totalCatches
+difficultyName : Texts -> Difficulty -> String
+difficultyName texts difficulty =
+    case difficulty of
+        Easy ->
+            texts.rabbitHole.easy
 
-    else
-        (stages layout |> List.take model.stage |> List.map .catches |> List.sum) + model.caughtThisStage
+        Fast ->
+            texts.rabbitHole.fast
+
+        Mad ->
+            texts.rabbitHole.mad
+
+
+difficultyInfo : Texts -> Difficulty -> String
+difficultyInfo texts difficulty =
+    case difficulty of
+        Easy ->
+            texts.rabbitHole.easyInfo
+
+        Fast ->
+            texts.rabbitHole.fastInfo
+
+        Mad ->
+            texts.rabbitHole.madInfo
 
 
 score : Model -> Contract.Score
 score model =
     let
-        fraction =
-            Maybe.withDefault (accuracy model) model.accuracyAtGoal
+        difficulty =
+            Maybe.withDefault Easy model.difficulty
+
+        landedAt =
+            model.landing |> Maybe.map .depth |> Maybe.withDefault model.depth
     in
-    { tarts =
-        if fraction >= 0.95 then
-            3
-
-        else if fraction >= 0.85 then
-            2
-
-        else
-            1
+    { tarts = tartsAt difficulty landedAt
     , stats =
-        [ { label = .results >> .accuracy, value = \_ -> percent fraction }
+        [ { label = .results >> .difficulty, value = \texts -> difficultyName texts difficulty }
+        , { label = .results >> .accuracy, value = \_ -> percent (accuracy model) }
         , { label = .results >> .jarsCaught, value = \_ -> String.fromInt model.hits }
         , { label = .results >> .bestStreak, value = \_ -> String.fromInt model.bestStreak }
-        , { label = .results >> .practiceJars, value = \_ -> String.fromInt model.practiceCatches }
         ]
     }
 
@@ -591,26 +918,25 @@ view : Context -> Model -> Contract.View msg
 view context model =
     let
         target =
-            nextJar model.jars
-
-        stage =
-            currentStage context.layout model
-
-        practiceKeys =
-            if model.practising then
-                [ "Escape" ]
+            if model.landing == Nothing then
+                nextJar model.jars
 
             else
-                []
+                Nothing
     in
     { stage =
         Html.div [ A.class "stage-scene" ]
             [ Svg.svg [ SA.viewBox "0 0 320 192", SA.class "pixel-scene" ]
-                (Well.background model.fallen
+                (Well.background model.scroll
                     ++ List.map (\jar -> Well.jar { letter = jar.letter, x = jar.x, y = jar.y, size = 1, highlighted = Just jar == target }) model.jars
                     ++ List.map viewFlying model.flying
-                    ++ [ viewAlice model ]
+                    ++ viewAliceAndHeap model
                 )
+            , if model.difficulty == Nothing && Story.isPlaying model.story then
+                viewChoice context.texts model.highlighted
+
+              else
+                Html.text ""
             , Story.view context.texts model.story
             ]
     , panel = viewPanel context model
@@ -619,19 +945,25 @@ view context model =
         , file = file
         , pendingKeys = ""
         , position =
-            String.fromInt (caughtSoFar context.layout model)
-                ++ "/"
-                ++ String.fromInt totalCatches
-                ++ (if model.practising then
-                        " +" ++ String.fromInt model.practiceCatches
+            case model.difficulty of
+                Just difficulty ->
+                    String.fromInt model.depth ++ "/" ++ String.fromInt (groundDepth difficulty)
 
-                    else
-                        ""
-                   )
+                Nothing ->
+                    ""
         }
     , keyboard =
         { target = Maybe.map .letter target
-        , helpers = (stage |> Maybe.map (.keys >> List.map String.fromChar) |> Maybe.withDefault []) ++ practiceKeys
+        , helpers =
+            case ( model.difficulty, model.landing ) of
+                ( Nothing, _ ) ->
+                    [ "j", "k" ]
+
+                ( Just _, Nothing ) ->
+                    List.map String.fromChar (currentStage context.layout model).keys ++ [ "Escape" ]
+
+                ( Just _, Just _ ) ->
+                    []
         }
     }
 
@@ -644,29 +976,108 @@ viewFlying jar =
     in
     Well.jar
         { letter = jar.letter
-        , x = jar.fromX + (alicePosition.x - jar.fromX) * progress
-        , y = jar.fromY + (alicePosition.y + 10 - jar.fromY) * progress
+        , x = jar.fromX + (aliceX - jar.fromX) * progress
+        , y = jar.fromY + (jarTargetY - jar.fromY) * progress
         , size = 1 - progress * 0.5
         , highlighted = False
         }
 
 
-viewAlice : Model -> Svg.Svg msg
-viewAlice model =
+jarTargetY : Float
+jarTargetY =
+    40
+
+
+{-| Alice, and the heap that comes into view as the ground gets near. The
+heap is drawn after Alice, so once she has landed she sits in the straw.
+-}
+viewAliceAndHeap : Model -> List (Svg.Svg msg)
+viewAliceAndHeap model =
     let
+        heapInView =
+            case ( model.landing, model.difficulty ) of
+                ( Just landing, Just difficulty ) ->
+                    max (heapVisibility difficulty landing.depth) (min 1 (landing.age / 400))
+
+                ( Nothing, Just difficulty ) ->
+                    heapVisibility difficulty model.depth
+
+                _ ->
+                    0
+
+        heapTop =
+            192 - heapHeight * heapInView
+
         wobble =
             if model.wobble > 0 then
                 sin (model.clock * 0.07) * 2
 
             else
                 0
+
+        aliceY =
+            case model.landing of
+                Just landing ->
+                    if landing.age < impactMilliseconds then
+                        let
+                            t =
+                                landing.age / impactMilliseconds
+                        in
+                        between landing.fromY restingAliceY (t * t)
+
+                    else
+                        restingAliceY
+
+                Nothing ->
+                    model.aliceY + sin (model.clock * 0.0022) * 3
     in
-    Sprite.viewAt
-        { x = alicePosition.x + wobble
-        , y = alicePosition.y + sin (model.clock * 0.0022) * 3
-        , pixelSize = 2
-        }
-        Sprites.aliceFalling
+    Sprite.viewAt { x = aliceX + wobble, y = aliceY, pixelSize = 2 } Sprites.aliceFalling
+        :: (if heapInView > 0 then
+                [ Well.heap heapTop ]
+
+            else
+                []
+           )
+        ++ (case model.landing of
+                Just landing ->
+                    Well.strawBurst { x = aliceX + 12, y = 150, age = landing.age - impactMilliseconds }
+
+                Nothing ->
+                    []
+           )
+
+
+{-| The heap appears from below over the last part of the fall.
+-}
+heapVisibility : Difficulty -> Int -> Float
+heapVisibility difficulty depth =
+    clamp 0 1 ((nearness difficulty depth - 0.6) / 0.4)
+
+
+{-| The card for picking a difficulty, over the top of the well.
+-}
+viewChoice : Texts -> Difficulty -> Html msg
+viewChoice texts highlighted =
+    Html.div [ A.class "overlay" ]
+        [ Html.div [ A.class "card" ]
+            [ Html.h2 [] [ Html.text texts.rabbitHole.chooseTitle ]
+            , Html.ol [ A.class "chapters" ]
+                (List.indexedMap
+                    (\index difficulty ->
+                        Html.li [ A.classList [ ( "selected", difficulty == highlighted ) ] ]
+                            [ Html.span [ A.class "chapter-number" ] [ Html.text (String.fromInt (index + 1)) ]
+                            , Html.span [ A.class "chapter-text" ]
+                                [ Html.span [ A.class "chapter-name" ] [ Html.text (difficultyName texts difficulty) ]
+                                , Html.span [ A.class "chapter-skill" ] [ Html.text (difficultyInfo texts difficulty) ]
+                                ]
+                            , Tarts.view "small" (pace difficulty).tarts
+                            ]
+                    )
+                    difficulties
+                )
+            , Html.p [ A.class "hint" ] [ Html.text texts.rabbitHole.chooseHint ]
+            ]
+        ]
 
 
 viewPanel : Context -> Model -> Html msg
@@ -675,54 +1086,52 @@ viewPanel context model =
         texts =
             context.texts
 
-        allStages =
-            stages context.layout
-
-        current =
-            min model.stage (List.length allStages - 1)
-
-        caughtCount =
-            caughtSoFar context.layout model
-
         stat label value =
             Html.span [] [ Html.text label, Html.b [] [ Html.text value ] ]
     in
-    if model.practising then
-        Html.div [ A.class "panel-content" ]
-            [ Html.span [ A.class "eyebrow" ] [ Html.text texts.rabbitHole.practiceLabel ]
-            , Html.p [ A.class "big" ] [ Html.text texts.rabbitHole.practice ]
-            , Html.div [ A.class "stats" ]
-                [ stat texts.results.practiceJars (String.fromInt model.practiceCatches)
-                , stat texts.results.bestStreak (String.fromInt model.bestStreak)
-                , stat texts.rabbitHole.speed (String.fromInt (round (jarSpeed model.hits * 1000)))
+    case model.difficulty of
+        Nothing ->
+            Html.div [ A.class "panel-content" ]
+                [ Html.p [ A.class "big" ] [ Html.text texts.rabbitHole.chooseTitle ]
+                , Html.p [] [ Html.text texts.rabbitHole.chooseHint ]
                 ]
-            ]
 
-    else
-        viewStagePanel texts model current allStages caughtCount stat
+        Just difficulty ->
+            let
+                stage =
+                    currentStage context.layout model
 
+                allStages =
+                    stages context.layout
 
-viewStagePanel : Texts -> Model -> Int -> List Stage -> Int -> (String -> String -> Html msg) -> Html msg
-viewStagePanel texts model current allStages caughtCount stat =
-    case allStages |> List.drop current |> List.head of
-        Just stage ->
+                stageLabel =
+                    if isBeyondStages context.layout model then
+                        texts.rabbitHole.allKeysLabel
+
+                    else
+                        texts.rabbitHole.stage (model.stage + 1) (List.length allStages)
+
+                ground =
+                    groundDepth difficulty
+            in
             Html.div [ A.class "panel-content" ]
                 [ Html.span [ A.class "eyebrow" ]
                     [ Html.text
-                        (texts.rabbitHole.stage (current + 1) (List.length allStages)
+                        (difficultyName texts difficulty
+                            ++ " · "
+                            ++ stageLabel
                             ++ " · "
                             ++ String.join " " (List.map upper stage.keys)
                         )
                     ]
                 , Html.p [ A.class "big" ] [ Html.text (stage.describe texts) ]
                 , Html.div [ A.class "meter" ]
-                    [ Html.i [ A.style "width" (String.fromFloat (100 * toFloat caughtCount / toFloat totalCatches) ++ "%") ] [] ]
+                    [ Html.i [ A.style "width" (String.fromFloat (100 * nearness difficulty model.depth) ++ "%") ] [] ]
                 , Html.div [ A.class "stats" ]
-                    [ stat texts.results.jarsCaught (String.fromInt caughtCount ++ "/" ++ String.fromInt totalCatches)
+                    [ stat texts.rabbitHole.toGround (String.fromInt (max 0 (ground - model.depth)))
                     , stat texts.results.accuracy (percent (accuracy model))
                     , stat texts.results.bestStreak (String.fromInt model.bestStreak)
+                    , stat texts.rabbitHole.speed (String.fromInt (round (jarSpeed difficulty model.depth * 1000)))
                     ]
+                , Html.p [ A.class "eyebrow" ] [ Html.text texts.rabbitHole.letGo ]
                 ]
-
-        Nothing ->
-            Html.text ""

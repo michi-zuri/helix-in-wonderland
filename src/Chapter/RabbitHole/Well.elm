@@ -1,4 +1,4 @@
-module Chapter.RabbitHole.Well exposing (background, jar)
+module Chapter.RabbitHole.Well exposing (background, heap, jar, strawBurst)
 
 {-| The art of chapter 1: the walls of the rabbit hole sliding upwards as
 Alice falls, with cupboards, maps and shelves on them as in the book, and
@@ -11,6 +11,7 @@ in pixels; everything on the walls moves up by that much.
 
 import Svg exposing (Svg)
 import Svg.Attributes as A
+import Svg.Lazy
 
 
 wallWidth : Float
@@ -58,6 +59,136 @@ jar { letter, x, y, size, highlighted } =
                , Svg.text_ [ A.x "9", A.y "16", A.class "jar-letter", A.textAnchor "middle" ] [ Svg.text (String.fromChar letter) ]
                ]
         )
+
+
+
+-- THE GROUND
+--
+-- "Thump! thump! down she came upon a heap of sticks and dry leaves, and the
+-- fall was over."
+
+
+{-| The heap at the bottom of the well, its top edge at `top`. The heap is
+the same picture every time, so it is built once and only moved.
+-}
+heap : Float -> Svg msg
+heap top =
+    Svg.g [ A.transform ("translate(0 " ++ String.fromFloat top ++ ")") ]
+        [ Svg.Lazy.lazy heapPicture () ]
+
+
+heapRows : Int
+heapRows =
+    24
+
+
+heapPicture : () -> Svg msg
+heapPicture () =
+    Svg.g [] (List.concatMap heapRow (List.range 0 (heapRows - 1)) ++ sticks ++ leaves)
+
+
+{-| One 2-pixel row of straw: narrow at the top of the mound, wide below.
+-}
+heapRow : Int -> List (Svg msg)
+heapRow row =
+    let
+        halfWidth =
+            30 + 68 * sqrt (toFloat row / toFloat (heapRows - 1))
+
+        left =
+            160 - halfWidth
+
+        chunks =
+            ceiling (2 * halfWidth / 4)
+    in
+    List.map
+        (\chunk -> rect (left + toFloat chunk * 4) (toFloat (row * 2)) 4 2 (strawColour (row * 31 + chunk)))
+        (List.range 0 (chunks - 1))
+
+
+sticks : List (Svg msg)
+sticks =
+    List.map
+        (\i ->
+            let
+                row =
+                    4 + modBy 18 (hash (i * 5))
+            in
+            rect (110 + toFloat (modBy 90 (hash (i * 11)))) (toFloat (row * 2)) (toFloat (8 + modBy 8 (hash i))) 1 "#7a4b33"
+        )
+        (List.range 0 6)
+
+
+leaves : List (Svg msg)
+leaves =
+    List.map
+        (\i ->
+            let
+                colour =
+                    case modBy 3 (hash (i * 3)) of
+                        0 ->
+                            "#d9682b"
+
+                        1 ->
+                            "#a8452a"
+
+                        _ ->
+                            "#7d9a3a"
+            in
+            rect (100 + toFloat (modBy 120 (hash (i * 17)))) (toFloat (6 + modBy 36 (hash (i * 23)))) 2 2 colour
+        )
+        (List.range 0 11)
+
+
+strawColour : Int -> String
+strawColour seed =
+    case modBy 4 (hash seed) of
+        0 ->
+            "#e8bf55"
+
+        1 ->
+            "#d4a23c"
+
+        2 ->
+            "#f3d27a"
+
+        _ ->
+            "#c08a2e"
+
+
+{-| Bits of straw flying up when Alice lands, `age` milliseconds after the
+impact at (x, y). Nothing before the impact or after a second.
+-}
+strawBurst : { x : Float, y : Float, age : Float } -> List (Svg msg)
+strawBurst { x, y, age } =
+    if age < 0 || age > 1000 then
+        []
+
+    else
+        let
+            t =
+                age / 1000
+        in
+        List.map
+            (\i ->
+                let
+                    angle =
+                        pi * (0.15 + 0.7 * toFloat (modBy 100 (hash (i * 7))) / 100)
+
+                    speed =
+                        50 + toFloat (modBy 60 (hash (i * 13)))
+                in
+                Svg.rect
+                    [ A.x (String.fromFloat (x + cos angle * speed * t))
+                    , A.y (String.fromFloat (y - sin angle * speed * t + 140 * t * t))
+                    , A.width "3"
+                    , A.height "1"
+                    , A.fill (strawColour i)
+                    , A.fillOpacity (String.fromFloat (1 - t))
+                    ]
+                    []
+            )
+            (List.range 0 15)
 
 
 
