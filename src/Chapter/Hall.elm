@@ -194,12 +194,8 @@ type alias Rabbit =
 
 init : Model
 init =
-    let
-        map =
-            parseMap plan
-    in
-    { map = map
-    , alice = findTile Start map |> Maybe.withDefault { x = 1, y = 10 }
+    { map = startingMap
+    , alice = findTile Start startingMap |> Maybe.withDefault { x = 1, y = 10 }
     , step = Nothing
     , queuedSteps = []
     , pendingCount = ""
@@ -527,7 +523,15 @@ view context model =
 backdrop : Svg msg
 backdrop =
     Svg.svg [ SA.viewBox "0 0 320 192", SA.class "pixel-scene" ]
-        [ Svg.Lazy.lazy viewMap (parseMap plan) ]
+        [ Svg.Lazy.lazy viewMap startingMap ]
+
+
+{-| The map as the chapter starts, parsed once. Using the same value every
+time lets `Svg.Lazy` skip redrawing it.
+-}
+startingMap : Map
+startingMap =
+    parseMap plan
 
 
 viewMap : Map -> Svg msg

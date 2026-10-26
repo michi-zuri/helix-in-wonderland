@@ -21,6 +21,7 @@ import Chapter.Pool as Pool
 import Chapter.RabbitHole as RabbitHole
 import Html exposing (Html)
 import Html.Attributes as A
+import Html.Lazy
 import Json.Decode as Decode exposing (Decoder)
 import Keyboard.Layout as Layout exposing (Layout)
 import Keyboard.View
@@ -543,12 +544,30 @@ viewChapter ctx chapter =
 -- SUBSCRIPTIONS
 
 
+{-| Animation frames only while something can move: during a chapter, or
+while a toast or key flash is fading. The title and results screens then
+cost nothing while the player is reading.
+-}
 subscriptions : Model -> Sub Msg
-subscriptions _ =
+subscriptions model =
     Sub.batch
         [ Browser.Events.onKeyDown keyDecoder
-        , Browser.Events.onAnimationFrameDelta Frame
+        , if needsFrames model then
+            Browser.Events.onAnimationFrameDelta Frame
+
+          else
+            Sub.none
         ]
+
+
+needsFrames : Model -> Bool
+needsFrames model =
+    case model.screen of
+        Playing _ ->
+            True
+
+        _ ->
+            model.toast /= Nothing || model.flash /= Nothing
 
 
 {-| Plain key presses only: browser shortcuts (Ctrl, Alt, Cmd) are left
@@ -628,14 +647,7 @@ view model =
                         []
     in
     Html.div [ A.class "app" ]
-        [ Chrome.header
-            { texts = texts
-            , settings = model.settings
-            , onLanguage = ChoseLanguage
-            , onLayout = ChoseLayout
-            , onToggleSound = ToggledSound
-            , onMenu = OpenedMenu
-            }
+        [ Html.Lazy.lazy2 viewHeader texts model.settings
         , Html.main_ [ A.class "stage" ]
             [ screen.stage
             , case model.toast of
@@ -653,9 +665,32 @@ view model =
             , focus = screen.keyboard
             , flash = Maybe.map (\f -> { key = f.key, ok = f.ok }) model.flash
             }
-        , Html.nav [ A.class "footer-links" ]
+        , Html.Lazy.lazy2 viewFooter texts (screenName model)
+        ]
+
+
+{-| Header and footer change only with the settings or the screen. They are
+drawn through `Html.Lazy`, which skips them while their arguments stay the
+same, instead of rebuilding them 60 times a second.
+-}
+viewHeader : Texts -> Settings -> Html Msg
+viewHeader texts settings =
+    Chrome.header
+        { texts = texts
+        , settings = settings
+        , onLanguage = ChoseLanguage
+        , onLayout = ChoseLayout
+        , onToggleSound = ToggledSound
+        , onMenu = OpenedMenu
+        }
+
+
+viewFooter : Texts -> String -> Html Msg
+viewFooter texts screen =
+    Html.footer [ A.class "page-footer" ]
+        [ Html.nav [ A.class "footer-links" ]
             [ Html.a [ A.href Project.pixelEditorUrl, A.target "_blank", A.rel "noopener" ] [ Html.text texts.drawPictures ]
-            , Html.a [ A.href (Project.proposeEditUrl (screenName model)), A.target "_blank", A.rel "noopener" ] [ Html.text texts.suggestChange ]
+            , Html.a [ A.href (Project.proposeEditUrl screen), A.target "_blank", A.rel "noopener" ] [ Html.text texts.suggestChange ]
             ]
         , Html.p [ A.class "footer" ] [ Html.text texts.footer ]
         ]

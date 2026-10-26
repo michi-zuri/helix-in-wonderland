@@ -9,6 +9,7 @@ in pixels; everything on the walls moves up by that much.
 
 -}
 
+import Pixel.Shapes as Shapes
 import Svg exposing (Svg)
 import Svg.Attributes as A
 import Svg.Lazy
@@ -23,13 +24,11 @@ wallWidth =
 -}
 background : Float -> List (Svg msg)
 background scroll =
-    rect 0 0 320 192 "#160c1d"
-        :: List.map (shaftBand scroll) (List.range 0 6)
-        ++ List.map (dust scroll) (List.range 0 25)
-        ++ [ Svg.defs [] [ bricks scroll ]
-           , Svg.rect [ A.width (String.fromFloat wallWidth), A.height "192", A.fill "url(#well-bricks)" ] []
-           , Svg.rect [ A.x (String.fromFloat (320 - wallWidth)), A.width (String.fromFloat wallWidth), A.height "192", A.fill "url(#well-bricks)" ] []
-           ]
+    [ rect 0 0 320 192 "#160c1d"
+    , shaftBands scroll
+    , dust scroll
+    , walls scroll
+    ]
         ++ List.concatMap (decorations scroll) [ LeftWall, RightWall ]
         ++ [ rect (wallWidth - 4) 0 4 192 "#2a1838"
            , rect (320 - wallWidth) 0 4 192 "#2a1838"
@@ -42,6 +41,14 @@ catch next.
 jar : { letter : Char, x : Float, y : Float, size : Float, highlighted : Bool } -> Svg msg
 jar { letter, x, y, size, highlighted } =
     Svg.g [ A.transform ("translate(" ++ String.fromFloat x ++ " " ++ String.fromFloat y ++ ") scale(" ++ String.fromFloat size ++ ")") ]
+        [ Svg.Lazy.lazy2 jarPicture letter highlighted ]
+
+
+{-| The jar itself, drawn once per letter and moved as a whole.
+-}
+jarPicture : Char -> Bool -> Svg msg
+jarPicture letter highlighted =
+    Svg.g []
         ((if highlighted then
             [ rect -2 2 22 20 "#efba5d", rect -1 3 20 18 "#160c1d" ]
 
@@ -69,12 +76,12 @@ jar { letter, x, y, size, highlighted } =
 
 
 {-| The heap at the bottom of the well, its top edge at `top`. The heap is
-the same picture every time, so it is built once and only moved.
+the same picture every time, so its paths are built once and only moved.
 -}
 heap : Float -> Svg msg
 heap top =
     Svg.g [ A.transform ("translate(0 " ++ String.fromFloat top ++ ")") ]
-        [ Svg.Lazy.lazy heapPicture () ]
+        [ Svg.Lazy.lazy Shapes.view heapLayers ]
 
 
 heapRows : Int
@@ -82,14 +89,14 @@ heapRows =
     24
 
 
-heapPicture : () -> Svg msg
-heapPicture () =
-    Svg.g [] (List.concatMap heapRow (List.range 0 (heapRows - 1)) ++ sticks ++ leaves)
+heapLayers : List ( String, String )
+heapLayers =
+    Shapes.layers (List.concatMap heapRow (List.range 0 (heapRows - 1)) ++ sticks ++ leaves)
 
 
 {-| One 2-pixel row of straw: narrow at the top of the mound, wide below.
 -}
-heapRow : Int -> List (Svg msg)
+heapRow : Int -> List Shapes.Rect
 heapRow row =
     let
         halfWidth =
@@ -102,40 +109,43 @@ heapRow row =
             ceiling (2 * halfWidth / 4)
     in
     List.map
-        (\chunk -> rect (left + toFloat chunk * 4) (toFloat (row * 2)) 4 2 (strawColour (row * 31 + chunk)))
+        (\chunk -> { x = left + toFloat chunk * 4, y = toFloat (row * 2), width = 4, height = 2, colour = strawColour (row * 31 + chunk) })
         (List.range 0 (chunks - 1))
 
 
-sticks : List (Svg msg)
+sticks : List Shapes.Rect
 sticks =
     List.map
         (\i ->
-            let
-                row =
-                    4 + modBy 18 (hash (i * 5))
-            in
-            rect (110 + toFloat (modBy 90 (hash (i * 11)))) (toFloat (row * 2)) (toFloat (8 + modBy 8 (hash i))) 1 "#7a4b33"
+            { x = 110 + toFloat (modBy 90 (hash (i * 11)))
+            , y = toFloat ((4 + modBy 18 (hash (i * 5))) * 2)
+            , width = toFloat (8 + modBy 8 (hash i))
+            , height = 1
+            , colour = "#7a4b33"
+            }
         )
         (List.range 0 6)
 
 
-leaves : List (Svg msg)
+leaves : List Shapes.Rect
 leaves =
     List.map
         (\i ->
-            let
-                colour =
-                    case modBy 3 (hash (i * 3)) of
-                        0 ->
-                            "#d9682b"
+            { x = 100 + toFloat (modBy 120 (hash (i * 17)))
+            , y = toFloat (6 + modBy 36 (hash (i * 23)))
+            , width = 2
+            , height = 2
+            , colour =
+                case modBy 3 (hash (i * 3)) of
+                    0 ->
+                        "#d9682b"
 
-                        1 ->
-                            "#a8452a"
+                    1 ->
+                        "#a8452a"
 
-                        _ ->
-                            "#7d9a3a"
-            in
-            rect (100 + toFloat (modBy 120 (hash (i * 17)))) (toFloat (6 + modBy 36 (hash (i * 23)))) 2 2 colour
+                    _ ->
+                        "#7d9a3a"
+            }
         )
         (List.range 0 11)
 
@@ -193,54 +203,111 @@ strawBurst { x, y, age } =
 
 
 -- THE SHAFT
+-- Everything on the walls and in the shaft is drawn once and then slid up
+-- with a single transform per frame. (Sliding SVG patterns would be simpler,
+-- but browsers redraw a pattern's tile every frame, which made old computers
+-- stutter.) Each strip is one repeat taller than the screen, so sliding it by
+-- up to one repeat always covers the view.
 
 
-shaftBand : Float -> Int -> Svg msg
-shaftBand scroll index =
-    let
-        y =
-            wrap 280 (toFloat (index * 40) - scroll * 0.5) - 40
-
-        color =
-            if modBy 2 index == 0 then
-                "#190d22"
-
-            else
-                "#1d1027"
-    in
-    rect wallWidth y (320 - 2 * wallWidth) 40 color
-
-
-dust : Float -> Int -> Svg msg
-dust scroll index =
-    let
-        x =
-            wallWidth + 2 + toFloat (modBy 196 (hash (index + 7)))
-
-        y =
-            wrap 220 (toFloat (modBy 400 (hash (index * 13))) - scroll * 1.7) - 14
-    in
-    Svg.rect [ A.x (String.fromFloat x), A.y (String.fromFloat y), A.width "1", A.height "6", A.fill "#dbbfef", A.fillOpacity "0.22" ] []
-
-
-{-| One 16×16 tile of brickwork, repeated over both walls and shifted up
-as Alice falls.
+{-| Slide a picture up by `offset`, wrapped to its repeat height.
 -}
-bricks : Float -> Svg msg
-bricks scroll =
-    Svg.pattern
-        [ A.id "well-bricks"
-        , A.width "16"
-        , A.height "16"
-        , A.patternUnits "userSpaceOnUse"
-        , A.patternTransform ("translate(0 " ++ String.fromFloat (negate (wrap 16 scroll)) ++ ")")
-        ]
-        [ rect 0 0 16 16 "#43295a"
-        , rect 0 0 16 1 "#382149"
-        , rect 0 8 16 1 "#382149"
-        , rect 0 0 1 8 "#382149"
-        , rect 8 8 1 8 "#382149"
-        ]
+sliding : Float -> Float -> Svg msg -> Svg msg
+sliding repeat offset picture =
+    Svg.g [ A.transform ("translate(0 " ++ String.fromFloat (negate (wrap repeat offset)) ++ ")") ] [ picture ]
+
+
+{-| Both brick walls, sliding at the speed of the fall.
+-}
+walls : Float -> Svg msg
+walls scroll =
+    sliding 16 scroll (Svg.Lazy.lazy Shapes.view wallLayers)
+
+
+wallLayers : List ( String, String )
+wallLayers =
+    let
+        rows =
+            List.range 0 13
+
+        wall left =
+            { x = left, y = 0, width = wallWidth, height = 224, colour = "#43295a" }
+                :: List.concatMap
+                    (\row ->
+                        let
+                            top =
+                                toFloat (row * 16)
+
+                            mortar x y w h =
+                                { x = left + x, y = top + y, width = w, height = h, colour = "#382149" }
+                        in
+                        mortar 0 0 wallWidth 1
+                            :: mortar 0 8 wallWidth 1
+                            :: List.concatMap
+                                (\column -> [ mortar (toFloat (column * 16)) 0 1 8, mortar (toFloat (column * 16 + 8)) 8 1 8 ])
+                                (List.range 0 3)
+                    )
+                    rows
+    in
+    Shapes.layers (wall 0 ++ wall (320 - wallWidth))
+
+
+{-| Darker and lighter bands down the shaft, sliding up at half speed.
+-}
+shaftBands : Float -> Svg msg
+shaftBands scroll =
+    sliding 80 (scroll * 0.5) (Svg.Lazy.lazy Shapes.view bandLayers)
+
+
+bandLayers : List ( String, String )
+bandLayers =
+    Shapes.layers
+        (List.map
+            (\index ->
+                { x = wallWidth
+                , y = toFloat (index * 40)
+                , width = 320 - 2 * wallWidth
+                , height = 40
+                , colour =
+                    if modBy 2 index == 0 then
+                        "#190d22"
+
+                    else
+                        "#1d1027"
+                }
+            )
+            (List.range 0 6)
+        )
+
+
+{-| Specks of dust rushing past, faster than the walls. Their colour is
+the light lilac already mixed with the dark shaft, because drawing solid
+colour is cheaper than see-through.
+-}
+dust : Float -> Svg msg
+dust scroll =
+    sliding 220 (scroll * 1.7) (Svg.Lazy.lazy Shapes.view dustLayers)
+
+
+dustLayers : List ( String, String )
+dustLayers =
+    Shapes.layers
+        (List.concatMap
+            (\index ->
+                let
+                    speck =
+                        { x = wallWidth + 2 + toFloat (modBy 196 (hash (index + 7)))
+                        , y = toFloat (modBy 220 (hash (index * 13)))
+                        , width = 1
+                        , height = 6
+                        , colour = "#4a3a56"
+                        }
+                in
+                -- Each speck twice, one repeat apart, so the strip is seamless.
+                [ speck, { speck | y = speck.y + 220 } ]
+            )
+            (List.range 0 25)
+        )
 
 
 
@@ -270,6 +337,9 @@ decorationSpacing =
     56
 
 
+{-| The things on one wall that are in view. Each is drawn once, at its own
+origin, and slid into place with a single transform.
+-}
 decorations : Float -> Wall -> List (Svg msg)
 decorations scroll wall =
     let
@@ -285,11 +355,13 @@ decorations scroll wall =
                     ( 274, 1 )
     in
     List.range firstSlot (firstSlot + 5)
-        |> List.concatMap
+        |> List.map
             (\slot ->
-                decoration (decorationAt (slot * 2 + wallIndex))
-                    x
-                    (toFloat (slot * decorationSpacing) - scroll + 8)
+                Svg.g
+                    [ A.transform
+                        ("translate(" ++ String.fromFloat x ++ " " ++ String.fromFloat (toFloat (slot * decorationSpacing) - scroll + 8) ++ ")")
+                    ]
+                    [ Svg.Lazy.lazy decorationPicture (decorationAt (slot * 2 + wallIndex)) ]
             )
 
 
@@ -310,6 +382,11 @@ decorationAt seed =
 
         _ ->
             BareWall
+
+
+decorationPicture : Decoration -> Svg msg
+decorationPicture kind =
+    Svg.g [] (decoration kind 0 0)
 
 
 decoration : Decoration -> Float -> Float -> List (Svg msg)
