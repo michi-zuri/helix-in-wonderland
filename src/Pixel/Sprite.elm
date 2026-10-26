@@ -7,21 +7,25 @@ module Pixel.Sprite exposing (Sprite, fromRows, palette, rows, size, view, viewA
         , ".yyyy."
         ]
 
-`.` is transparent. Each row is turned into runs of same-coloured pixels
-once, when the sprite is defined, so drawing it stays cheap.
+`.` is transparent. When the sprite is defined, its pixels are turned into
+one SVG path per colour (see `Pixel.Shapes`), so drawing it stays cheap
+even on old computers, and drawing the same sprite again is skipped
+entirely (`Svg.Lazy`).
 
 -}
 
 import Dict
+import Pixel.Shapes as Shapes
 import Svg exposing (Svg)
 import Svg.Attributes as A
+import Svg.Lazy
 
 
 type Sprite
     = Sprite
         { width : Int
         , height : Int
-        , runs : List Run
+        , layers : List ( String, String )
         , rows : List String
         , palette : List ( Char, String )
         }
@@ -40,9 +44,11 @@ fromRows colours pixelRows =
     Sprite
         { width = pixelRows |> List.map String.length |> List.maximum |> Maybe.withDefault 0
         , height = List.length pixelRows
-        , runs =
+        , layers =
             List.indexedMap (\y row -> rowRuns (\c -> Dict.get c colors) y row) pixelRows
                 |> List.concat
+                |> List.map (\run -> { x = toFloat run.x, y = toFloat run.y, width = toFloat run.length, height = 1, colour = run.color })
+                |> Shapes.layers
         , rows = pixelRows
         , palette = colours
         }
@@ -93,21 +99,13 @@ size (Sprite s) =
 {-| Draw at the origin, one SVG unit per pixel.
 -}
 view : Sprite -> Svg msg
-view (Sprite s) =
-    Svg.g []
-        (List.map
-            (\run ->
-                Svg.rect
-                    [ A.x (String.fromInt run.x)
-                    , A.y (String.fromInt run.y)
-                    , A.width (String.fromInt run.length)
-                    , A.height "1"
-                    , A.fill run.color
-                    ]
-                    []
-            )
-            s.runs
-        )
+view sprite =
+    Svg.Lazy.lazy viewLayers sprite
+
+
+viewLayers : Sprite -> Svg msg
+viewLayers (Sprite s) =
+    Shapes.view s.layers
 
 
 {-| Draw with the top-left corner at a position, scaled by `pixelSize`.

@@ -13,11 +13,14 @@ import Editor.Session as Session exposing (Session)
 import Editor.View
 import Html exposing (Html)
 import Html.Attributes as A
+import Html.Lazy
+import Pixel.Shapes as Shapes
 import Pixel.Sprite as Sprite
 import Pixel.Sprites as Sprites
 import Speaker exposing (Speaker(..))
 import Svg exposing (Svg)
 import Svg.Attributes as SA
+import Svg.Lazy
 import Texts exposing (Texts)
 import Ui.Checklist as Checklist
 import Ui.Dialog as Dialog
@@ -232,7 +235,7 @@ view context model =
     { stage =
         Html.div [ A.class "stage-scene" ]
             [ viewMushroom model.clock
-            , Editor.View.view buffer
+            , Html.Lazy.lazy Editor.View.view buffer
             , Story.view context.texts model.story
             ]
     , panel = viewPanel context.texts model work
@@ -292,28 +295,9 @@ viewMushroom clock =
         seconds =
             clock / 1000
 
-        blade x =
-            let
-                height =
-                    toFloat (3 + modBy 6 (x * 7))
-
-                sway =
-                    sin (seconds * 1.5 + toFloat x / 20)
-            in
-            Svg.rect
-                [ SA.x (String.fromInt x)
-                , SA.y (String.fromFloat (44 - height + sway))
-                , SA.width "1"
-                , SA.height (String.fromFloat height)
-                , SA.fill
-                    (if modBy 2 x == 0 then
-                        "#4f7d4a"
-
-                     else
-                        "#6fae62"
-                    )
-                ]
-                []
+        -- The grass is drawn once and leans as a whole, pivoting on the ground.
+        sway =
+            sin (seconds * 1.5) * 6
 
         ring index =
             let
@@ -334,11 +318,40 @@ viewMushroom clock =
         ([ Svg.rect [ SA.width "320", SA.height "56", SA.fill "#2d1f45" ] []
          , Svg.rect [ SA.y "44", SA.width "320", SA.height "12", SA.fill "#3a5a3a" ] []
          ]
-            ++ List.map blade (List.range 0 106 |> List.map ((*) 3))
+            ++ [ Svg.g [ SA.transform ("translate(0 44) skewX(" ++ String.fromFloat sway ++ ") translate(0 -44)") ]
+                    [ Svg.Lazy.lazy grass () ]
+               ]
             ++ [ Sprite.viewAt { x = 196, y = 12, pixelSize = 2 } Sprites.caterpillar
                , Sprite.viewAt { x = 140, y = 26, pixelSize = 1.1 } Sprites.alice
                ]
             ++ List.map ring [ 0, 1, 2 ]
+        )
+
+
+grass : () -> Svg msg
+grass () =
+    Shapes.view
+        (Shapes.layers
+            (List.map
+                (\x ->
+                    let
+                        height =
+                            toFloat (3 + modBy 6 (x * 7))
+                    in
+                    { x = toFloat x
+                    , y = 44 - height
+                    , width = 1
+                    , height = height
+                    , colour =
+                        if modBy 2 x == 0 then
+                            "#4f7d4a"
+
+                        else
+                            "#6fae62"
+                    }
+                )
+                (List.range 0 106 |> List.map ((*) 3))
+            )
         )
 
 

@@ -15,11 +15,13 @@ import Editor.Session as Session exposing (Session)
 import Editor.View
 import Html exposing (Html)
 import Html.Attributes as A
+import Html.Lazy
 import Pixel.Sprite as Sprite
 import Pixel.Sprites as Sprites
 import Speaker exposing (Speaker(..))
 import Svg exposing (Svg)
 import Svg.Attributes as SA
+import Svg.Lazy
 import Texts exposing (PoolTexts, Texts)
 import Ui.Checklist as Checklist
 import Ui.Dialog as Dialog
@@ -287,7 +289,7 @@ view context model =
     { stage =
         Html.div [ A.class "stage-scene" ]
             [ viewPool model.clock
-            , Editor.View.view buffer
+            , Html.Lazy.lazy Editor.View.view buffer
             , Story.view context.texts model.story
             ]
     , panel = viewPanel context.texts model work.puzzle buffer
@@ -333,19 +335,11 @@ viewPool clock =
         seconds =
             clock / 1000
 
+        -- Each wave is drawn once (`wavePath`) and slid sideways; sliding by
+        -- one wavelength looks exactly like the start again.
         wave row =
-            Svg.path
-                [ SA.d (wavePath row seconds)
-                , SA.stroke
-                    (if modBy 2 row == 0 then
-                        "#2a4a6e"
-
-                     else
-                        "#33577f"
-                    )
-                , SA.fill "none"
-                ]
-                []
+            Svg.g [ SA.transform ("translate(" ++ String.fromFloat (negate (waveShift seconds)) ++ " 0)") ]
+                [ Svg.Lazy.lazy waveLine row ]
 
         tear index =
             let
@@ -371,9 +365,43 @@ viewPool clock =
         )
 
 
-wavePath : Int -> Float -> String
-wavePath row seconds =
-    List.range 0 80
+{-| How far the waves have moved, within one wavelength.
+-}
+waveShift : Float -> Float
+waveShift seconds =
+    let
+        wavelength =
+            2 * pi * waveWidth
+    in
+    (seconds * 1.6 * waveWidth) - wavelength * toFloat (floor (seconds * 1.6 * waveWidth / wavelength))
+
+
+waveWidth : Float
+waveWidth =
+    14
+
+
+waveLine : Int -> Svg msg
+waveLine row =
+    Svg.path
+        [ SA.d (wavePath row)
+        , SA.stroke
+            (if modBy 2 row == 0 then
+                "#2a4a6e"
+
+             else
+                "#33577f"
+            )
+        , SA.fill "none"
+        ]
+        []
+
+
+{-| One wave, a wavelength wider than the banner so it can slide.
+-}
+wavePath : Int -> String
+wavePath row =
+    List.range 0 104
         |> List.map
             (\i ->
                 let
@@ -381,7 +409,7 @@ wavePath row seconds =
                         toFloat (i * 4)
 
                     y =
-                        8 + toFloat (row * 10) + sin (x / 14 + seconds * 1.6 + toFloat row) * 2
+                        8 + toFloat (row * 10) + sin (x / waveWidth + toFloat row) * 2
                 in
                 String.fromFloat x ++ " " ++ String.fromFloat y
             )

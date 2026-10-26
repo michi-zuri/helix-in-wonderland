@@ -2,11 +2,17 @@ module Keyboard.View exposing (view)
 
 {-| The on-screen keyboard. Every key is tinted with the colour of the finger
 that presses it, so the picture doubles as a ten-finger chart.
+
+The game redraws 60 times a second, but the keyboard changes only when the
+next key, the outlined keys or a key flash change. `view` hands those to
+`Html.Lazy` as plain strings, so all other frames skip the keyboard.
+
 -}
 
 import Chapter.Contract exposing (KeyboardFocus)
 import Html exposing (Html)
 import Html.Attributes as A
+import Html.Lazy
 import Keyboard.Layout as Layout exposing (Finger, Layout)
 import Texts exposing (Texts)
 
@@ -17,7 +23,47 @@ type alias Flash =
 
 view : { texts : Texts, layout : Layout, focus : KeyboardFocus, flash : Maybe Flash } -> Html msg
 view { texts, layout, focus, flash } =
+    Html.Lazy.lazy5 viewKeyboard
+        texts
+        layout
+        (focus.target |> Maybe.map String.fromChar |> Maybe.withDefault "")
+        (String.join "\n" focus.helpers)
+        (case flash of
+            Just f ->
+                f.key
+                    ++ (if f.ok then
+                            "\n+"
+
+                        else
+                            "\n-"
+                       )
+
+            Nothing ->
+                ""
+        )
+
+
+{-| The arguments come back from their string forms here.
+-}
+viewKeyboard : Texts -> Layout -> String -> String -> String -> Html msg
+viewKeyboard texts layout targetKey helperKeys flashKey =
     let
+        focus =
+            { target = String.toList targetKey |> List.head
+            , helpers = String.split "\n" helperKeys
+            }
+
+        flash =
+            case String.split "\n" flashKey of
+                [ flashed, "+" ] ->
+                    Just { key = flashed, ok = True }
+
+                [ flashed, "-" ] ->
+                    Just { key = flashed, ok = False }
+
+                _ ->
+                    Nothing
+
         key extraClass keyName label maybeFinger =
             Html.div
                 [ A.class "key"
