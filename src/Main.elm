@@ -97,6 +97,16 @@ flashMilliseconds =
     170
 
 
+{-| The most game time one animation frame may move on. When the page was
+in the background (another tab, a busy computer), the browser reports the
+whole pause at once; without this cap every jar on screen would float away
+in one go. 100 ms keeps the game in real time down to 10 frames a second.
+-}
+longestFrameMilliseconds : Float
+longestFrameMilliseconds =
+    100
+
+
 {-| Flags from JavaScript: the browser language, a random seed, and anything
 saved earlier. Bad or missing data never stops the game; it falls back to
 defaults.
@@ -164,7 +174,11 @@ update msg model =
             detectLayout press model
                 |> andThen (handleKey press.key)
 
-        Frame milliseconds ->
+        Frame elapsed ->
+            let
+                milliseconds =
+                    min longestFrameMilliseconds elapsed
+            in
             { model
                 | toast = countDown milliseconds model.toast
                 , flash = countDown milliseconds model.flash
@@ -274,14 +288,34 @@ startChapter id model =
     )
 
 
+{-| Enter on the results card: on to the next chapter if it is open, the
+end card after the last one, otherwise play this chapter again.
+-}
 afterResults : ChapterId -> Model -> ( Model, Cmd Msg )
 afterResults id model =
-    case ChapterId.next id of
-        Just next ->
-            startChapter next model
+    case nextAfterResults id model of
+        Just msg ->
+            update msg model
 
         Nothing ->
-            ( { model | screen = TheEnd }, Cmd.none )
+            startChapter id model
+
+
+{-| What "Next" does on the results card, or `Nothing` while the next
+chapter is still locked.
+-}
+nextAfterResults : ChapterId -> Model -> Maybe Msg
+nextAfterResults id model =
+    case ChapterId.next id of
+        Just next ->
+            if Progress.isOpen { unlockAll = model.settings.unlockAll } next model.progress then
+                Just (StartedChapter next)
+
+            else
+                Nothing
+
+        Nothing ->
+            Just FinishedGame
 
 
 stepCurrentChapter : ChapterInput -> Model -> ( Model, Cmd Msg )
@@ -579,13 +613,7 @@ view model =
                             { texts = texts
                             , chapter = id
                             , score = score
-                            , onNext =
-                                case ChapterId.next id of
-                                    Just next ->
-                                        StartedChapter next
-
-                                    Nothing ->
-                                        FinishedGame
+                            , onNext = nextAfterResults id model
                             , onReplay = StartedChapter id
                             , onMenu = OpenedMenu
                             }

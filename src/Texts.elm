@@ -80,7 +80,9 @@ type alias ResultTexts =
     , wordsPerMinute : String
     , wrongDeletions : String
     , backspaces : String
-    , practiceJars : String
+    , difficulty : String
+    , noTart : String
+    , noTartHint : String
     , yes : String
     , notYet : String
     }
@@ -108,9 +110,18 @@ type alias RabbitHoleTexts =
     , allEight : String
     , stretch : String -> String -> String
     , stage : Int -> Int -> String
-    , goalReached : String
-    , practice : String
-    , practiceLabel : String
+    , chooseTitle : String
+    , chooseHint : String
+    , easy : String
+    , easyInfo : String
+    , fast : String
+    , fastInfo : String
+    , mad : String
+    , madInfo : String
+    , allKeys : String
+    , allKeysLabel : String
+    , toGround : String
+    , letGo : String
     , speed : String
     , landing1 : String
     , landing2 : String
@@ -306,7 +317,9 @@ english =
         , wordsPerMinute = "Words per minute"
         , wrongDeletions = "Wrong deletions"
         , backspaces = "Backspaces"
-        , practiceJars = "Practice jars"
+        , difficulty = "Difficulty"
+        , noTart = "No tart this time"
+        , noTartHint = "One tart opens the next chapter."
         , yes = "yes"
         , notYet = "not yet"
         }
@@ -327,9 +340,18 @@ english =
         , allEight = "All eight together. This is the home row. Your fingers live here."
         , stretch = \a b -> a ++ " and " ++ b ++ ": your index fingers stretch one key inward, then come home."
         , stage = \current total -> "Stage " ++ String.fromInt current ++ " of " ++ String.fromInt total
-        , goalReached = "Goal reached! Keep catching to practise, or press Esc to land."
-        , practice = "Practice with all keys: the jars get faster and faster. Press Esc to land."
-        , practiceLabel = "Practice · all keys"
+        , chooseTitle = "How fast do you want to fall?"
+        , chooseHint = "j / k to choose · Enter to jump"
+        , easy = "Easy"
+        , easyInfo = "A gentle fall. You land after the basic jars."
+        , fast = "Fast"
+        , fastInfo = "Quicker jars, and a few seconds more."
+        , mad = "Mad"
+        , madInfo = "We're all mad here: nearly 30 seconds of fast jars, no mistakes."
+        , allKeys = "All keys now. Keep catching to reach the ground."
+        , allKeysLabel = "All keys"
+        , toGround = "To the ground"
+        , letGo = "Esc lets go: Alice lands where she is. Mistakes lift her up again."
         , speed = "Speed"
         , landing1 = "Thump! Thump! Down Alice came upon a heap of sticks and dry leaves, and the fall was over."
         , landing2 = "Your fingers know the home row now. The keys h j k l live there too, and you will need them in the next chapter."
@@ -526,7 +548,9 @@ german =
         , wordsPerMinute = "Wörter pro Minute"
         , wrongDeletions = "Falsch gelöscht"
         , backspaces = "Rücktaste"
-        , practiceJars = "Übungsgläser"
+        , difficulty = "Schwierigkeit"
+        , noTart = "Kein Törtchen diesmal"
+        , noTartHint = "Mit einem Törtchen geht das nächste Kapitel auf."
         , yes = "ja"
         , notYet = "noch nicht"
         }
@@ -547,9 +571,18 @@ german =
         , allEight = "Alle acht zusammen. Das ist die Grundreihe. Hier wohnen deine Finger."
         , stretch = \a b -> a ++ " und " ++ b ++ ": die Zeigefinger strecken sich eine Taste nach innen und kommen zurück."
         , stage = \current total -> "Stufe " ++ String.fromInt current ++ " von " ++ String.fromInt total
-        , goalReached = "Ziel erreicht! Fang weiter, um zu üben, oder drück Esc zum Landen."
-        , practice = "Üben mit allen Tasten: die Gläser werden immer schneller. Esc zum Landen."
-        , practiceLabel = "Üben · alle Tasten"
+        , chooseTitle = "Wie schnell willst du fallen?"
+        , chooseHint = "j / k zum Wählen · Enter zum Springen"
+        , easy = "Leicht"
+        , easyInfo = "Gemütlich fallen. Nach den Grundgläsern bist du unten."
+        , fast = "Schnell"
+        , fastInfo = "Flottere Gläser und ein paar Sekunden länger."
+        , mad = "Verrückt"
+        , madInfo = "Wir sind hier alle verrückt: fast 30 Sekunden schnelle Gläser ohne Fehler."
+        , allKeys = "Jetzt alle Tasten. Fang weiter, bis du unten bist."
+        , allKeysLabel = "Alle Tasten"
+        , toGround = "Bis zum Boden"
+        , letGo = "Esc lässt los: Alice landet, wo sie gerade ist. Fehler heben sie wieder hoch."
         , speed = "Tempo"
         , landing1 = "Plumps! Plumps! Alice landete auf einem Haufen Zweige und trockener Blätter, und der Fall war vorbei."
         , landing2 = "Deine Finger kennen jetzt die Grundreihe. Auch h j k l wohnen dort, und die brauchst du im nächsten Kapitel."
