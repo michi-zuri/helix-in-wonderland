@@ -42,6 +42,7 @@ type Sound
     | TickSound
     | CorrectSound
     | ErrorSound
+    | PortalSound
 
 
 {-| The name the JavaScript side knows the sound by.
@@ -63,6 +64,9 @@ soundName sound =
 
         CorrectSound ->
             "correct"
+
+        PortalSound ->
+            "portal"
 
         ErrorSound ->
             "error"

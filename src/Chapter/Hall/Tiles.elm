@@ -18,6 +18,7 @@ type Tile
     | GlassTable
     | Pillar
     | GoldenKey
+    | Portal Int
 
 
 size : Int
@@ -25,7 +26,8 @@ size =
     16
 
 
-{-| The map is written as text in `Chapter.Hall`; this is its legend.
+{-| The maps are written as text in `Chapter.Hall.Map`; this is the legend.
+A digit is a door that leads to the other door with the same digit.
 -}
 fromChar : Char -> Tile
 fromChar char =
@@ -55,7 +57,11 @@ fromChar char =
             GoldenKey
 
         _ ->
-            Wall
+            if Char.isDigit char then
+                Portal (Char.toCode char - Char.toCode '0')
+
+            else
+                Wall
 
 
 isWalkable : Tile -> Bool
@@ -71,6 +77,9 @@ isWalkable tile =
             True
 
         GoldenKey ->
+            True
+
+        Portal _ ->
             True
 
         _ ->
@@ -90,6 +99,9 @@ view position tile =
 
                 Curtain ->
                     wall position ++ curtain
+
+                Portal number ->
+                    wall position ++ portal number
 
                 GlassTable ->
                     floor position ++ glass
@@ -158,6 +170,34 @@ door =
     , pixel 4 2 8 1 "#8a5a3c"
     , pixel 7 4 1 12 "#6b3f2a"
     , pixel 10 9 2 2 "#efba5d"
+    ]
+
+
+{-| A door that leads somewhere: the frame has the pair's colour, and the
+number on it matches the partner door's.
+-}
+portal : Int -> List (Svg msg)
+portal number =
+    let
+        colour =
+            case modBy 4 number of
+                1 ->
+                    "#e2557a"
+
+                2 ->
+                    "#5fb3e6"
+
+                3 ->
+                    "#7fc46a"
+
+                _ ->
+                    "#efba5d"
+    in
+    [ pixel 2 1 12 15 colour
+    , pixel 4 3 8 13 "#6b3f2a"
+    , pixel 5 4 6 6 "#f4ead2"
+    , Svg.text_ [ A.x "8", A.y "9.5", A.class "door-number", A.textAnchor "middle" ] [ Svg.text (String.fromInt number) ]
+    , pixel 10 11 1 2 colour
     ]
 
 

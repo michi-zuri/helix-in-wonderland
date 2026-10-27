@@ -1,4 +1,4 @@
-module Chapter.RabbitHole exposing (Difficulty(..), Model, Msg(..), groundDepth, init, jarSpeed, update, view)
+module Chapter.RabbitHole exposing (Model, Msg(..), groundDepth, init, jarSpeed, update, view)
 
 {-| Chapter 1, "Down the Rabbit Hole": the home row. Alice falls down the
 well; jars float up with a letter on their label, and pressing that letter
@@ -7,12 +7,13 @@ catches the jar. Six stages introduce the fingers pair by pair.
 The fall: every jar caught brings Alice one step closer to the ground.
 Every mistake, a wrong key or a jar that floats away, lifts her back up a
 little. The closer the ground, the faster the jars. Before falling, the
-player picks how deep the well is and how fast it gets: easy, fast or mad.
+player picks how deep the well is and how fast it gets: easy, challenge or
+mad.
 Esc lets go at any moment and Alice lands where she is, in a heap of sticks
 and dry leaves.
 
-Tarts follow the depth Alice landed at: the easy ground gives one, the fast
-ground two, and only the mad ground three. Letting go before the easy ground
+Tarts follow the depth Alice landed at: the easy ground gives one, the
+challenge ground two, and only the mad ground three. Letting go before the easy ground
 earns none.
 
 The stages come from the keyboard layout, so a Swiss child practises
@@ -26,6 +27,7 @@ to `init`: the same seed gives the same game, which is what tests use.
 import Chapter.Contract as Contract exposing (Context, Effect(..), Sound(..))
 import Chapter.RabbitHole.Well as Well
 import Chapter.Story as Story exposing (Story)
+import Difficulty exposing (Difficulty(..))
 import Html exposing (Html)
 import Html.Attributes as A
 import Keyboard.Layout as Layout exposing (Layout)
@@ -37,7 +39,7 @@ import Svg
 import Svg.Attributes as SA
 import Texts exposing (Texts)
 import Ui.Dialog as Dialog
-import Ui.Tarts as Tarts
+import Ui.DifficultyChoice as DifficultyChoice exposing (Choice)
 
 
 file : String
@@ -137,25 +139,15 @@ allKeysStage layout =
 -- DIFFICULTY
 
 
-type Difficulty
-    = Easy
-    | Fast
-    | Mad
-
-
-difficulties : List Difficulty
-difficulties =
-    [ Easy, Fast, Mad ]
-
-
 {-| How each difficulty plays.
 
   - `ground`: how deep the well is, in jars. Easy ends with the basic jars,
-    fast adds a few seconds, mad nearly thirty seconds at full speed.
+    challenge adds a few seconds, mad nearly thirty seconds at full speed.
   - `topSpeed`: how fast jars rise near the ground, in pixels per second.
   - `shortestGap`: the pause between two jars near the ground, in ms.
   - `mostJars`: how many jars may be on screen at once near the ground.
-  - `tarts`: what reaching this ground is worth.
+
+Reaching a difficulty's ground is worth its tarts (`Difficulty.tarts`).
 
 -}
 type alias Pace =
@@ -163,7 +155,6 @@ type alias Pace =
     , topSpeed : Float
     , shortestGap : Float
     , mostJars : Int
-    , tarts : Int
     }
 
 
@@ -171,13 +162,13 @@ pace : Difficulty -> Pace
 pace difficulty =
     case difficulty of
         Easy ->
-            { ground = basicJars, topSpeed = 40, shortestGap = 900, mostJars = 4, tarts = 1 }
+            { ground = basicJars, topSpeed = 40, shortestGap = 900, mostJars = 4 }
 
-        Fast ->
-            { ground = basicJars + 8, topSpeed = 60, shortestGap = 650, mostJars = 5, tarts = 2 }
+        Challenge ->
+            { ground = basicJars + 8, topSpeed = 60, shortestGap = 650, mostJars = 5 }
 
         Mad ->
-            { ground = basicJars + 40, topSpeed = 95, shortestGap = 400, mostJars = 6, tarts = 3 }
+            { ground = basicJars + 40, topSpeed = 95, shortestGap = 400, mostJars = 6 }
 
 
 groundDepth : Difficulty -> Int
@@ -190,8 +181,8 @@ counting only the grounds of the chosen difficulty and easier ones.
 -}
 tartsAt : Difficulty -> Int -> Int
 tartsAt chosen depth =
-    difficulties
-        |> List.filter (\d -> (pace d).tarts <= (pace chosen).tarts && depth >= (pace d).ground)
+    Difficulty.all
+        |> List.filter (\d -> Difficulty.tarts d <= Difficulty.tarts chosen && depth >= (pace d).ground)
         |> List.length
 
 
@@ -277,14 +268,6 @@ wobbleMilliseconds =
     350
 
 
-{-| Enter must wait this long after the difficulty card appears, so a
-child hurrying through the story doesn't pick one by accident.
--}
-choiceGuardMilliseconds : Float
-choiceGuardMilliseconds =
-    500
-
-
 {-| Where Alice is drawn: at the top of the well before the first catch,
 `lowestAliceY` just before the ground.
 -}
@@ -335,8 +318,7 @@ heapHeight =
 
 type alias Model =
     { story : Story
-    , highlighted : Difficulty
-    , choiceShownAt : Float
+    , choice : Choice
     , difficulty : Maybe Difficulty
     , stage : Int
     , caughtThisStage : Int
@@ -398,8 +380,7 @@ init seed =
             , Dialog.say Narrator (.rabbitHole >> .intro3)
             , Dialog.say Narrator (.rabbitHole >> .intro4)
             ]
-    , highlighted = Easy
-    , choiceShownAt = 0
+    , choice = DifficultyChoice.start 0
     , difficulty = Nothing
     , stage = 0
     , caughtThisStage = 0
@@ -489,7 +470,7 @@ update context msg model =
                     ( { model | story = story }, [ PlaySound TickSound ] )
 
                 Story.IntroOver story ->
-                    ( { model | story = story, choiceShownAt = model.clock }, [] )
+                    ( { model | story = story, choice = DifficultyChoice.start model.clock }, [] )
 
                 Story.OutroOver story ->
                     ( { model | story = story }, [ Finish (score model) ] )
@@ -504,69 +485,20 @@ update context msg model =
 
 choose : Layout -> String -> Model -> ( Model, List Effect )
 choose layout key model =
-    let
-        move step =
-            ( { model | highlighted = shiftDifficulty step model.highlighted }, [ PlaySound TickSound ] )
+    case DifficultyChoice.press model.clock key model.choice of
+        DifficultyChoice.Moved choice ->
+            ( { model | choice = choice }, [ PlaySound TickSound ] )
 
-        enterAllowed =
-            model.clock - model.choiceShownAt >= choiceGuardMilliseconds
-    in
-    case key of
-        "j" ->
-            move 1
+        DifficultyChoice.Picked difficulty ->
+            startFalling layout difficulty model
 
-        "ArrowDown" ->
-            move 1
-
-        "k" ->
-            move -1
-
-        "ArrowUp" ->
-            move -1
-
-        "1" ->
-            startFalling layout Easy model
-
-        "2" ->
-            startFalling layout Fast model
-
-        "3" ->
-            startFalling layout Mad model
-
-        "Enter" ->
-            if enterAllowed then
-                startFalling layout model.highlighted model
-
-            else
-                ( model, [] )
-
-        _ ->
+        DifficultyChoice.Unchanged ->
             ( model, [] )
-
-
-shiftDifficulty : Int -> Difficulty -> Difficulty
-shiftDifficulty step difficulty =
-    let
-        index =
-            difficulties
-                |> List.indexedMap Tuple.pair
-                |> List.filter (\( _, d ) -> d == difficulty)
-                |> List.head
-                |> Maybe.map Tuple.first
-                |> Maybe.withDefault 0
-
-        count =
-            List.length difficulties
-    in
-    difficulties
-        |> List.drop (modBy count (index + step))
-        |> List.head
-        |> Maybe.withDefault difficulty
 
 
 startFalling : Layout -> Difficulty -> Model -> ( Model, List Effect )
 startFalling layout difficulty model =
-    ( { model | difficulty = Just difficulty, highlighted = difficulty, spawnIn = 400 }
+    ( { model | difficulty = Just difficulty, spawnIn = 400 }
     , PlaySound PickupSound
         :: (stageAt layout 0 |> Maybe.map (\stage -> [ ShowToast stage.describe ]) |> Maybe.withDefault [])
     )
@@ -865,27 +797,14 @@ percent fraction =
     String.fromInt (round (fraction * 100)) ++ "%"
 
 
-difficultyName : Texts -> Difficulty -> String
-difficultyName texts difficulty =
-    case difficulty of
-        Easy ->
-            texts.rabbitHole.easy
-
-        Fast ->
-            texts.rabbitHole.fast
-
-        Mad ->
-            texts.rabbitHole.mad
-
-
 difficultyInfo : Texts -> Difficulty -> String
 difficultyInfo texts difficulty =
     case difficulty of
         Easy ->
             texts.rabbitHole.easyInfo
 
-        Fast ->
-            texts.rabbitHole.fastInfo
+        Challenge ->
+            texts.rabbitHole.challengeInfo
 
         Mad ->
             texts.rabbitHole.madInfo
@@ -902,7 +821,7 @@ score model =
     in
     { tarts = tartsAt difficulty landedAt
     , stats =
-        [ { label = .results >> .difficulty, value = \texts -> difficultyName texts difficulty }
+        [ { label = .results >> .difficulty, value = \texts -> Difficulty.name texts difficulty }
         , { label = .results >> .accuracy, value = \_ -> percent (accuracy model) }
         , { label = .results >> .jarsCaught, value = \_ -> String.fromInt model.hits }
         , { label = .results >> .bestStreak, value = \_ -> String.fromInt model.bestStreak }
@@ -933,7 +852,13 @@ view context model =
                     ++ viewAliceAndHeap model
                 )
             , if model.difficulty == Nothing && Story.isPlaying model.story then
-                viewChoice context.texts model.highlighted
+                DifficultyChoice.view
+                    { texts = context.texts
+                    , title = context.texts.rabbitHole.chooseTitle
+                    , hint = context.texts.rabbitHole.chooseHint
+                    , info = difficultyInfo context.texts
+                    }
+                    model.choice
 
               else
                 Html.text ""
@@ -1054,32 +979,6 @@ heapVisibility difficulty depth =
     clamp 0 1 ((nearness difficulty depth - 0.6) / 0.4)
 
 
-{-| The card for picking a difficulty, over the top of the well.
--}
-viewChoice : Texts -> Difficulty -> Html msg
-viewChoice texts highlighted =
-    Html.div [ A.class "overlay" ]
-        [ Html.div [ A.class "card" ]
-            [ Html.h2 [] [ Html.text texts.rabbitHole.chooseTitle ]
-            , Html.ol [ A.class "chapters" ]
-                (List.indexedMap
-                    (\index difficulty ->
-                        Html.li [ A.classList [ ( "selected", difficulty == highlighted ) ] ]
-                            [ Html.span [ A.class "chapter-number" ] [ Html.text (String.fromInt (index + 1)) ]
-                            , Html.span [ A.class "chapter-text" ]
-                                [ Html.span [ A.class "chapter-name" ] [ Html.text (difficultyName texts difficulty) ]
-                                , Html.span [ A.class "chapter-skill" ] [ Html.text (difficultyInfo texts difficulty) ]
-                                ]
-                            , Tarts.view "small" (pace difficulty).tarts
-                            ]
-                    )
-                    difficulties
-                )
-            , Html.p [ A.class "hint" ] [ Html.text texts.rabbitHole.chooseHint ]
-            ]
-        ]
-
-
 viewPanel : Context -> Model -> Html msg
 viewPanel context model =
     let
@@ -1117,7 +1016,7 @@ viewPanel context model =
             Html.div [ A.class "panel-content" ]
                 [ Html.span [ A.class "eyebrow" ]
                     [ Html.text
-                        (difficultyName texts difficulty
+                        (Difficulty.name texts difficulty
                             ++ " · "
                             ++ stageLabel
                             ++ " · "

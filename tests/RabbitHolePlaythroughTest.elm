@@ -10,8 +10,9 @@ possible.
 -}
 
 import Chapter.Contract exposing (Context)
-import Chapter.RabbitHole as RabbitHole exposing (Difficulty(..))
+import Chapter.RabbitHole as RabbitHole
 import Chapter.Story as Story
+import Difficulty exposing (Difficulty(..))
 import Expect
 import Keyboard.Layout exposing (Layout(..))
 import Language exposing (Language(..))
@@ -50,7 +51,7 @@ numberKey difficulty =
         Easy ->
             "1"
 
-        Fast ->
+        Challenge ->
             "2"
 
         Mad ->
@@ -159,11 +160,11 @@ suite =
                     playToTheEnd (player Easy)
                         |> (\run -> ( run.model.hits, Playthrough.finishedWith run ))
                         |> Expect.equal ( 40, Just 1 )
-            , test "fast: a few seconds beyond the basic jars, worth two tarts" <|
+            , test "challenge: a few seconds beyond the basic jars, worth two tarts" <|
                 \_ ->
                     Expect.all
-                        [ \_ -> playToTheEnd (player Fast) |> Playthrough.finishedWith |> Expect.equal (Just 2)
-                        , \_ -> secondsBeyondBasicJars Fast |> Expect.all [ Expect.atLeast 3, Expect.atMost 10 ]
+                        [ \_ -> playToTheEnd (player Challenge) |> Playthrough.finishedWith |> Expect.equal (Just 2)
+                        , \_ -> secondsBeyondBasicJars Challenge |> Expect.all [ Expect.atLeast 3, Expect.atMost 10 ]
                         ]
                         ()
             , test "mad: nearly thirty seconds beyond the basic jars, worth three tarts" <|
@@ -180,12 +181,12 @@ suite =
                         , \_ -> Expect.lessThan (RabbitHole.jarSpeed Easy 40) (RabbitHole.jarSpeed Easy 20)
                         , \_ ->
                             Expect.lessThan
-                                (RabbitHole.jarSpeed Fast (RabbitHole.groundDepth Fast))
+                                (RabbitHole.jarSpeed Challenge (RabbitHole.groundDepth Challenge))
                                 (RabbitHole.jarSpeed Easy (RabbitHole.groundDepth Easy))
                         , \_ ->
                             Expect.lessThan
                                 (RabbitHole.jarSpeed Mad (RabbitHole.groundDepth Mad))
-                                (RabbitHole.jarSpeed Fast (RabbitHole.groundDepth Fast))
+                                (RabbitHole.jarSpeed Challenge (RabbitHole.groundDepth Challenge))
                         ]
                         ()
             , test "Enter right after the story doesn't pick a difficulty by accident" <|
@@ -201,7 +202,7 @@ suite =
                         |> Playthrough.sendAll (RabbitHole.update (contextFor UsQwerty))
                             (List.repeat 12 (RabbitHole.Frame 50) ++ [ RabbitHole.KeyPressed "j", RabbitHole.KeyPressed "Enter" ])
                         |> (\run -> run.model.difficulty)
-                        |> Expect.equal (Just Fast)
+                        |> Expect.equal (Just Challenge)
             ]
         , describe "mistakes"
             [ test "a wrong key lifts Alice three jars back up" <|
@@ -235,9 +236,9 @@ suite =
                     playToTheEnd { layout = UsQwerty, difficulty = Mad, mistakeEvery = 0, letGoAtDepth = Just (RabbitHole.groundDepth Easy) }
                         |> Playthrough.finishedWith
                         |> Expect.equal (Just 1)
-            , test "in mad, past the fast ground, earns two tarts" <|
+            , test "in mad, past the challenge ground, earns two tarts" <|
                 \_ ->
-                    playToTheEnd { layout = UsQwerty, difficulty = Mad, mistakeEvery = 0, letGoAtDepth = Just (RabbitHole.groundDepth Fast) }
+                    playToTheEnd { layout = UsQwerty, difficulty = Mad, mistakeEvery = 0, letGoAtDepth = Just (RabbitHole.groundDepth Challenge) }
                         |> Playthrough.finishedWith
                         |> Expect.equal (Just 2)
             , test "the score comes only after the landing and the closing story" <|

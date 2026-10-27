@@ -38,6 +38,7 @@ p{margin:0}
 .stage-scene{position:relative}
 .pixel-scene{display:block;width:100%;height:auto;aspect-ratio:5/3;max-width:100%;shape-rendering:crispEdges}
 .pixel-label{font-family:var(--mono);font-size:11px;fill:var(--ink)}
+.door-number{font-family:var(--mono);font-size:7px;fill:var(--ink)}
 .jar-letter{font-family:var(--mono);font-size:11px;fill:var(--ink)}
 .bottle-label{font-family:var(--display);font-size:11px;fill:var(--ink)}
 .banner{display:block;width:100%;height:auto;aspect-ratio:320/56;max-width:100%;shape-rendering:crispEdges}
@@ -208,6 +209,7 @@ h2{margin:0;font-family:var(--display);font-weight:400;font-size:22px}
     step:   () => beep(330, 0.03, 'triangle', 0.03),
     tick:   () => beep(520, 0.02, 'triangle', 0.02),
     correct:() => beep(880, 0.06),
+    portal: () => [392, 523, 659, 784, 1046].forEach((f, i) => setTimeout(() => beep(f, 0.06, 'triangle', 0.04), i * 40)),
     bump:   () => beep(100, 0.09, 'square', 0.035),
     error:  () => beep(140, 0.13, 'sawtooth', 0.035),
     pickup: () => { beep(988, 0.08); setTimeout(() => beep(1318, 0.12), 80); },

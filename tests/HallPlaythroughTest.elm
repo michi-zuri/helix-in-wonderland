@@ -49,13 +49,19 @@ start =
     Playthrough.start Hall.init
 
 
+{-| Read the story and pick the easy hall with its number key.
+-}
+inEasyHall : Run Hall.Model
+inEasyHall =
+    start |> readStory |> press "1"
+
+
 suite : Test
 suite =
     describe "Chapter 2: The Hall of Doors"
-        [ test "the fastest route with counts earns three tarts" <|
+        [ test "the easy hall's fastest route earns its one tart" <|
             \_ ->
-                start
-                    |> readStory
+                inEasyHall
                     |> press "5k8l"
                     |> wait
                     |> readStory
@@ -63,11 +69,10 @@ suite =
                     |> wait
                     |> readStory
                     |> Playthrough.finishedWith
-                    |> Expect.equal (Just 3)
+                    |> Expect.equal (Just 1)
         , test "walking without counts still finishes, with one tart" <|
             \_ ->
-                start
-                    |> readStory
+                inEasyHall
                     |> press "kkkkkllllllll"
                     |> wait
                     |> readStory
@@ -86,8 +91,7 @@ suite =
                     |> Expect.equal { x = 1, y = 10 }
         , test "walking into a wall stops the rest of a count" <|
             \_ ->
-                start
-                    |> readStory
+                inEasyHall
                     |> press "9h"
                     |> wait
                     |> .model
@@ -95,24 +99,21 @@ suite =
                     |> Expect.equal { x = 1, y = 10 }
         , test "the curtain stays locked without the key" <|
             \_ ->
-                start
-                    |> readStory
+                inEasyHall
                     |> press "17l"
                     |> wait
                     |> (\run -> ( Playthrough.finishedWith run, Playthrough.toastCount run ))
                     |> Expect.equal ( Nothing, 1 )
         , test "arrow keys show a hint instead of moving" <|
             \_ ->
-                start
-                    |> readStory
+                inEasyHall
                     |> send (Hall.KeyPressed "ArrowRight")
                     |> wait
                     |> (\run -> ( run.model.alice, Playthrough.toastCount run ))
                     |> Expect.equal ( { x = 1, y = 10 }, 1 )
         , test "a count cannot start with 0" <|
             \_ ->
-                start
-                    |> readStory
+                inEasyHall
                     |> press "0"
                     |> .model
                     |> .pendingCount
