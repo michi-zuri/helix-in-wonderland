@@ -3,9 +3,10 @@ module HallDoorsTest exposing (suite)
 {-| The mad hall's doors (`Chapter.Hall.Doors`) keep their promises for any
 seed and any order of going through doors:
 
-  - every door leads somewhere, and two doors always lead to each other;
+  - every door leads somewhere, every time: the doors are linked in pairs,
+    and as there are seven, one more leads one way;
   - the way back always works;
-  - no pair could trap Alice (two doors of one part of the hall, or two
+  - no link could trap Alice (two doors of one part of the hall, or two
     dead ends);
   - the other doors really do change.
 
@@ -40,6 +41,9 @@ partOf door =
         ( 0, 7 ) ->
             "start"
 
+        ( 5, 11 ) ->
+            "start"
+
         ( 4, 0 ) ->
             "top left"
 
@@ -56,9 +60,11 @@ partOf door =
             "curtain"
 
 
+{-| The only part with a single door.
+-}
 isDeadEnd : Point -> Bool
 isDeadEnd door =
-    List.member (partOf door) [ "start", "curtain" ]
+    partOf door == "curtain"
 
 
 {-| Go through the doors picked by `choices` (each one an index into the
@@ -104,15 +110,31 @@ problems doors =
         pairs =
             Doors.pairs doors
 
+        oneWay =
+            Doors.oneWay doors
+
         used =
-            List.concatMap (\( a, b ) -> [ a, b ]) pairs
+            List.concatMap (\( a, b ) -> [ a, b ]) pairs ++ (oneWay |> Maybe.map (Tuple.first >> List.singleton) |> Maybe.withDefault [])
     in
     List.concat
         [ if List.sortBy (\p -> ( p.x, p.y )) used == List.sortBy (\p -> ( p.x, p.y )) allDoors then
             []
 
           else
-            [ "not every door is in exactly one pair" ]
+            [ "not every door is in exactly one pair, or the one door left over" ]
+        , allDoors
+            |> List.filter (\door -> Doors.leadsTo door doors == Nothing)
+            |> List.map (\_ -> "a door leads nowhere")
+        , case oneWay of
+            Just ( from, to ) ->
+                if partOf from == partOf to then
+                    [ "the one-way door leads into its own part" ]
+
+                else
+                    []
+
+            Nothing ->
+                [ "seven doors, but none left over" ]
         , pairs
             |> List.filter (\( a, b ) -> partOf a == partOf b)
             |> List.map (\_ -> "two doors of the same part are linked")
@@ -128,14 +150,14 @@ problems doors =
 suite : Test
 suite =
     describe "The doors of the mad hall"
-        [ test "the mad hall has six doors that lead somewhere" <|
-            \_ -> List.length allDoors |> Expect.equal 6
-        , fuzz2 Fuzz.int (Fuzz.list (Fuzz.intRange 0 5)) "every pairing is complete and can't trap Alice" <|
+        [ test "all seven doors of the mad hall lead somewhere" <|
+            \_ -> List.length allDoors |> Expect.equal 7
+        , fuzz2 Fuzz.int (Fuzz.list (Fuzz.intRange 0 6)) "every door always leads somewhere, and no link can trap Alice" <|
             \seed choices ->
                 journey seed choices
                     |> List.concatMap (Tuple.second >> problems)
                     |> Expect.equal []
-        , fuzz2 Fuzz.int (Fuzz.list (Fuzz.intRange 0 5)) "the way back always leads to the door Alice came from" <|
+        , fuzz2 Fuzz.int (Fuzz.list (Fuzz.intRange 0 6)) "the way back always leads to the door Alice came from" <|
             \seed choices ->
                 journey seed choices
                     |> List.filter
