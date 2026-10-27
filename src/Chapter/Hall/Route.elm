@@ -8,7 +8,7 @@ tests play the route to prove every hall can be finished.
 A move is one count and a direction: `7l` walks seven steps right for two
 keystrokes, `l` one step for one. A move stops early, as in the game: at a
 wall, at the key (picking it up), at the curtain, and at a door (which
-leads to its partner door).
+leads on to the floor in front of its partner door).
 
 -}
 
@@ -159,7 +159,7 @@ moves largestCount map visit direction =
                             arriving (\v -> { v | hasKey = True }) :: found
 
                     Portal _ ->
-                        case Map.partner next map of
+                        case Map.leadsTo next map of
                             Just other ->
                                 arriving (\v -> { v | at = other, doors = v.doors + 1 }) :: found
 

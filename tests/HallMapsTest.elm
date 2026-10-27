@@ -4,8 +4,11 @@ module HallMapsTest exposing (suite)
 
   - every hall can be finished, by playing the route with the fewest
     keystrokes through the real chapter;
-  - challenge needs all four directions and many turns;
-  - mad is a maze whose rooms only doors connect, and its route uses
+  - the harder halls are the easy hall with things dropped on the floor:
+    walls, pillars, table, doors and key stay where they were;
+  - challenge needs all four directions, many turns and no long straight
+    runs, and always leaves more than one way open;
+  - in mad, parts of the hall only the doors connect, and its route uses
     several doors.
 
 -}
@@ -184,6 +187,19 @@ suite =
                     |> Expect.equal [ "h", "j", "k", "l" ]
         , test "challenge: the best route has at least 15 turns" <|
             \_ -> turns (routeOf Challenge) |> Expect.atLeast 15
+        , test "challenge: no straight run is longer than 5 steps" <|
+            \_ -> longestCount (routeOf Challenge) |> Expect.atMost 5
+        , test "challenge: blocking any one tile still leaves a way through" <|
+            \_ ->
+                chokepoints (mapOf Challenge) |> Expect.equal []
+        , describe "the harder halls keep the easy hall's walls, pillars, table, doors and key"
+            (List.map
+                (\difficulty ->
+                    test (difficultyLabel difficulty) <|
+                        \_ -> changedLayout (mapOf difficulty) |> Expect.equal []
+                )
+                [ Challenge, Mad ]
+            )
         , test "mad: the key and the curtain can't be reached without doors" <|
             \_ ->
                 ( reachable GoldenKey (mapOf Mad), reachable CurtainFront (mapOf Mad) )
@@ -196,7 +212,7 @@ suite =
                     |> List.map (\number -> List.length (doorsNumbered number (mapOf Mad)))
                     |> List.filter (\count -> count /= 0 && count /= 2)
                     |> Expect.equal []
-        , test "stepping into a door comes out of its partner, and stops there" <|
+        , test "stepping into a door comes out in front of its partner, and stops there" <|
             \_ ->
                 let
                     send =
@@ -206,22 +222,75 @@ suite =
                         Playthrough.start Hall.init
                             |> Playthrough.sendAll (Hall.update context) (List.repeat 12 (Hall.KeyPressed "Enter"))
                             |> send (Hall.KeyPressed "3")
-                            -- From the start (1,10): up 4 to (1,6), right 2 to (3,6), down 2, right 2,
-                            -- up 2 to (5,6), then right 3 reaches door 1 at (8,6); the extra steps of
-                            -- "9l" must not carry on past the partner door.
+                            -- From the start (1,10): right to (2,10), up 3 to (2,7), then left:
+                            -- the second step enters the door on the left (0,7), which leads to
+                            -- the first door at the top (4,0). Alice comes out below it, at (4,1);
+                            -- the extra steps of "9h" must not carry on.
                             |> Playthrough.sendAll (Hall.update context)
-                                (List.map Hall.KeyPressed [ "4", "k", "2", "l", "2", "j", "2", "l", "2", "k", "9", "l" ])
+                                (List.map Hall.KeyPressed [ "l", "3", "k", "9", "h" ])
                             |> Playthrough.sendAll (Hall.update context) (List.repeat 400 (Hall.Frame 16))
                 in
                 walked.model.alice
-                    |> Expect.equal { x = 1, y = 1 }
+                    |> Expect.equal { x = 4, y = 1 }
         ]
+
+
+allPoints : List Point
+allPoints =
+    List.range 0 11
+        |> List.concatMap (\y -> List.range 0 19 |> List.map (\x -> { x = x, y = y }))
+
+
+{-| Tiles that differ from the easy hall in a way other than something
+dropped on its floor or one of its doors leading somewhere.
+-}
+changedLayout : Map -> List Point
+changedLayout map =
+    let
+        easy =
+            mapOf Easy
+
+        allowed before after =
+            case ( before, after ) of
+                ( Floor, Dropped ) ->
+                    True
+
+                ( Door, Portal _ ) ->
+                    True
+
+                _ ->
+                    before == after
+    in
+    allPoints |> List.filter (\point -> not (allowed (Map.tileAt point easy) (Map.tileAt point map)))
+
+
+{-| Floor tiles that, blocked, would leave no way to finish the hall. Tiles
+right next to the start, the key or the curtain don't count: those can
+always be blocked off.
+-}
+chokepoints : Map -> List Point
+chokepoints map =
+    let
+        nextTo tile point =
+            List.any (\direction -> Map.tileAt (Map.neighbour direction point) map == tile) Map.directions
+    in
+    allPoints
+        |> List.filter (\point -> Map.tileAt point map == Floor)
+        |> List.filter (\point -> not (nextTo Start point || nextTo GoldenKey point || nextTo CurtainFront point))
+        |> List.filter (\point -> Route.fewest 30 (Map.setTile point Dropped map) == Nothing)
+
+
+longestCount : Route -> Int
+longestCount route =
+    route.keys
+        |> List.filterMap String.toInt
+        |> List.maximum
+        |> Maybe.withDefault 1
 
 
 doorsNumbered : Int -> Map -> List Point
 doorsNumbered number map =
-    List.range 0 11
-        |> List.concatMap (\y -> List.range 0 19 |> List.map (\x -> { x = x, y = y }))
+    allPoints
         |> List.filter (\point -> Map.tileAt point map == Portal number)
 
 
