@@ -45,6 +45,18 @@ Pushing to `main` on GitHub runs the tests and publishes `dist/site` to
 GitHub Pages (`.github/workflows/pages.yml`). `netlify.toml` does the same
 for Netlify if the repo is connected there.
 
+## Make your own copy
+
+Fork the repository on GitHub, then in the fork: **Settings → Pages →
+Source: GitHub Actions**, and run the "Test and publish" workflow (or push to
+`main`). The game appears at `https://<you>.github.io/<repository>/`; a
+custom domain set in the same Pages settings works too.
+
+Nothing needs changing for this: the game finds the pixel editor next to
+itself, whatever the address, and the build writes the fork's repository
+into the page, so "Suggest a change" and pixel-art proposals open issues in
+the fork (see `src/Project.elm` and `tools/build.mjs`).
+
 ## How the code is organised
 
 ```
@@ -69,6 +81,7 @@ src/
   Pixel/Sprite.elm          pixel art from text; Pixel/Sprites.elm holds the art
   PixelEditor.elm           the pixel editor page for art proposals (see ART.md)
   Ui/                       dialog box, title, results and end cards, checklist, header
+  Project.elm               where this copy lives: links to the site and its GitHub repository
   Ports.elm                 the only doors to JavaScript
 public/index.html           page shell, CSS, and the JS side of the ports
 tests/                      elm-test suites (Playthrough.elm holds shared helpers)

@@ -26,10 +26,17 @@ import Svg.Attributes as SA
 import Url
 
 
-main : Program () Model Msg
+{-| The page passes where the site and its repository are, so links work on
+any copy of the game (see `Project`).
+-}
+main : Program Decode.Value Model Msg
 main =
     Browser.element
-        { init = \_ -> ( load firstPicture, Cmd.none )
+        { init =
+            \flags ->
+                ( load (Decode.decodeValue (Decode.field "links" Project.decoder) flags |> Result.withDefault Project.fallback) firstPicture
+                , Cmd.none
+                )
         , update = \msg model -> ( update msg model, Cmd.none )
         , view = view
         , subscriptions = \_ -> Sub.none
@@ -46,7 +53,8 @@ transparent =
 
 
 type alias Model =
-    { picture : String
+    { links : Project.Links
+    , picture : String
     , pixels : Array (Array Char)
     , palette : List ( Char, String )
     , brush : Char
@@ -60,8 +68,8 @@ firstPicture =
     "tart"
 
 
-load : String -> Model
-load name =
+load : Project.Links -> String -> Model
+load links name =
     let
         sprite =
             Sprites.catalogue
@@ -73,7 +81,8 @@ load name =
         palette =
             Sprite.palette sprite
     in
-    { picture = name
+    { links = links
+    , picture = name
     , pixels = Sprite.rows sprite |> List.map (String.toList >> Array.fromList) |> Array.fromList
     , palette = palette
     , brush = palette |> List.head |> Maybe.map Tuple.first |> Maybe.withDefault transparent
@@ -101,7 +110,7 @@ update : Msg -> Model -> Model
 update msg model =
     case msg of
         ChosePicture name ->
-            load name
+            load model.links name
 
         ChoseBrush letter ->
             { model | brush = letter }
@@ -143,7 +152,7 @@ update msg model =
                     model
 
         ResetPicture ->
-            load model.picture
+            load model.links model.picture
 
 
 paint : Int -> Int -> Model -> Model
@@ -189,7 +198,7 @@ in (GitHub fills form fields from the link's query parameters).
 -}
 proposalLink : Model -> String
 proposalLink model =
-    Project.newIssueUrl
+    Project.newIssueUrl model.links
         ++ "?template=pixel-art.yml"
         ++ "&title="
         ++ Url.percentEncode ("Pixel art: " ++ model.picture)
@@ -239,8 +248,8 @@ view model =
         , Html.h2 [] [ Html.text "Your picture as text · Dein Bild als Text" ]
         , Html.pre [ A.class "text" ] [ Html.text (coloursText model ++ "\n\n" ++ rowsText model) ]
         , Html.nav [ A.class "links" ]
-            [ Html.a [ A.href Project.gameUrl ] [ Html.text "← Back to the game · Zurück zum Spiel" ]
-            , Html.a [ A.href (Project.proposeEditUrl "Pixel editor"), A.target "_blank", A.rel "noopener" ]
+            [ Html.a [ A.href (Project.gameUrl model.links) ] [ Html.text "← Back to the game · Zurück zum Spiel" ]
+            , Html.a [ A.href (Project.proposeEditUrl model.links "Pixel editor"), A.target "_blank", A.rel "noopener" ]
                 [ Html.text "Suggest a change to this page · Änderung für diese Seite vorschlagen" ]
             ]
         ]

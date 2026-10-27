@@ -40,7 +40,13 @@ a.send{background:var(--honey);color:var(--ink);border-color:var(--honey);font-w
 </head>
 <body>
 <div id="editor"></div>
+<!-- CONFIG -->
 <!-- ELM -->
-<script>Elm.PixelEditor.init({ node: document.getElementById('editor') });</script>
+<script>
+  Elm.PixelEditor.init({
+    node: document.getElementById('editor'),
+    flags: { links: { site: window.HELIX_SITE || new URL('./', location.href).href, repository: window.HELIX_REPOSITORY } }
+  });
+</script>
 </body>
 </html>
