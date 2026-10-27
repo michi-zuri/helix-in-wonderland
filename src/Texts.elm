@@ -48,6 +48,7 @@ type alias Texts =
     , startHere : String
     , unlockAll : String
     , allUnlocked : String
+    , difficulty : { easy : String, challenge : String, mad : String }
     , chapter : ChapterId -> ChapterInfo
     , results : ResultTexts
     , theEnd : EndTexts
@@ -112,11 +113,8 @@ type alias RabbitHoleTexts =
     , stage : Int -> Int -> String
     , chooseTitle : String
     , chooseHint : String
-    , easy : String
     , easyInfo : String
-    , fast : String
-    , fastInfo : String
-    , mad : String
+    , challengeInfo : String
     , madInfo : String
     , allKeys : String
     , allKeysLabel : String
@@ -142,6 +140,14 @@ type alias HallTexts =
     , countTip : String
     , azertyTip : String
     , arrows : String
+    , chooseTitle : String
+    , chooseHint : String
+    , easyInfo : String
+    , challengeInfo : String
+    , madInfo : String
+    , doorFound : String
+    , doorRule : String
+    , doorsTip : String
     }
 
 
@@ -286,6 +292,7 @@ english =
     , startHere = "start here"
     , unlockAll = "Unlock all chapters (for grown-ups)"
     , allUnlocked = "All chapters are unlocked"
+    , difficulty = { easy = "Easy", challenge = "Challenge", mad = "Mad" }
     , chapter =
         \id ->
             case id of
@@ -342,11 +349,8 @@ english =
         , stage = \current total -> "Stage " ++ String.fromInt current ++ " of " ++ String.fromInt total
         , chooseTitle = "How fast do you want to fall?"
         , chooseHint = "j / k to choose · Enter to jump"
-        , easy = "Easy"
         , easyInfo = "A gentle fall. You land after the basic jars."
-        , fast = "Fast"
-        , fastInfo = "Quicker jars, and a few seconds more."
-        , mad = "Mad"
+        , challengeInfo = "Quicker jars, and a few seconds more."
         , madInfo = "We're all mad here: nearly 30 seconds of fast jars, no mistakes."
         , allKeys = "All keys now. Keep catching to reach the ground."
         , allKeysLabel = "All keys"
@@ -370,6 +374,14 @@ english =
         , countTip = "Type a number first, like 5j, to walk five steps."
         , azertyTip = "On AZERTY, digits need Shift: Shift+5, then j."
         , arrows = "Arrow keys are for rabbits in a hurry. Keep your fingers home: h j k l."
+        , chooseTitle = "Which hall do you want to explore?"
+        , chooseHint = "j / k to choose · Enter to go in"
+        , easyInfo = "The hall as it is: find the key, then the little curtain."
+        , challengeInfo = "Walls everywhere: one winding way, with turns in all four directions."
+        , madInfo = "A maze of rooms. Every door leads to the door with the same number."
+        , doorFound = "Alice opened the door and stepped out of another door, somewhere else in the hall!"
+        , doorRule = "In this hall every door leads to its partner: the door with the same number."
+        , doorsTip = "A door leads to the other door with the same number."
         }
     , drinkMe =
         { intro1 = "On the table stood a little bottle. Round its neck was a paper label with the words DRINK ME printed in large letters."
@@ -517,6 +529,7 @@ german =
     , startHere = "hier starten"
     , unlockAll = "Alle Kapitel freischalten (für Erwachsene)"
     , allUnlocked = "Alle Kapitel sind frei"
+    , difficulty = { easy = "Leicht", challenge = "Herausforderung", mad = "Verrückt" }
     , chapter =
         \id ->
             case id of
@@ -573,11 +586,8 @@ german =
         , stage = \current total -> "Stufe " ++ String.fromInt current ++ " von " ++ String.fromInt total
         , chooseTitle = "Wie schnell willst du fallen?"
         , chooseHint = "j / k zum Wählen · Enter zum Springen"
-        , easy = "Leicht"
         , easyInfo = "Gemütlich fallen. Nach den Grundgläsern bist du unten."
-        , fast = "Schnell"
-        , fastInfo = "Flottere Gläser und ein paar Sekunden länger."
-        , mad = "Verrückt"
+        , challengeInfo = "Flottere Gläser und ein paar Sekunden länger."
         , madInfo = "Wir sind hier alle verrückt: fast 30 Sekunden schnelle Gläser ohne Fehler."
         , allKeys = "Jetzt alle Tasten. Fang weiter, bis du unten bist."
         , allKeysLabel = "Alle Tasten"
@@ -601,6 +611,14 @@ german =
         , countTip = "Tippe zuerst eine Zahl, zum Beispiel 5j, für fünf Schritte."
         , azertyTip = "Auf AZERTY brauchen Ziffern die Umschalttaste: Umschalt+5, dann j."
         , arrows = "Pfeiltasten sind für eilige Kaninchen. Lass die Finger zu Hause: h j k l."
+        , chooseTitle = "Welchen Saal willst du erkunden?"
+        , chooseHint = "j / k zum Wählen · Enter zum Hineingehen"
+        , easyInfo = "Der Saal, wie er ist: finde den Schlüssel, dann den kleinen Vorhang."
+        , challengeInfo = "Überall Wände: ein verwinkelter Weg mit Kurven in alle vier Richtungen."
+        , madInfo = "Ein Labyrinth aus Räumen. Jede Tür führt zur Tür mit derselben Zahl."
+        , doorFound = "Alice öffnete die Tür und trat aus einer anderen Tür heraus, ganz woanders im Saal!"
+        , doorRule = "In diesem Saal führt jede Tür zu ihrer Partnertür: der Tür mit derselben Zahl."
+        , doorsTip = "Eine Tür führt zur anderen Tür mit derselben Zahl."
         }
     , drinkMe =
         { intro1 = "Auf dem Tisch stand ein Fläschchen. Um seinen Hals hing ein Zettel mit grossen Buchstaben: TRINK MICH."

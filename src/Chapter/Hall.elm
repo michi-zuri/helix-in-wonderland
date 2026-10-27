@@ -3,16 +3,23 @@ module Chapter.Hall exposing (Model, Msg(..), backdrop, init, update, view)
 {-| Chapter 2, "The Hall of Doors": Alice walks with `h j k l`, finds the
 golden key, then learns counts (`8l`) on the way to the little curtain.
 
+Three halls to choose from (see `Chapter.Hall.Map`): easy is open, challenge
+is one winding corridor, mad is a maze of rooms joined by doors, where every
+door leads to its partner door. Finishing is worth the difficulty's tarts.
+
 Read top to bottom: the map, the tunable numbers, the model, `update`, then
 the view. Everything here is pure; sounds, toasts and the end of the chapter
 are requested as `Effect`s for `Main` to carry out.
 
 -}
 
-import Array exposing (Array)
+import Array
 import Chapter.Contract as Contract exposing (Context, Effect(..), Sound(..))
+import Chapter.Hall.Map as Map exposing (Direction(..), Map, Point)
+import Chapter.Hall.Route as Route
 import Chapter.Hall.Tiles as Tiles exposing (Tile(..))
 import Chapter.Story as Story exposing (Story)
+import Difficulty exposing (Difficulty(..))
 import Html exposing (Html)
 import Html.Attributes as HA
 import Keyboard.Layout as Layout
@@ -22,83 +29,14 @@ import Speaker exposing (Speaker(..))
 import Svg exposing (Svg)
 import Svg.Attributes as SA
 import Svg.Lazy
+import Texts exposing (Texts)
 import Ui.Dialog as Dialog
+import Ui.DifficultyChoice as DifficultyChoice exposing (Choice)
 
 
 file : String
 file =
     "02_hall_of_doors.txt"
-
-
-
--- MAP
---
--- Legend: # wall, D door, C curtain (with c in front of it, the goal),
--- T glass table, P pillar, K golden key, S start, . floor.
--- The shortest solution with counts is 5k 8l 9l 5j: eight keystrokes.
-
-
-plan : List String
-plan =
-    [ "####D####D####D#####"
-    , "#..................#"
-    , "#..PP..........PP..#"
-    , "#..PP...TTT....PP..#"
-    , "#.......TTT........#"
-    , "#........K.........#"
-    , "#..................#"
-    , "D....PP......PP....D"
-    , "#....PP......PP....#"
-    , "#..................#"
-    , "#S................c#"
-    , "#####D#######D####C#"
-    ]
-
-
-type alias Map =
-    Array (Array Tile)
-
-
-type alias Point =
-    { x : Int, y : Int }
-
-
-parseMap : List String -> Map
-parseMap rows =
-    rows
-        |> List.map (String.toList >> List.map Tiles.fromChar >> Array.fromList)
-        |> Array.fromList
-
-
-tileAt : Point -> Map -> Tile
-tileAt { x, y } map =
-    Array.get y map
-        |> Maybe.andThen (Array.get x)
-        |> Maybe.withDefault Wall
-
-
-setTile : Point -> Tile -> Map -> Map
-setTile { x, y } tile map =
-    case Array.get y map of
-        Just row ->
-            Array.set y (Array.set x tile row) map
-
-        Nothing ->
-            map
-
-
-findTile : Tile -> Map -> Maybe Point
-findTile wanted map =
-    map
-        |> Array.toIndexedList
-        |> List.concatMap
-            (\( y, row ) ->
-                row
-                    |> Array.toIndexedList
-                    |> List.filter (\( _, tile ) -> tile == wanted)
-                    |> List.map (\( x, _ ) -> { x = x, y = y })
-            )
-        |> List.head
 
 
 
@@ -129,16 +67,6 @@ stepsWithHints =
     14
 
 
-fewestKeystrokes : Int
-fewestKeystrokes =
-    8
-
-
-keystrokesForThirdTart : Int
-keystrokesForThirdTart =
-    20
-
-
 rabbitPixelsPerMillisecond : Float
 rabbitPixelsPerMillisecond =
     0.07
@@ -149,7 +77,11 @@ rabbitPixelsPerMillisecond =
 
 
 type alias Model =
-    { map : Map
+    { choice : Choice
+    , difficulty : Maybe Difficulty
+    , fewestKeystrokes : Int
+    , usedDoor : Bool
+    , map : Map
     , alice : Point
     , step : Maybe Step
     , queuedSteps : List Direction
@@ -163,13 +95,6 @@ type alias Model =
     , bumpRemaining : Float
     , clock : Float
     }
-
-
-type Direction
-    = Left
-    | Down
-    | Up
-    | Right
 
 
 {-| The step Alice is animating: she already stands on the new tile in the
@@ -194,8 +119,12 @@ type alias Rabbit =
 
 init : Model
 init =
-    { map = startingMap
-    , alice = findTile Start startingMap |> Maybe.withDefault { x = 1, y = 10 }
+    { choice = DifficultyChoice.start 0
+    , difficulty = Nothing
+    , fewestKeystrokes = 0
+    , usedDoor = False
+    , map = startingMap
+    , alice = startOf startingMap
     , step = Nothing
     , queuedSteps = []
     , pendingCount = ""
@@ -231,7 +160,12 @@ update context msg model =
             case Story.hear context.texts key model.story of
                 Story.NotTalking ->
                     if Story.isPlaying model.story then
-                        explore key model
+                        case model.difficulty of
+                            Just _ ->
+                                explore key model
+
+                            Nothing ->
+                                choose key model
 
                     else
                         ( model, [] )
@@ -243,7 +177,7 @@ update context msg model =
                     ( { model | story = story }, [ PlaySound TickSound ] )
 
                 Story.IntroOver story ->
-                    ( { model | story = story, rabbit = startRunning model.rabbit }, [] )
+                    ( { model | story = story, rabbit = startRunning model.rabbit, choice = DifficultyChoice.start model.clock }, [] )
 
                 Story.OutroOver story ->
                     ( { model | story = story }, [ Finish (score model) ] )
@@ -256,6 +190,44 @@ update context msg model =
                 , story = Story.tick milliseconds model.story
             }
                 |> animateWalking milliseconds
+
+
+choose : String -> Model -> ( Model, List Effect )
+choose key model =
+    case DifficultyChoice.press model.clock key model.choice of
+        DifficultyChoice.Moved choice ->
+            ( { model | choice = choice }, [ PlaySound TickSound ] )
+
+        DifficultyChoice.Picked difficulty ->
+            ( enterHall difficulty model, [ PlaySound PickupSound ] )
+
+        DifficultyChoice.Unchanged ->
+            ( model, [] )
+
+
+{-| Set up the hall of the chosen difficulty.
+-}
+enterHall : Difficulty -> Model -> Model
+enterHall difficulty model =
+    let
+        map =
+            if difficulty == Easy then
+                startingMap
+
+            else
+                Map.parse (Map.plan difficulty)
+    in
+    { model
+        | difficulty = Just difficulty
+        , map = map
+        , alice = startOf map
+        , fewestKeystrokes = Route.fewest largestCount map |> Maybe.map .keystrokes |> Maybe.withDefault 0
+    }
+
+
+startOf : Map -> Point
+startOf map =
+    Map.find Start map |> Maybe.withDefault { x = 1, y = 10 }
 
 
 explore : String -> Model -> ( Model, List Effect )
@@ -272,7 +244,7 @@ explore key model =
         ( { model | pendingCount = "" }, [] )
 
     else
-        case directionFor key of
+        case Map.directionFor key of
             Just direction ->
                 walk key direction model
 
@@ -289,25 +261,6 @@ explore key model =
 isCountDigit : String -> String -> Bool
 isCountDigit key pendingCount =
     String.length key == 1 && String.all Char.isDigit key && not (key == "0" && pendingCount == "")
-
-
-directionFor : String -> Maybe Direction
-directionFor key =
-    case key of
-        "h" ->
-            Just Left
-
-        "j" ->
-            Just Down
-
-        "k" ->
-            Just Up
-
-        "l" ->
-            Just Right
-
-        _ ->
-            Nothing
 
 
 walk : String -> Direction -> Model -> ( Model, List Effect )
@@ -356,9 +309,9 @@ startNextStep model =
         direction :: rest ->
             let
                 target =
-                    neighbour direction model.alice
+                    Map.neighbour direction model.alice
             in
-            if Tiles.isWalkable (tileAt target model.map) then
+            if Tiles.isWalkable (Map.tileAt target model.map) then
                 ( { model
                     | alice = target
                     , step = Just { from = model.alice, progress = 0 }
@@ -379,11 +332,11 @@ startNextStep model =
 -}
 arrive : Model -> ( Model, List Effect )
 arrive model =
-    case tileAt model.alice model.map of
+    case Map.tileAt model.alice model.map of
         GoldenKey ->
             ( { model
                 | hasKey = True
-                , map = setTile model.alice Floor model.map
+                , map = Map.setTile model.alice Floor model.map
                 , queuedSteps = []
                 , story =
                     Story.tell (Dialog.say Alice (.hall >> .keyFound))
@@ -405,24 +358,39 @@ arrive model =
             else
                 ( { model | queuedSteps = [] }, [ ShowToast (.hall >> .locked) ] )
 
+        Portal _ ->
+            goThroughDoor model
+
         _ ->
             ( model, [] )
 
 
-neighbour : Direction -> Point -> Point
-neighbour direction { x, y } =
-    case direction of
-        Left ->
-            { x = x - 1, y = y }
+{-| Alice steps into a door and comes out of its partner. The first time,
+the story explains what happened. Any steps still queued are dropped, so
+she stands still on the far side.
+-}
+goThroughDoor : Model -> ( Model, List Effect )
+goThroughDoor model =
+    case Map.partner model.alice model.map of
+        Just other ->
+            ( { model
+                | alice = other
+                , queuedSteps = []
+                , usedDoor = True
+                , story =
+                    if model.usedDoor then
+                        model.story
 
-        Right ->
-            { x = x + 1, y = y }
+                    else
+                        Story.tell (Dialog.say Narrator (.hall >> .doorFound))
+                            [ Dialog.say Narrator (.hall >> .doorRule) ]
+                            model.story
+              }
+            , [ PlaySound PortalSound ]
+            )
 
-        Up ->
-            { x = x, y = y - 1 }
-
-        Down ->
-            { x = x, y = y + 1 }
+        Nothing ->
+            ( model, [] )
 
 
 startRunning : Rabbit -> Rabbit
@@ -465,17 +433,14 @@ rabbitIsGone rabbit =
 score : Model -> Contract.Score
 score model =
     let
-        bonus condition =
-            if condition then
-                1
-
-            else
-                0
+        difficulty =
+            Maybe.withDefault Easy model.difficulty
     in
-    { tarts = 1 + bonus model.usedCount + bonus (model.keystrokes <= keystrokesForThirdTart)
+    { tarts = Difficulty.tarts difficulty
     , stats =
-        [ { label = .results >> .keystrokes, value = \_ -> String.fromInt model.keystrokes }
-        , { label = .results >> .fewestPossible, value = \_ -> String.fromInt fewestKeystrokes }
+        [ { label = .results >> .difficulty, value = \texts -> Difficulty.name texts difficulty }
+        , { label = .results >> .keystrokes, value = \_ -> String.fromInt model.keystrokes }
+        , { label = .results >> .fewestPossible, value = \_ -> String.fromInt model.fewestKeystrokes }
         , { label = .results >> .usedCount
           , value =
                 \texts ->
@@ -505,6 +470,17 @@ view context model =
                 , viewKeyHints model
                 , viewPendingCount model
                 ]
+            , if model.difficulty == Nothing && Story.isPlaying model.story then
+                DifficultyChoice.view
+                    { texts = context.texts
+                    , title = context.texts.hall.chooseTitle
+                    , hint = context.texts.hall.chooseHint
+                    , info = difficultyInfo context.texts
+                    }
+                    model.choice
+
+              else
+                Html.text ""
             , Story.view context.texts model.story
             ]
     , panel = viewPanel context model
@@ -514,8 +490,29 @@ view context model =
         , pendingKeys = model.pendingCount
         , position = String.fromInt (model.alice.y + 1) ++ ":" ++ String.fromInt (model.alice.x + 1)
         }
-    , keyboard = { target = Nothing, helpers = [ "h", "j", "k", "l" ] }
+    , keyboard =
+        { target = Nothing
+        , helpers =
+            if model.difficulty == Nothing then
+                [ "j", "k" ]
+
+            else
+                [ "h", "j", "k", "l" ]
+        }
     }
+
+
+difficultyInfo : Texts -> Difficulty -> String
+difficultyInfo texts difficulty =
+    case difficulty of
+        Easy ->
+            texts.hall.easyInfo
+
+        Challenge ->
+            texts.hall.challengeInfo
+
+        Mad ->
+            texts.hall.madInfo
 
 
 {-| The empty hall, drawn behind the title and results cards.
@@ -531,7 +528,7 @@ time lets `Svg.Lazy` skip redrawing it.
 -}
 startingMap : Map
 startingMap =
-    parseMap plan
+    Map.parse (Map.plan Easy)
 
 
 viewMap : Map -> Svg msg
@@ -561,7 +558,7 @@ viewTile position tile =
 
 viewKeySparkle : Model -> Svg msg
 viewKeySparkle model =
-    case ( model.hasKey, findTile GoldenKey model.map ) of
+    case ( model.hasKey, Map.find GoldenKey model.map ) of
         ( False, Just { x, y } ) ->
             if modBy 2 (floor (model.clock / 330)) == 0 then
                 pixelRect (x * 16 + 12) (y * 16 + 4) 1 1 "#ffffff"
@@ -634,14 +631,14 @@ viewKeyHints : Model -> Svg msg
 viewKeyHints model =
     let
         showHints =
-            Story.isPlaying model.story && model.stepsTaken < stepsWithHints && model.step == Nothing
+            Story.isPlaying model.story && model.difficulty /= Nothing && model.stepsTaken < stepsWithHints && model.step == Nothing
 
         keycap ( key, direction ) =
             let
                 spot =
-                    neighbour direction model.alice
+                    Map.neighbour direction model.alice
             in
-            if Tiles.isWalkable (tileAt spot model.map) then
+            if Tiles.isWalkable (Map.tileAt spot model.map) then
                 [ pixelRect (spot.x * 16 + 3) (spot.y * 16 + 4) 10 10 "#120a18"
                 , pixelRect (spot.x * 16 + 3) (spot.y * 16 + 3) 10 9 "#dbbfef"
                 , label (spot.x * 16 + 8) (spot.y * 16 + 11) key
@@ -687,7 +684,13 @@ viewPanel context model =
     in
     Html.div [ HA.class "panel-content" ]
         (List.concat
-            [ [ Html.div [ HA.class "legend" ]
+            [ case model.difficulty of
+                Just difficulty ->
+                    [ Html.span [ HA.class "eyebrow" ] [ Html.text (Difficulty.name texts difficulty) ] ]
+
+                Nothing ->
+                    []
+            , [ Html.div [ HA.class "legend" ]
                     (List.map
                         (\( key, arrow ) -> Html.span [] [ Html.b [] [ Html.text key ], Html.text (" " ++ arrow) ])
                         [ ( "h", "←" ), ( "j", "↓" ), ( "k", "↑" ), ( "l", "→" ) ]
@@ -698,6 +701,11 @@ viewPanel context model =
 
               else
                 [ paragraph "big" texts.hall.findKey ]
+            , if model.difficulty == Just Mad then
+                [ paragraph "tip" texts.hall.doorsTip ]
+
+              else
+                []
             , if model.hasKey && Layout.needsShiftForDigits context.layout then
                 [ paragraph "tip" texts.hall.azertyTip ]
 
