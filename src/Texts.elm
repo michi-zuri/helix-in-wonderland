@@ -378,10 +378,10 @@ english =
         , chooseHint = "j / k to choose · Enter to go in"
         , easyInfo = "The hall as it is: find the key, then the little curtain."
         , challengeInfo = "Things dropped all over the floor: weave your way round them, turning in every direction."
-        , madInfo = "Heaps of dropped things cut the hall into parts. Only the doors lead on, and not always where you expect."
+        , madInfo = "Heaps of dropped things cut the hall into parts. Only the doors lead on, and they keep changing where they go."
         , doorFound = "Alice opened the door and stepped out of another door, somewhere else in the hall!"
-        , doorRule = "In this hall the doors are linked: each one leads to another door. Try them all!"
-        , doorsTip = "Each door leads to another door of the hall. Remember where they go."
+        , doorRule = "The doors in this hall play tricks. The door you just came out of takes you back. Every other door may lead somewhere new each time."
+        , doorsTip = "The way back always works. All the other doors change where they lead whenever you go through one."
         }
     , drinkMe =
         { intro1 = "On the table stood a little bottle. Round its neck was a paper label with the words DRINK ME printed in large letters."
@@ -615,10 +615,10 @@ german =
         , chooseHint = "j / k zum Wählen · Enter zum Hineingehen"
         , easyInfo = "Der Saal, wie er ist: finde den Schlüssel, dann den kleinen Vorhang."
         , challengeInfo = "Überall liegen heruntergefallene Sachen: Schlängle dich drum herum, mit Kurven in alle Richtungen."
-        , madInfo = "Haufen von heruntergefallenen Sachen teilen den Saal. Nur die Türen führen weiter, und nicht immer dorthin, wo du denkst."
+        , madInfo = "Haufen von heruntergefallenen Sachen teilen den Saal. Nur die Türen führen weiter, und sie ändern ständig, wohin."
         , doorFound = "Alice öffnete die Tür und trat aus einer anderen Tür heraus, ganz woanders im Saal!"
-        , doorRule = "In diesem Saal sind die Türen verbunden: Jede führt zu einer anderen Tür. Probier sie alle aus!"
-        , doorsTip = "Jede Tür führt zu einer anderen Tür im Saal. Merk dir, wohin sie führen."
+        , doorRule = "Die Türen in diesem Saal spielen Streiche. Die Tür, aus der du gerade kommst, bringt dich zurück. Jede andere Tür kann jedes Mal woandershin führen."
+        , doorsTip = "Der Weg zurück klappt immer. Alle anderen Türen ändern, wohin sie führen, sobald du durch eine gehst."
         }
     , drinkMe =
         { intro1 = "Auf dem Tisch stand ein Fläschchen. Um seinen Hals hing ein Zettel mit grossen Buchstaben: TRINK MICH."

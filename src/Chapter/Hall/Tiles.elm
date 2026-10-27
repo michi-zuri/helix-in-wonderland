@@ -18,7 +18,7 @@ type Tile
     | GlassTable
     | Pillar
     | GoldenKey
-    | Portal Int
+    | Portal
     | Dropped
 
 
@@ -28,8 +28,8 @@ size =
 
 
 {-| The maps are written as text in `Chapter.Hall.Map`; this is the legend.
-A digit is a door that leads to the other door with the same digit; `x` is
-something dropped on the floor.
+`O` is a door that leads to another `O` door (see `Chapter.Hall.Doors`);
+`x` is something dropped on the floor.
 -}
 fromChar : Char -> Tile
 fromChar char =
@@ -61,12 +61,11 @@ fromChar char =
         'x' ->
             Dropped
 
-        _ ->
-            if Char.isDigit char then
-                Portal (Char.toCode char - Char.toCode '0')
+        'O' ->
+            Portal
 
-            else
-                Wall
+        _ ->
+            Wall
 
 
 isWalkable : Tile -> Bool
@@ -84,7 +83,7 @@ isWalkable tile =
         GoldenKey ->
             True
 
-        Portal _ ->
+        Portal ->
             True
 
         _ ->
@@ -106,7 +105,7 @@ view position tile =
                     wall position ++ curtain
 
                 -- Looks like any other door: where it leads is a surprise.
-                Portal _ ->
+                Portal ->
                     wall position ++ door
 
                 Dropped ->

@@ -3,9 +3,11 @@ module Chapter.Hall exposing (Model, Msg(..), backdrop, init, update, view)
 {-| Chapter 2, "The Hall of Doors": Alice walks with `h j k l`, finds the
 golden key, then learns counts (`8l`) on the way to the little curtain.
 
-Three halls to choose from (see `Chapter.Hall.Map`): easy is open, challenge
-is one winding corridor, mad is a maze of rooms joined by doors, where every
-door leads to its partner door. Finishing is worth the difficulty's tarts.
+Three halls to choose from (see `Chapter.Hall.Map`): easy is open,
+challenge has things dropped all over the floor, and in mad heaps of them
+split the hall into parts that only the doors join. Those doors change
+where they lead, except the way back (see `Chapter.Hall.Doors`). Finishing
+is worth the difficulty's tarts.
 
 Read top to bottom: the map, the tunable numbers, the model, `update`, then
 the view. Everything here is pure; sounds, toasts and the end of the chapter
@@ -15,6 +17,7 @@ are requested as `Effect`s for `Main` to carry out.
 
 import Array
 import Chapter.Contract as Contract exposing (Context, Effect(..), Sound(..))
+import Chapter.Hall.Doors as Doors exposing (Doors)
 import Chapter.Hall.Map as Map exposing (Direction(..), Map, Point)
 import Chapter.Hall.Route as Route
 import Chapter.Hall.Tiles as Tiles exposing (Tile(..))
@@ -25,6 +28,7 @@ import Html.Attributes as HA
 import Keyboard.Layout as Layout
 import Pixel.Sprite as Sprite
 import Pixel.Sprites as Sprites
+import Random
 import Speaker exposing (Speaker(..))
 import Svg exposing (Svg)
 import Svg.Attributes as SA
@@ -82,6 +86,8 @@ type alias Model =
     , fewestKeystrokes : Int
     , usedDoor : Bool
     , map : Map
+    , doors : Doors
+    , seed : Random.Seed
     , alice : Point
     , step : Maybe Step
     , queuedSteps : List Direction
@@ -117,13 +123,18 @@ type alias Rabbit =
     }
 
 
-init : Model
-init =
+{-| The seed decides where the mad hall's doors lead; the same seed plays
+the same game.
+-}
+init : Random.Seed -> Model
+init seed =
     { choice = DifficultyChoice.start 0
     , difficulty = Nothing
     , fewestKeystrokes = 0
     , usedDoor = False
     , map = startingMap
+    , doors = Doors.init seed startingMap
+    , seed = seed
     , alice = startOf startingMap
     , step = Nothing
     , queuedSteps = []
@@ -216,12 +227,21 @@ enterHall difficulty model =
 
             else
                 Map.parse (Map.plan difficulty)
+
+        doors =
+            Doors.init model.seed map
     in
     { model
         | difficulty = Just difficulty
         , map = map
+        , doors = doors
         , alice = startOf map
-        , fewestKeystrokes = Route.fewest largestCount map |> Maybe.map .keystrokes |> Maybe.withDefault 0
+        , fewestKeystrokes =
+            Route.fewest { largestCount = largestCount, exits = \door -> Doors.mightLeadTo door doors }
+                { at = startOf map, hasKey = False }
+                map
+                |> Maybe.map .keystrokes
+                |> Maybe.withDefault 0
     }
 
 
@@ -358,23 +378,25 @@ arrive model =
             else
                 ( { model | queuedSteps = [] }, [ ShowToast (.hall >> .locked) ] )
 
-        Portal _ ->
+        Portal ->
             goThroughDoor model
 
         _ ->
             ( model, [] )
 
 
-{-| Alice steps into a door and comes out in front of its partner. The first time,
+{-| Alice steps into a door and comes out in front of the door it leads to;
+then the other doors change where they lead (`Chapter.Hall.Doors`). The first time,
 the story explains what happened. Any steps still queued are dropped, so
 she stands still on the far side.
 -}
 goThroughDoor : Model -> ( Model, List Effect )
 goThroughDoor model =
-    case Map.leadsTo model.alice model.map of
-        Just other ->
+    case Doors.leadsTo model.alice model.doors |> Maybe.andThen (\other -> Map.inFrontOf other model.map) of
+        Just exit ->
             ( { model
-                | alice = other
+                | alice = exit
+                , doors = Doors.walkThrough model.alice model.doors
                 , queuedSteps = []
                 , usedDoor = True
                 , story =

@@ -1,6 +1,6 @@
 module Chapter.Hall.Map exposing
     ( Map, Point, plan, parse
-    , tileAt, setTile, find, leadsTo
+    , tileAt, setTile, find, findAll, inFrontOf
     , Direction(..), directions, neighbour, directionFor, keyFor
     )
 
@@ -9,7 +9,7 @@ in them. Shared by the chapter, the route finder (`Chapter.Hall.Route`) and
 the tests.
 
 @docs Map, Point, plan, parse
-@docs tileAt, setTile, find, leadsTo
+@docs tileAt, setTile, find, findAll, inFrontOf
 @docs Direction, directions, neighbour, directionFor, keyFor
 
 -}
@@ -33,9 +33,9 @@ type alias Point =
 -- Legend: # wall, D door in the wall, C curtain (with c in front of it, the
 -- goal), T glass table, P pillar, K golden key, S start, . floor,
 -- x something dropped on the floor (blocks the way).
--- A digit is a door that leads somewhere: the two doors with the same digit
--- lead to each other. The player never sees the digits; to them both look
--- like the hall's ordinary doors.
+-- O is a door that leads somewhere: to another O door, which one is decided
+-- while playing (see `Chapter.Hall.Doors`). To the player it looks like any
+-- other door.
 --
 -- The harder halls are the easy hall with things dropped on its floor and
 -- some doors opened: walls, pillars, table, doors and key stay where they
@@ -80,22 +80,21 @@ plan difficulty =
             ]
 
         -- Heaps of dropped things split the hall into four parts. Only the
-        -- hall's own doors connect them: the door on the left leads to the
-        -- first door at the top, the middle top door to the door on the
-        -- right, the right top door to the right bottom door.
+        -- hall's own doors connect them, and where each door leads changes
+        -- as Alice uses them (`Chapter.Hall.Doors`).
         Mad ->
-            [ "####1####2####3#####"
+            [ "####O####O####O#####"
             , "#.....x.....x......#"
             , "#..PP...x...x.xPPx.#"
             , "#xxPPxxxTTTx...PP..#"
             , "#....x..TTT..x.....#"
             , "#....x...K..x...x..#"
             , "#....x..x..x.....x.#"
-            , "1..x.PP......PP....2"
+            , "O..x.PP......PP....O"
             , "#x...PPxxxxxxPPxxxx#"
             , "#..x...x...x....x..#"
             , "#S.....x..x...x...c#"
-            , "#####D#######3####C#"
+            , "#####D#######O####C#"
             ]
 
 
@@ -145,40 +144,14 @@ find wanted map =
     findAll wanted map |> List.head
 
 
-{-| Where Alice comes out after stepping into a door: on the floor in front
-of its partner, the other door with the same number.
--}
-leadsTo : Point -> Map -> Maybe Point
-leadsTo door map =
-    case tileAt door map of
-        Portal number ->
-            findAll (Portal number) map
-                |> List.filter ((/=) door)
-                |> List.head
-                |> Maybe.andThen (\other -> inFrontOf other map)
-
-        _ ->
-            Nothing
-
-
-{-| The floor next to a door in the outer wall.
+{-| The floor next to a door in the outer wall: where Alice comes out.
 -}
 inFrontOf : Point -> Map -> Maybe Point
 inFrontOf door map =
     directions
         |> List.map (\direction -> neighbour direction door)
-        |> List.filter (\point -> Tiles.isWalkable (tileAt point map) && not (isDoor (tileAt point map)))
+        |> List.filter (\point -> Tiles.isWalkable (tileAt point map) && tileAt point map /= Portal)
         |> List.head
-
-
-isDoor : Tile -> Bool
-isDoor tile =
-    case tile of
-        Portal _ ->
-            True
-
-        _ ->
-            False
 
 
 

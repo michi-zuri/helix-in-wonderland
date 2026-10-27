@@ -11,6 +11,7 @@ import Expect
 import Keyboard.Layout exposing (Layout(..))
 import Language exposing (Language(..))
 import Playthrough exposing (Run)
+import Random
 import Test exposing (Test, describe, test)
 import Texts
 
@@ -46,7 +47,7 @@ readStory =
 
 start : Run Hall.Model
 start =
-    Playthrough.start Hall.init
+    Playthrough.start (Hall.init (Random.initialSeed 1))
 
 
 {-| Read the story and pick the easy hall with its number key.
