@@ -1,7 +1,7 @@
 module Chapter.Hall.Doors exposing
     ( Doors, init
     , leadsTo, mightLeadTo, walkThrough
-    , pairs
+    , pairs, oneWay
     )
 
 {-| Where the doors of a hall lead. Mad mode's doors play tricks:
@@ -17,11 +17,16 @@ same part of the hall (she could never leave that part), and the two doors
 that are each the only door of their part (she would go back and forth
 between two dead ends forever).
 
+With an odd number of doors one is left over. It leads one way, to a
+random door of another part. Once Alice goes through it, it and the door
+she comes out of are the pair that stays linked, so the way back still
+works, and the door that lost its partner is the new one left over.
+
 The randomness comes from a seed, so the same seed plays the same game.
 
 @docs Doors, init
 @docs leadsTo, mightLeadTo, walkThrough
-@docs pairs
+@docs pairs, oneWay
 
 -}
 
@@ -35,6 +40,7 @@ import Set exposing (Set)
 type Doors
     = Doors
         { pairs : List ( Point, Point )
+        , oneWay : Maybe ( Point, Point )
         , kept : Maybe ( Point, Point )
         , partOf : Dict ( Int, Int ) ( Int, Int )
         , deadEnds : Set ( Int, Int )
@@ -65,12 +71,9 @@ init seed map =
                 |> Set.fromList
 
         empty =
-            { pairs = [], kept = Nothing, partOf = partOf, deadEnds = deadEnds, seed = seed }
-
-        ( first, nextSeed ) =
-            pickPairs empty doors
+            { pairs = [], oneWay = Nothing, kept = Nothing, partOf = partOf, deadEnds = deadEnds, seed = seed }
     in
-    Doors { empty | pairs = first, seed = nextSeed }
+    Doors (link doors empty)
 
 
 {-| The door that `door` leads to right now.
@@ -90,6 +93,28 @@ leadsTo door (Doors doors) =
                     Nothing
             )
         |> List.head
+        |> orElse
+            (case doors.oneWay of
+                Just ( from, to ) ->
+                    if from == door then
+                        Just to
+
+                    else
+                        Nothing
+
+                Nothing ->
+                    Nothing
+            )
+
+
+orElse : Maybe a -> Maybe a -> Maybe a
+orElse fallback first =
+    case first of
+        Just _ ->
+            first
+
+        Nothing ->
+            fallback
 
 
 {-| Where `door` might lead, as far as the player can know: back to where
@@ -121,8 +146,8 @@ anyAllowed door doors =
         |> List.filter (\other -> other /= door && allowed doors ( door, other ))
 
 
-{-| Alice went through `door`: that pair stays linked, every other door
-gets a new partner.
+{-| Alice went through `door`: it and the door she came out of stay
+linked both ways, every other door gets a new partner.
 -}
 walkThrough : Point -> Doors -> Doors
 walkThrough door (Doors doors) =
@@ -134,10 +159,10 @@ walkThrough door (Doors doors) =
                         |> List.map (\( x, y ) -> { x = x, y = y })
                         |> List.filter (\other -> other /= door && other /= partner)
 
-                ( newPairs, nextSeed ) =
-                    pickPairs doors others
+                relinked =
+                    link others doors
             in
-            Doors { doors | pairs = ( door, partner ) :: newPairs, kept = Just ( door, partner ), seed = nextSeed }
+            Doors { relinked | pairs = ( door, partner ) :: relinked.pairs, kept = Just ( door, partner ) }
 
         Nothing ->
             Doors doors
@@ -150,38 +175,71 @@ pairs (Doors doors) =
     doors.pairs
 
 
+{-| The door left over when there is an odd number, and where it leads.
+-}
+oneWay : Doors -> Maybe ( Point, Point )
+oneWay (Doors doors) =
+    doors.oneWay
+
+
 
 -- PAIRING
 
 
-{-| Pick one of the allowed ways to pair up `doors`, at random. There are
-few doors, so it simply lists every way and picks one.
+type alias Links a =
+    { a
+        | pairs : List ( Point, Point )
+        , oneWay : Maybe ( Point, Point )
+        , partOf : Dict ( Int, Int ) ( Int, Int )
+        , deadEnds : Set ( Int, Int )
+        , seed : Random.Seed
+    }
+
+
+{-| Link up `toLink` at random, in one of the allowed ways: in pairs, and
+with an odd number one door left over that leads one way. There are few
+doors, so it simply lists every way and picks one. If there is no allowed
+way, the doors keep their links.
 -}
-pickPairs :
-    { a | partOf : Dict ( Int, Int ) ( Int, Int ), deadEnds : Set ( Int, Int ), seed : Random.Seed }
-    -> List Point
-    -> ( List ( Point, Point ), Random.Seed )
-pickPairs doors toPair =
-    case List.filter (List.all (allowed doors)) (pairings toPair) of
+link : List Point -> Links a -> Links a
+link toLink doors =
+    let
+        everyWay =
+            if modBy 2 (List.length toLink) == 0 then
+                List.map (\pairing -> ( pairing, Nothing )) (pairings toLink)
+
+            else
+                toLink
+                    |> List.concatMap
+                        (\leftOver ->
+                            pairings (List.filter ((/=) leftOver) toLink)
+                                |> List.concatMap
+                                    (\pairing ->
+                                        anyAllowed leftOver doors
+                                            |> List.map (\target -> ( pairing, Just ( leftOver, target ) ))
+                                    )
+                        )
+
+        allowedWays =
+            List.filter (\( pairing, _ ) -> List.all (allowed doors) pairing) everyWay
+    in
+    case allowedWays of
         first :: others ->
-            Random.step (Random.uniform first others) doors.seed
+            let
+                ( ( newPairs, newOneWay ), nextSeed ) =
+                    Random.step (Random.uniform first others) doors.seed
+            in
+            { doors | pairs = newPairs, oneWay = newOneWay, seed = nextSeed }
 
         [] ->
-            ( [], doors.seed )
+            doors
 
 
-{-| Every way to split a list of doors into pairs. With an odd number, one
-door is left over and leads nowhere.
+{-| Every way to split an even number of doors into pairs.
 -}
 pairings : List Point -> List (List ( Point, Point ))
 pairings doors =
     case doors of
-        [] ->
-            [ [] ]
-
-        [ _ ] ->
-            [ [] ]
-
         first :: rest ->
             rest
                 |> List.concatMap
@@ -189,6 +247,9 @@ pairings doors =
                         pairings (List.filter ((/=) other) rest)
                             |> List.map (\more -> ( first, other ) :: more)
                     )
+
+        [] ->
+            [ [] ]
 
 
 allowed : { a | partOf : Dict ( Int, Int ) ( Int, Int ), deadEnds : Set ( Int, Int ) } -> ( Point, Point ) -> Bool
