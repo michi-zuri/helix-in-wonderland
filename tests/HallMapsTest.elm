@@ -8,13 +8,14 @@ module HallMapsTest exposing (suite)
     walls, pillars, table, doors and key stay where they were;
   - challenge needs all four directions, many turns and no long straight
     runs, and always leaves more than one way open;
-  - in mad, parts of the hall only the doors connect, and its route uses
-    several doors.
+  - in mad, parts of the hall only the doors connect; however the doors
+    shuffle, a player who keeps trying gets through.
 
 -}
 
 import Chapter.Contract exposing (Context)
 import Chapter.Hall as Hall
+import Chapter.Hall.Doors as Doors
 import Chapter.Hall.Map as Map exposing (Map, Point)
 import Chapter.Hall.Route as Route exposing (Route)
 import Chapter.Hall.Tiles as Tiles exposing (Tile(..))
@@ -24,6 +25,7 @@ import Expect
 import Keyboard.Layout exposing (Layout(..))
 import Language exposing (Language(..))
 import Playthrough exposing (Run)
+import Random
 import Set
 import Test exposing (Test, describe, test)
 import Texts
@@ -39,10 +41,29 @@ mapOf difficulty =
     Map.parse (Map.plan difficulty)
 
 
+{-| The fewest keystrokes from the start; in the mad hall with the luckiest
+doors.
+-}
 routeOf : Difficulty -> Route
 routeOf difficulty =
-    Route.fewest 30 (mapOf difficulty)
+    let
+        map =
+            mapOf difficulty
+
+        doors =
+            Doors.init (Random.initialSeed 1) map
+    in
+    Route.fewest { largestCount = 30, exits = \door -> Doors.mightLeadTo door doors }
+        { at = Map.find Start map |> Maybe.withDefault { x = 1, y = 10 }, hasKey = False }
+        map
         |> Maybe.withDefault { keys = [], keystrokes = 0, doors = 0 }
+
+
+inHall : Int -> Difficulty -> Run Hall.Model
+inHall seed difficulty =
+    Playthrough.start (Hall.init (Random.initialSeed seed))
+        |> Playthrough.sendAll (Hall.update context) (List.repeat 12 (Hall.KeyPressed "Enter"))
+        |> Playthrough.send (Hall.update context) (Hall.KeyPressed (numberKey difficulty))
 
 
 numberKey : Difficulty -> String
@@ -59,17 +80,8 @@ playRoute difficulty =
         send =
             Playthrough.send (Hall.update context)
 
-        settle run =
-            List.foldl
-                (\_ current ->
-                    if Story.isTalking current.model.story then
-                        send (Hall.KeyPressed "Enter") current
-
-                    else
-                        send (Hall.Frame 16) current
-                )
-                run
-                (List.range 1 400)
+        settle =
+            settleWith send
 
         pressKey key run =
             if String.all Char.isDigit key then
@@ -78,11 +90,72 @@ playRoute difficulty =
             else
                 settle (send (Hall.KeyPressed key) run)
     in
-    Playthrough.start Hall.init
-        |> Playthrough.sendAll (Hall.update context) (List.repeat 12 (Hall.KeyPressed "Enter"))
-        |> send (Hall.KeyPressed (numberKey difficulty))
+    inHall 1 difficulty
         |> (\run -> List.foldl pressKey run (List.concatMap splitCount (routeOf difficulty).keys))
         |> settle
+
+
+{-| Let Alice walk and read any story that pops up.
+-}
+settleWith : (Hall.Msg -> Run Hall.Model -> Run Hall.Model) -> Run Hall.Model -> Run Hall.Model
+settleWith send run =
+    List.foldl
+        (\_ current ->
+            if Story.isTalking current.model.story then
+                send (Hall.KeyPressed "Enter") current
+
+            else
+                send (Hall.Frame 16) current
+        )
+        run
+        (List.range 1 400)
+
+
+{-| A player in the mad hall: plan the best route with the luckiest doors
+from wherever Alice is, make its first move, look where she ended up, plan
+again. Gives up after `movesLeft` moves.
+-}
+playMad : Int -> Run Hall.Model -> Run Hall.Model
+playMad movesLeft run =
+    let
+        send =
+            Playthrough.send (Hall.update context)
+
+        model =
+            run.model
+
+        plan =
+            Route.fewest { largestCount = 30, exits = \door -> Doors.mightLeadTo door model.doors }
+                { at = model.alice, hasKey = model.hasKey }
+                model.map
+    in
+    if movesLeft <= 0 || Playthrough.finishedWith run /= Nothing then
+        run
+
+    else
+        case plan |> Maybe.map (.keys >> firstMove) of
+            Just ((_ :: _) as move) ->
+                playMad (movesLeft - 1)
+                    (settleWith send (List.foldl (\key current -> send (Hall.KeyPressed key) current) run move))
+
+            _ ->
+                run
+
+
+{-| The keys of the first move: an optional count, then a direction.
+-}
+firstMove : List String -> List String
+firstMove keys =
+    case keys of
+        first :: rest ->
+            if String.all Char.isDigit first then
+                splitCount first ++ List.take 1 rest
+
+            else
+                [ first ]
+
+        [] ->
+            []
 
 
 {-| "12" is typed as "1" then "2".
@@ -117,7 +190,7 @@ withoutDoors map =
     let
         open point =
             case Map.tileAt point map of
-                Portal _ ->
+                Portal ->
                     False
 
                 tile ->
@@ -158,7 +231,7 @@ reachable tile map =
 suite : Test
 suite =
     describe "The halls of chapter 2"
-        [ describe "every hall can be finished, and is worth its difficulty's tarts"
+        [ describe "easy and challenge can be finished in the fewest keystrokes, for their tarts"
             (List.map
                 (\difficulty ->
                     test (difficultyLabel difficulty) <|
@@ -167,7 +240,19 @@ suite =
                                 |> (\run -> ( Playthrough.finishedWith run, run.model.keystrokes ))
                                 |> Expect.equal ( Just (Difficulty.tarts difficulty), (routeOf difficulty).keystrokes )
                 )
-                Difficulty.all
+                [ Easy, Challenge ]
+            )
+        , describe "mad: however the doors shuffle, a player who keeps trying earns three tarts"
+            (List.map
+                (\seed ->
+                    test ("seed " ++ String.fromInt seed) <|
+                        \_ ->
+                            inHall seed Mad
+                                |> playMad 200
+                                |> (\run -> ( Playthrough.finishedWith run, run.model.keystrokes >= (routeOf Mad).keystrokes ))
+                                |> Expect.equal ( Just 3, True )
+                )
+                (List.range 1 20)
             )
         , test "the easy hall is still today's hall: eight keystrokes at best" <|
             \_ -> (routeOf Easy).keystrokes |> Expect.equal 8
@@ -204,34 +289,29 @@ suite =
             \_ ->
                 ( reachable GoldenKey (mapOf Mad), reachable CurtainFront (mapOf Mad) )
                     |> Expect.equal ( False, False )
-        , test "mad: the best route goes through at least three doors" <|
-            \_ -> (routeOf Mad).doors |> Expect.atLeast 3
-        , test "mad: every door has exactly one partner" <|
-            \_ ->
-                List.range 1 9
-                    |> List.map (\number -> List.length (doorsNumbered number (mapOf Mad)))
-                    |> List.filter (\count -> count /= 0 && count /= 2)
-                    |> Expect.equal []
-        , test "stepping into a door comes out in front of its partner, and stops there" <|
+        , test "mad: even with the luckiest doors, the way needs at least two of them" <|
+            \_ -> (routeOf Mad).doors |> Expect.atLeast 2
+        , test "stepping into a door comes out in front of the door it leads to, and stops there" <|
             \_ ->
                 let
-                    send =
-                        Playthrough.send (Hall.update context)
+                    leftDoor =
+                        { x = 0, y = 7 }
+
+                    expected =
+                        Doors.leadsTo leftDoor (Doors.init (Random.initialSeed 7) (mapOf Mad))
+                            |> Maybe.andThen (\door -> Map.inFrontOf door (mapOf Mad))
 
                     walked =
-                        Playthrough.start Hall.init
-                            |> Playthrough.sendAll (Hall.update context) (List.repeat 12 (Hall.KeyPressed "Enter"))
-                            |> send (Hall.KeyPressed "3")
+                        inHall 7 Mad
                             -- From the start (1,10): right to (2,10), up 3 to (2,7), then left:
-                            -- the second step enters the door on the left (0,7), which leads to
-                            -- the first door at the top (4,0). Alice comes out below it, at (4,1);
-                            -- the extra steps of "9h" must not carry on.
+                            -- the second step enters the door on the left; the extra steps of
+                            -- "9h" must not carry on after Alice comes out.
                             |> Playthrough.sendAll (Hall.update context)
                                 (List.map Hall.KeyPressed [ "l", "3", "k", "9", "h" ])
                             |> Playthrough.sendAll (Hall.update context) (List.repeat 400 (Hall.Frame 16))
                 in
-                walked.model.alice
-                    |> Expect.equal { x = 4, y = 1 }
+                Just walked.model.alice
+                    |> Expect.equal expected
         ]
 
 
@@ -255,7 +335,7 @@ changedLayout map =
                 ( Floor, Dropped ) ->
                     True
 
-                ( Door, Portal _ ) ->
+                ( Door, Portal ) ->
                     True
 
                 _ ->
@@ -277,7 +357,7 @@ chokepoints map =
     allPoints
         |> List.filter (\point -> Map.tileAt point map == Floor)
         |> List.filter (\point -> not (nextTo Start point || nextTo GoldenKey point || nextTo CurtainFront point))
-        |> List.filter (\point -> Route.fewest 30 (Map.setTile point Dropped map) == Nothing)
+        |> List.filter (\point -> Route.fewest { largestCount = 30, exits = always [] } { at = Map.find Start map |> Maybe.withDefault point, hasKey = False } (Map.setTile point Dropped map) == Nothing)
 
 
 longestCount : Route -> Int
@@ -286,12 +366,6 @@ longestCount route =
         |> List.filterMap String.toInt
         |> List.maximum
         |> Maybe.withDefault 1
-
-
-doorsNumbered : Int -> Map -> List Point
-doorsNumbered number map =
-    allPoints
-        |> List.filter (\point -> Map.tileAt point map == Portal number)
 
 
 difficultyLabel : Difficulty -> String

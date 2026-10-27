@@ -3,12 +3,14 @@ module Chapter.Hall.Route exposing (Route, fewest)
 {-| The route through a hall with the fewest keystrokes, counts included.
 
 The game shows this number on the results card ("fewest possible"), and the
-tests play the route to prove every hall can be finished.
+tests play the route to prove every hall can be finished. In the mad hall
+the doors change where they lead, so there it is the fewest keystrokes with
+the luckiest doors.
 
 A move is one count and a direction: `7l` walks seven steps right for two
 keystrokes, `l` one step for one. A move stops early, as in the game: at a
 wall, at the key (picking it up), at the curtain, and at a door (which
-leads on to the floor in front of its partner door).
+leads on to the floor in front of another door).
 
 -}
 
@@ -37,23 +39,36 @@ type alias Visit =
     }
 
 
-{-| `largestCount` is the biggest count the game accepts.
+{-| The fewest keystrokes from `from` to the curtain with the key.
+
+`largestCount` is the biggest count the game accepts. `exits` says which
+doors a door might lead to; with several, the route takes the luckiest.
+
 -}
-fewest : Int -> Map -> Maybe Route
-fewest largestCount map =
-    Map.find Start map
-        |> Maybe.andThen
-            (\start ->
-                search largestCount map Set.empty [ { cost = 0, at = start, hasKey = False, won = False, keys = [], doors = 0 } ]
-            )
+fewest :
+    { largestCount : Int, exits : Point -> List Point }
+    -> { at : Point, hasKey : Bool }
+    -> Map
+    -> Maybe Route
+fewest { largestCount, exits } from map =
+    search { largestCount = largestCount, exits = exits, map = map }
+        Set.empty
+        [ { cost = 0, at = from.at, hasKey = from.hasKey, won = False, keys = [], doors = 0 } ]
+
+
+type alias Hall =
+    { largestCount : Int
+    , exits : Point -> List Point
+    , map : Map
+    }
 
 
 {-| Dijkstra's algorithm: always continue from the cheapest position not
 yet explored, so the first time the curtain is reached, it was reached in
 the fewest keystrokes.
 -}
-search : Int -> Map -> Set ( Int, Int, Int ) -> List Visit -> Maybe Route
-search largestCount map explored frontier =
+search : Hall -> Set ( Int, Int, Int ) -> List Visit -> Maybe Route
+search hall explored frontier =
     case cheapest frontier of
         Nothing ->
             Nothing
@@ -63,13 +78,12 @@ search largestCount map explored frontier =
                 Just { keys = List.reverse visit.keys, keystrokes = visit.cost, doors = visit.doors }
 
             else if Set.member (place visit) explored then
-                search largestCount map explored rest
+                search hall explored rest
 
             else
-                search largestCount
-                    map
+                search hall
                     (Set.insert (place visit) explored)
-                    (rest ++ List.concatMap (moves largestCount map visit) Map.directions)
+                    (rest ++ List.concatMap (moves hall visit) Map.directions)
 
 
 {-| Where a visit stands, as something a `Set` can hold (Bools can't be
@@ -127,8 +141,8 @@ removeFirst item list =
 {-| Every move from `visit` in one direction: one step, two steps, ... until
 something stops Alice.
 -}
-moves : Int -> Map -> Visit -> Direction -> List Visit
-moves largestCount map visit direction =
+moves : Hall -> Visit -> Direction -> List Visit
+moves { largestCount, exits, map } visit direction =
     let
         go steps at found =
             let
@@ -158,13 +172,11 @@ moves largestCount map visit direction =
                         else
                             arriving (\v -> { v | hasKey = True }) :: found
 
-                    Portal _ ->
-                        case Map.leadsTo next map of
-                            Just other ->
-                                arriving (\v -> { v | at = other, doors = v.doors + 1 }) :: found
-
-                            Nothing ->
-                                found
+                    Portal ->
+                        exits next
+                            |> List.filterMap (\door -> Map.inFrontOf door map)
+                            |> List.map (\exit -> arriving (\v -> { v | at = exit, doors = v.doors + 1 }))
+                            |> (\arrivals -> arrivals ++ found)
 
                     CurtainFront ->
                         if visit.hasKey then

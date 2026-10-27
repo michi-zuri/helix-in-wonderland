@@ -457,7 +457,7 @@ newChapter seed id =
             RabbitHoleChapter (RabbitHole.init seed)
 
         HallOfDoors ->
-            HallChapter Hall.init
+            HallChapter (Hall.init seed)
 
         DrinkMe ->
             DrinkMeChapter DrinkMe.init
