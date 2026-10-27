@@ -7,8 +7,9 @@ body:
     attributes:
       value: |
         Thanks for drawing! The easiest way is the pixel editor: it fills in this form for you.
+        Open it with "Draw pictures for the game" at the bottom of any screen in the game.
         Danke fürs Zeichnen! Am einfachsten geht es mit dem Pixel-Editor: er füllt dieses Formular für dich aus.
-        https://michi-zuri.github.io/helix-in-wonderland/pixel-editor.html
+        Du öffnest ihn mit "Bilder fürs Spiel zeichnen" unten auf jeder Seite im Spiel.
   - type: input
     id: picture
     attributes:

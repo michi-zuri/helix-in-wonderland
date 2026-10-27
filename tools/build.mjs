@@ -5,14 +5,43 @@
 import { execFileSync } from 'node:child_process';
 import { copyFileSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 
+// Which GitHub repository this build belongs to, so proposal links open
+// issues there: GitHub Actions says so in GITHUB_REPOSITORY (forks too);
+// locally, the git remote tells. Without either, the game falls back to the
+// original repository (src/Project.elm).
+function repository() {
+  if (process.env.GITHUB_REPOSITORY) return process.env.GITHUB_REPOSITORY;
+  try {
+    const url = execFileSync('git', ['config', '--get', 'remote.origin.url'], { encoding: 'utf8' }).trim();
+    const match = url.match(/github\.com[:/]([^/]+\/[^/]+?)(\.git)?$/);
+    if (match) return match[1];
+  } catch (error) {}
+  return null;
+}
+const repo = repository();
+const config = (extra = {}) =>
+  `<script>window.HELIX_REPOSITORY = ${JSON.stringify(repo)};` +
+  Object.entries(extra).map(([key, value]) => ` window.${key} = ${JSON.stringify(value)};`).join('') +
+  `</script>`;
+
+// The claude.ai copy can't find the pixel editor next to itself, so it links
+// to the repository's default GitHub Pages address instead.
+function pagesAddress(repo) {
+  if (!repo) return 'https://michi-zuri.github.io/helix-in-wonderland/';
+  const [owner, name] = repo.split('/');
+  const host = `${owner.toLowerCase()}.github.io`;
+  return name.toLowerCase() === host ? `https://${host}/` : `https://${host}/${name}/`;
+}
+
 const compiled = 'build/elm.js';
 execFileSync('npx', ['elm', 'make', 'src/Main.elm', '--optimize', `--output=${compiled}`], { stdio: 'inherit' });
 
 const script = readFileSync(compiled, 'utf8').replaceAll('</script', '<\\/script');
-const page = readFileSync('public/index.html', 'utf8').replace('<!-- ELM -->', () => `<script>\n${script}\n</script>`);
+const template = readFileSync('public/index.html', 'utf8').replace('<!-- ELM -->', () => `<script>\n${script}\n</script>`);
+const page = template.replace('<!-- CONFIG -->', () => config());
 
 mkdirSync('dist/site', { recursive: true });
-writeFileSync('dist/helix-wonderland.html', page);
+writeFileSync('dist/helix-wonderland.html', template.replace('<!-- CONFIG -->', () => config({ HELIX_SITE: pagesAddress(repo) })));
 
 // The standalone site: everything before the app's mount point goes into <head>.
 const split = page.indexOf('<div id="app">');
@@ -34,6 +63,7 @@ ${body}</body>
 copyFileSync('public/favicon.svg', 'dist/site/favicon.svg');
 copyFileSync('public/fonts/DepartureMono-LICENSE.txt', 'dist/site/font-license.txt');
 
+console.log(`links: issues go to ${repo ?? '(original repository)'}`);
 for (const file of ['dist/helix-wonderland.html', 'dist/site/index.html']) {
   console.log(`${file}  (${Math.round(statSync(file).size / 1024)} KB)`);
 }
@@ -43,5 +73,7 @@ const editorCompiled = 'build/pixel-editor.js';
 execFileSync('npx', ['elm', 'make', 'src/PixelEditor.elm', '--optimize', `--output=${editorCompiled}`], { stdio: 'inherit' });
 const editorScript = readFileSync(editorCompiled, 'utf8').replaceAll('</script', '<\\/script');
 writeFileSync('dist/site/pixel-editor.html',
-  readFileSync('public/pixel-editor.html', 'utf8').replace('<!-- ELM -->', () => `<script>\n${editorScript}\n</script>`));
+  readFileSync('public/pixel-editor.html', 'utf8')
+    .replace('<!-- ELM -->', () => `<script>\n${editorScript}\n</script>`)
+    .replace('<!-- CONFIG -->', () => config()));
 console.log(`dist/site/pixel-editor.html  (${Math.round(statSync('dist/site/pixel-editor.html').size / 1024)} KB)`);

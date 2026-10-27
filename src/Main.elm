@@ -60,6 +60,7 @@ type alias Model =
     , seed : Random.Seed
     , toast : Maybe Toast
     , flash : Maybe Flash
+    , links : Project.Links
     }
 
 
@@ -108,8 +109,8 @@ longestFrameMilliseconds =
     100
 
 
-{-| Flags from JavaScript: the browser language, a random seed, and anything
-saved earlier. Bad or missing data never stops the game; it falls back to
+{-| Flags from JavaScript: the browser language, a random seed, where the
+game is served from (for its links), and anything saved earlier. Bad or missing data never stops the game; it falls back to
 defaults.
 -}
 init : Decode.Value -> ( Model, Cmd Msg )
@@ -132,6 +133,7 @@ init flags =
       , seed = Random.initialSeed (decodeFlag "seed" Decode.int 1865)
       , toast = Nothing
       , flash = Nothing
+      , links = decodeFlag "links" Project.decoder Project.fallback
       }
     , Cmd.none
     )
@@ -665,7 +667,7 @@ view model =
             , focus = screen.keyboard
             , flash = Maybe.map (\f -> { key = f.key, ok = f.ok }) model.flash
             }
-        , Html.Lazy.lazy2 viewFooter texts (screenName model)
+        , Html.Lazy.lazy3 viewFooter model.links texts (screenName model)
         ]
 
 
@@ -685,12 +687,12 @@ viewHeader texts settings =
         }
 
 
-viewFooter : Texts -> String -> Html Msg
-viewFooter texts screen =
+viewFooter : Project.Links -> Texts -> String -> Html Msg
+viewFooter links texts screen =
     Html.footer [ A.class "page-footer" ]
         [ Html.nav [ A.class "footer-links" ]
-            [ Html.a [ A.href Project.pixelEditorUrl, A.target "_blank", A.rel "noopener" ] [ Html.text texts.drawPictures ]
-            , Html.a [ A.href (Project.proposeEditUrl screen), A.target "_blank", A.rel "noopener" ] [ Html.text texts.suggestChange ]
+            [ Html.a [ A.href (Project.pixelEditorUrl links), A.target "_blank", A.rel "noopener" ] [ Html.text texts.drawPictures ]
+            , Html.a [ A.href (Project.proposeEditUrl links screen), A.target "_blank", A.rel "noopener" ] [ Html.text texts.suggestChange ]
             ]
         , Html.p [ A.class "footer" ] [ Html.text texts.footer ]
         ]

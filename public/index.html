@@ -152,6 +152,7 @@ h2{margin:0;font-family:var(--display);font-weight:400;font-size:22px}
 <div id="app"></div>
 <button id="focus-prompt" hidden>Click to play · Klicken zum Spielen</button>
 
+<!-- CONFIG -->
 <!-- ELM -->
 
 <script>
@@ -185,6 +186,9 @@ h2{margin:0;font-family:var(--display);font-weight:400;font-size:22px}
     flags: {
       browserLanguage: navigator.language || 'en',
       seed: Math.floor(Math.random() * 2147483647),
+      // Where this copy of the game lives, for its links (see src/Project.elm):
+      // the folder of this page, and the repository the build came from.
+      links: { site: window.HELIX_SITE || new URL('./', location.href).href, repository: window.HELIX_REPOSITORY },
       settings: load('helix-wonderland.settings'),
       progress: load('helix-wonderland.progress')
     }
