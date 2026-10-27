@@ -19,6 +19,7 @@ type Tile
     | Pillar
     | GoldenKey
     | Portal Int
+    | Dropped
 
 
 size : Int
@@ -27,7 +28,8 @@ size =
 
 
 {-| The maps are written as text in `Chapter.Hall.Map`; this is the legend.
-A digit is a door that leads to the other door with the same digit.
+A digit is a door that leads to the other door with the same digit; `x` is
+something dropped on the floor.
 -}
 fromChar : Char -> Tile
 fromChar char =
@@ -55,6 +57,9 @@ fromChar char =
 
         'K' ->
             GoldenKey
+
+        'x' ->
+            Dropped
 
         _ ->
             if Char.isDigit char then
@@ -100,8 +105,12 @@ view position tile =
                 Curtain ->
                     wall position ++ curtain
 
-                Portal number ->
-                    wall position ++ portal number
+                -- Looks like any other door: where it leads is a surprise.
+                Portal _ ->
+                    wall position ++ door
+
+                Dropped ->
+                    floor position ++ dropped position
 
                 GlassTable ->
                     floor position ++ glass
@@ -173,32 +182,67 @@ door =
     ]
 
 
-{-| A door that leads somewhere: the frame has the pair's colour, and the
-number on it matches the partner door's.
+{-| Something dropped on the floor, in Alice's hurry or the Rabbit's. Which
+thing lies where follows from the position, so the hall looks varied but
+the same every time.
 -}
-portal : Int -> List (Svg msg)
-portal number =
-    let
-        colour =
-            case modBy 4 number of
-                1 ->
-                    "#e2557a"
+dropped : { x : Int, y : Int } -> List (Svg msg)
+dropped { x, y } =
+    case modBy 6 (x * 7 + y * 3) of
+        0 ->
+            -- a pile of two books
+            [ pixel 2 9 12 3 "#b8435a"
+            , pixel 2 10 12 1 "#f4ead2"
+            , pixel 3 5 10 4 "#4f7fbf"
+            , pixel 3 6 10 1 "#f4ead2"
+            , pixel 3 12 12 1 "#2a1c35"
+            ]
 
-                2 ->
-                    "#5fb3e6"
+        1 ->
+            -- the White Rabbit's white kid gloves
+            [ pixel 2 6 5 7 "#f4ead2"
+            , pixel 2 4 1 3 "#f4ead2"
+            , pixel 4 3 1 3 "#f4ead2"
+            , pixel 6 4 1 3 "#f4ead2"
+            , pixel 9 7 5 7 "#e3d6bb"
+            , pixel 9 5 1 3 "#e3d6bb"
+            , pixel 11 4 1 3 "#e3d6bb"
+            , pixel 13 5 1 3 "#e3d6bb"
+            ]
 
-                3 ->
-                    "#7fc46a"
+        2 ->
+            -- the Rabbit's fan
+            [ pixel 7 11 2 3 "#6b3f2a"
+            , pixel 5 8 6 3 "#e2557a"
+            , pixel 3 5 10 3 "#e2557a"
+            , pixel 3 5 10 1 "#f4a6bb"
+            , pixel 7 5 1 6 "#b8435a"
+            ]
 
-                _ ->
-                    "#efba5d"
-    in
-    [ pixel 2 1 12 15 colour
-    , pixel 4 3 8 13 "#6b3f2a"
-    , pixel 5 4 6 6 "#f4ead2"
-    , Svg.text_ [ A.x "8", A.y "9.5", A.class "door-number", A.textAnchor "middle" ] [ Svg.text (String.fromInt number) ]
-    , pixel 10 11 1 2 colour
-    ]
+        3 ->
+            -- a teacup on its saucer
+            [ pixel 2 12 12 2 "#d7f1f7"
+            , pixel 4 6 8 6 "#f4ead2"
+            , pixel 4 7 8 1 "#5fb3e6"
+            , pixel 12 8 2 3 "#f4ead2"
+            , pixel 5 5 6 1 "#8a5a3c"
+            ]
+
+        4 ->
+            -- the little cake box marked EAT ME
+            [ pixel 3 6 10 8 "#efba5d"
+            , pixel 3 6 10 2 "#c98f3a"
+            , pixel 5 10 6 1 "#b8435a"
+            , pixel 5 12 4 1 "#b8435a"
+            ]
+
+        _ ->
+            -- a jar of orange marmalade
+            [ pixel 4 6 8 8 "#e8873a"
+            , pixel 4 4 8 2 "#f4ead2"
+            , pixel 5 8 6 3 "#f4ead2"
+            , pixel 5 3 6 1 "#b8435a"
+            ]
 
 
 curtain : List (Svg msg)

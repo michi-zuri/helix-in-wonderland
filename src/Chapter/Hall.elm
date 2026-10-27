@@ -365,13 +365,13 @@ arrive model =
             ( model, [] )
 
 
-{-| Alice steps into a door and comes out of its partner. The first time,
+{-| Alice steps into a door and comes out in front of its partner. The first time,
 the story explains what happened. Any steps still queued are dropped, so
 she stands still on the far side.
 -}
 goThroughDoor : Model -> ( Model, List Effect )
 goThroughDoor model =
-    case Map.partner model.alice model.map of
+    case Map.leadsTo model.alice model.map of
         Just other ->
             ( { model
                 | alice = other
