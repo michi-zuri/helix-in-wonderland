@@ -225,6 +225,14 @@ score texts model =
 
 view : Context -> Model -> Contract.View msg
 view context model =
+    Story.instructions model.story (scene context model)
+
+
+{-| Everything the chapter shows; `view` holds back the instructions while
+the opening story plays.
+-}
+scene : Context -> Model -> Contract.View msg
+scene context model =
     let
         work =
             currentWork context.texts model
