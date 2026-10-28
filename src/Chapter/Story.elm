@@ -2,6 +2,7 @@ module Chapter.Story exposing
     ( Story, begin, tell, conclude
     , Heard(..), hear, tick
     , isPlaying, isTalking, view
+    , instructions
     )
 
 {-| The rhythm every chapter shares: an opening story, then play, then a
@@ -29,9 +30,11 @@ A chapter keeps one `Story` in its model and asks it first about every key:
 @docs Story, begin, tell, conclude
 @docs Heard, hear, tick
 @docs isPlaying, isTalking, view
+@docs instructions
 
 -}
 
+import Chapter.Contract as Contract
 import Html exposing (Html)
 import Texts exposing (Texts)
 import Ui.Dialog as Dialog exposing (Dialog, Line)
@@ -146,3 +149,25 @@ view texts (Story s) =
 
         Nothing ->
             Html.text ""
+
+
+{-| Instructions wait until they are relevant. While the opening story
+plays nothing can be typed yet, so a chapter's instructions would only be
+read too early and forgotten: the panel below the stage stays empty and the
+on-screen keyboard shows no hints. Every chapter's `view` goes through this:
+
+    view context model =
+        Story.instructions model.story (scene context model)
+
+-}
+instructions : Story -> Contract.View msg -> Contract.View msg
+instructions (Story s) chapterView =
+    case s.phase of
+        Intro ->
+            { chapterView
+                | panel = Html.text ""
+                , keyboard = { target = Nothing, helpers = [] }
+            }
+
+        _ ->
+            chapterView

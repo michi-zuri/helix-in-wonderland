@@ -482,6 +482,14 @@ score model =
 
 view : Context -> Model -> Contract.View msg
 view context model =
+    Story.instructions model.story (scene context model)
+
+
+{-| Everything the chapter shows; `view` holds back the instructions while
+the opening story plays.
+-}
+scene : Context -> Model -> Contract.View msg
+scene context model =
     { stage =
         Html.div [ HA.class "stage-scene" ]
             [ Svg.svg [ SA.viewBox "0 0 320 192", SA.class "pixel-scene" ]
@@ -704,48 +712,51 @@ viewPanel context model =
         stat name value =
             Html.span [] [ Html.text name, Html.b [] [ Html.text value ] ]
     in
-    Html.div [ HA.class "panel-content" ]
-        (List.concat
-            [ case model.difficulty of
-                Just difficulty ->
-                    [ Html.span [ HA.class "eyebrow" ] [ Html.text (Difficulty.name texts difficulty) ] ]
+    case model.difficulty of
+        Nothing ->
+            Html.div [ HA.class "panel-content" ]
+                [ paragraph "big" texts.hall.chooseTitle
+                , paragraph "" texts.hall.chooseHint
+                ]
 
-                Nothing ->
-                    []
-            , [ Html.div [ HA.class "legend" ]
-                    (List.map
-                        (\( key, arrow ) -> Html.span [] [ Html.b [] [ Html.text key ], Html.text (" " ++ arrow) ])
-                        [ ( "h", "←" ), ( "j", "↓" ), ( "k", "↑" ), ( "l", "→" ) ]
-                    )
-              ]
-            , if model.hasKey then
-                [ paragraph "big" texts.hall.goToCurtain, paragraph "" texts.hall.countTip ]
+        Just difficulty ->
+            Html.div [ HA.class "panel-content" ]
+                (List.concat
+                    [ [ Html.span [ HA.class "eyebrow" ] [ Html.text (Difficulty.name texts difficulty) ]
+                      , Html.div [ HA.class "legend" ]
+                            (List.map
+                                (\( key, arrow ) -> Html.span [] [ Html.b [] [ Html.text key ], Html.text (" " ++ arrow) ])
+                                [ ( "h", "←" ), ( "j", "↓" ), ( "k", "↑" ), ( "l", "→" ) ]
+                            )
+                      ]
+                    , if model.hasKey then
+                        [ paragraph "big" texts.hall.goToCurtain, paragraph "" texts.hall.countTip ]
 
-              else
-                [ paragraph "big" texts.hall.findKey ]
-            , if model.difficulty == Just Mad then
-                [ paragraph "tip" texts.hall.doorsTip ]
+                      else
+                        [ paragraph "big" texts.hall.findKey ]
+                    , if difficulty == Mad then
+                        [ paragraph "tip" texts.hall.doorsTip ]
 
-              else
-                []
-            , if model.hasKey && Layout.needsShiftForDigits context.layout then
-                [ paragraph "tip" texts.hall.azertyTip ]
+                      else
+                        []
+                    , if model.hasKey && Layout.needsShiftForDigits context.layout then
+                        [ paragraph "tip" texts.hall.azertyTip ]
 
-              else
-                []
-            , [ Html.div [ HA.class "stats" ]
-                    [ stat texts.results.keystrokes (String.fromInt model.keystrokes)
-                    , stat texts.results.usedCount
-                        (if model.usedCount then
-                            texts.results.yes
+                      else
+                        []
+                    , [ Html.div [ HA.class "stats" ]
+                            [ stat texts.results.keystrokes (String.fromInt model.keystrokes)
+                            , stat texts.results.usedCount
+                                (if model.usedCount then
+                                    texts.results.yes
 
-                         else
-                            texts.results.notYet
-                        )
+                                 else
+                                    texts.results.notYet
+                                )
+                            ]
+                      ]
                     ]
-              ]
-            ]
-        )
+                )
 
 
 

@@ -142,6 +142,12 @@ tools/                      build script, plus offline helpers (see below)
 - Keys are handled by the character they type (`KeyboardEvent.key`), so
   Helix commands work on every layout. Layouts only affect teaching: the
   on-screen keyboard, finger hints, and chapter 1's home-row stages.
+- Instructions wait until they are relevant. While a story plays nothing
+  can be typed, so a chapter shows no instructions then: its `view` goes
+  through `Chapter.Story.instructions`, which empties the panel and the
+  keyboard hints during the opening story. Show
+  each hint at the moment the player can act on it (the difficulty question
+  after the story, the movement keys once there is a hall to walk in).
 - A chapter's puzzle text (words, poem) follows the language setting until
   the first key press, then stays fixed for that chapter.
 - Saved data keys (`Chapter.Id.toKey`, `Keyboard.Layout.toKey`) must never
