@@ -117,6 +117,9 @@ h2{margin:0;font-family:var(--display);font-weight:400;font-size:22px}
 .word.now .space-slot{position:absolute;left:100%;top:0;width:.6em}
 .word.now .current{border-bottom:3px solid var(--honey)}
 .word.now .wrong{color:var(--apricot);border-color:var(--apricot)}
+/* Chapter 3 hides the word while it is typed: only a cursor marks where the next letter goes. */
+.word.now .hidden-cursor{display:inline-block;width:.6em;border-bottom:3px solid var(--honey)}
+.word.now .hidden-cursor.wrong{border-color:var(--apricot)}
 
 .status-line{display:flex;flex-wrap:wrap;background:var(--midnight);font-family:var(--mono);font-size:20px;line-height:1.35}
 .status-line>span{padding:0 10px;white-space:nowrap}
