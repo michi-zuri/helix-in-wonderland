@@ -151,12 +151,26 @@ type alias HallTexts =
     }
 
 
+{-| Each word list is one hidden sentence. Mad's made-up words sound like a
+sentence when read aloud. Words may only use the letters learned so far:
+the home row, plus `e` and `i` (a test checks this).
+-}
 type alias DrinkMeTexts =
     { intro1 : String
     , intro2 : String
     , intro3 : String
     , finale : String
-    , words : List String
+    , easyWords : List String
+    , challengeWords : List String
+    , madWords : List String
+    , chooseTitle : String
+    , chooseHint : String
+    , easyInfo : String
+    , challengeInfo : String
+    , madInfo : String
+    , fromMemory : String
+    , tooSlow : String
+    , startedOver : String
     , sips : String
     , newKeys : String
     , bottle : String
@@ -385,10 +399,20 @@ english =
         }
     , drinkMe =
         { intro1 = "On the table stood a little bottle. Round its neck was a paper label with the words DRINK ME printed in large letters."
-        , intro2 = "Each word you type is one sip. Type the word, then tap the space bar with your thumb."
+        , intro2 = "Each word you type is one sip. Look at the word, then type it from memory, and tap the space bar with your thumb."
         , intro3 = "Two new keys: e is your left middle finger reaching up one row, i is your right middle finger reaching up. Always come back home afterwards."
         , finale = "What a curious feeling! Alice was now only ten inches high, the right size for going through the little door."
-        , words = [ "ask", "fall", "sad", "flask", "alas", "glad", "she", "like", "idea", "shelf", "hide", "lake" ]
+        , easyWords = [ "alas", "she", "feels", "as", "if", "she", "shall", "fade", "like", "a", "sad", "leaf" ]
+        , challengeWords = [ "she", "glided", "aside", "as", "seashells", "salads", "ladles", "flasks", "giggled", "sighed", "faded" ]
+        , madWords = [ "alaasaleesiss", "ashaiashaleef", "sheesaighsshee", "shallhaidasafish", "afishalaas", "fishesfeelsaad" ]
+        , chooseTitle = "How big a sip?"
+        , chooseHint = "j / k to choose · Enter to drink"
+        , easyInfo = "Short words."
+        , challengeInfo = "Longer words."
+        , madInfo = "Very long made-up words."
+        , fromMemory = "Read the word first. It hides as soon as you start typing, and a pause in the middle of a word starts it over. Between words, take all the time you need."
+        , tooSlow = "Too slow! The word starts over."
+        , startedOver = "Started over"
         , sips = "Sips"
         , newKeys = "New keys: e and i. Middle fingers reach up."
         , bottle = "DRINK ME"
@@ -622,10 +646,20 @@ german =
         }
     , drinkMe =
         { intro1 = "Auf dem Tisch stand ein Fläschchen. Um seinen Hals hing ein Zettel mit grossen Buchstaben: TRINK MICH."
-        , intro2 = "Jedes Wort, das du tippst, ist ein Schluck. Tippe das Wort und drücke dann mit dem Daumen die Leertaste."
+        , intro2 = "Jedes Wort, das du tippst, ist ein Schluck. Schau dir das Wort an, tippe es aus dem Gedächtnis und drücke dann mit dem Daumen die Leertaste."
         , intro3 = "Zwei neue Tasten: e ist der linke Mittelfinger, eine Reihe nach oben. i ist der rechte Mittelfinger, eine Reihe nach oben. Danach immer zurück nach Hause."
         , finale = "Was für ein seltsames Gefühl! Alice war nur noch fünfundzwanzig Zentimeter gross, genau richtig für die kleine Tür."
-        , words = [ "das", "ja", "als", "lass", "fass", "glas", "eis", "alle", "leise", "seide", "held", "ideal" ]
+        , easyWords = [ "ja", "das", "glas", "half", "alles", "fiel", "sie", "sass", "leise", "als", "elfe", "da" ]
+        , challengeWords = [ "eilige", "elfe", "liesel", "sah", "seidige", "igel", "kegel", "segel", "alles", "gefiel", "liesel" ]
+        , madWords = [ "haialiissaadaas", "glaasjadaasglaas", "halfaliissass", "alselfedaaaha", "siiliiflaise", "ailighfiilsii" ]
+        , chooseTitle = "Wie gross soll der Schluck sein?"
+        , chooseHint = "j / k zum Wählen · Enter zum Trinken"
+        , easyInfo = "Kurze Wörter."
+        , challengeInfo = "Längere Wörter."
+        , madInfo = "Sehr lange, erfundene Wörter."
+        , fromMemory = "Lies zuerst das Wort. Sobald du tippst, verschwindet es, und eine Pause mitten im Wort fängt es von vorne an. Zwischen den Wörtern hast du alle Zeit der Welt."
+        , tooSlow = "Zu langsam! Das Wort fängt von vorne an."
+        , startedOver = "Neu angefangen"
         , sips = "Schlucke"
         , newKeys = "Neue Tasten: e und i. Die Mittelfinger greifen nach oben."
         , bottle = "TRINK MICH"

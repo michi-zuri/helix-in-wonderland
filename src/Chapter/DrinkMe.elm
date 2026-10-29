@@ -1,8 +1,14 @@
-module Chapter.DrinkMe exposing (Model, Msg(..), init, update, view, wordsPerMinute)
+module Chapter.DrinkMe exposing (Model, Msg(..), init, pauseLimit, update, view, wordsPerMinute)
 
 {-| Chapter 3, "Drink Me": typing whole words. Each word is one sip from the
 bottle and Alice shrinks a little, until she is small enough for the little
 door. Adds two new keys, `e` and `i`, and the thumb on the space bar.
+
+Words are typed from memory, to teach planning a word before typing it: a
+word shows until its first key, then hides, and a pause of more than
+`pauseLimit` between two of its letters starts it over (and shows it
+again). Between words there is no hurry. The difficulty picks the words:
+short, longer, or very long made-up ones (`Texts.DrinkMeTexts`).
 
 Typing speed is measured with the game's own clock (the `Frame` messages),
 not the computer's, so tests can type at any pace they like.
@@ -11,6 +17,7 @@ not the computer's, so tests can type at any pace they like.
 
 import Chapter.Contract as Contract exposing (Context, Effect(..), Sound(..))
 import Chapter.Story as Story exposing (Story)
+import Difficulty exposing (Difficulty(..))
 import Html exposing (Html)
 import Html.Attributes as A
 import Pixel.Sprite as Sprite
@@ -20,6 +27,7 @@ import Svg exposing (Svg)
 import Svg.Attributes as SA
 import Texts exposing (Texts)
 import Ui.Dialog as Dialog
+import Ui.DifficultyChoice as DifficultyChoice exposing (Choice)
 
 
 file : String
@@ -56,16 +64,32 @@ millisecondsBeforeSpeed =
     3000
 
 
+{-| The longest pause allowed between two letters of a word, in
+milliseconds. A longer one starts the word over.
+-}
+pauseLimit : Float
+pauseLimit =
+    300
+
+
 
 -- MODEL
 
 
+{-| `sinceLetter` counts the time since the last right letter while a word
+is half typed; it is `Nothing` before a word's first letter and after its
+last, where there is no hurry.
+-}
 type alias Model =
     { story : Story
+    , choice : Choice
+    , difficulty : Maybe Difficulty
     , words : Maybe (List String)
     , wordIndex : Int
     , letterIndex : Int
     , waitingForSpace : Bool
+    , sinceLetter : Maybe Float
+    , startedOver : Int
     , correct : Int
     , errors : Int
     , lastKeyWrong : Bool
@@ -83,10 +107,14 @@ init =
             [ Dialog.say Narrator (.drinkMe >> .intro2)
             , Dialog.say Narrator (.drinkMe >> .intro3)
             ]
+    , choice = DifficultyChoice.start 0
+    , difficulty = Nothing
     , words = Nothing
     , wordIndex = 0
     , letterIndex = 0
     , waitingForSpace = False
+    , sinceLetter = Nothing
+    , startedOver = 0
     , correct = 0
     , errors = 0
     , lastKeyWrong = False
@@ -97,12 +125,33 @@ init =
     }
 
 
-{-| The word list follows the language setting until the first key press,
-then stays fixed for the rest of the chapter.
+{-| The words follow the language setting until a difficulty is picked,
+then stay fixed for the rest of the chapter.
 -}
 currentWords : Texts -> Model -> List String
 currentWords texts model =
-    Maybe.withDefault texts.drinkMe.words model.words
+    Maybe.withDefault (wordsFor texts (Maybe.withDefault Easy model.difficulty)) model.words
+
+
+wordsFor : Texts -> Difficulty -> List String
+wordsFor texts difficulty =
+    case difficulty of
+        Easy ->
+            texts.drinkMe.easyWords
+
+        Challenge ->
+            texts.drinkMe.challengeWords
+
+        Mad ->
+            texts.drinkMe.madWords
+
+
+{-| The current word hides once its first letter is typed, until it is
+complete.
+-}
+isHidden : Model -> Bool
+isHidden model =
+    model.letterIndex > 0 && not model.waitingForSpace
 
 
 {-| The key to press next: a letter of the current word, or the space bar
@@ -136,7 +185,12 @@ update context msg model =
             case Story.hear context.texts key model.story of
                 Story.NotTalking ->
                     if Story.isPlaying model.story then
-                        typeKey context.texts key model
+                        case model.difficulty of
+                            Just _ ->
+                                typeKey context.texts key model
+
+                            Nothing ->
+                                choose context.texts key model
 
                     else
                         ( model, [] )
@@ -148,13 +202,26 @@ update context msg model =
                     ( { model | story = story }, [ PlaySound TickSound ] )
 
                 Story.IntroOver story ->
-                    ( { model | story = story }, [ ShowToast (.drinkMe >> .newKeys) ] )
+                    ( { model | story = story, choice = DifficultyChoice.start model.clock }, [ ShowToast (.drinkMe >> .newKeys) ] )
 
                 Story.OutroOver story ->
                     ( { model | story = story }, [ Finish (score model) ] )
 
         Frame milliseconds ->
             frame context.texts milliseconds model
+
+
+choose : Texts -> String -> Model -> ( Model, List Effect )
+choose texts key model =
+    case DifficultyChoice.press model.clock key model.choice of
+        DifficultyChoice.Moved choice ->
+            ( { model | choice = choice }, [ PlaySound TickSound ] )
+
+        DifficultyChoice.Picked difficulty ->
+            ( { model | difficulty = Just difficulty, words = Just (wordsFor texts difficulty) }, [ PlaySound PickupSound ] )
+
+        DifficultyChoice.Unchanged ->
+            ( model, [] )
 
 
 typeKey : Texts -> String -> Model -> ( Model, List Effect )
@@ -164,15 +231,14 @@ typeKey texts key model =
             let
                 words =
                     currentWords texts model
-
-                started =
-                    { model | words = Just words }
             in
-            if Just char == expectedKey words started then
-                typedRight words char started
+            if Just char == expectedKey words model then
+                typedRight words char model
 
             else
-                ( { started | errors = model.errors + 1, lastKeyWrong = True }
+                -- A wrong key doesn't stop the clock: the pause since the
+                -- last right letter keeps counting.
+                ( { model | errors = model.errors + 1, lastKeyWrong = True }
                 , [ PlaySound ErrorSound, FlashKey (String.fromChar char) False ]
                 )
 
@@ -190,6 +256,7 @@ typedRight words char model =
             | waitingForSpace = False
             , wordIndex = model.wordIndex + 1
             , letterIndex = 0
+            , sinceLetter = Nothing
             , correct = model.correct + 1
             , lastKeyWrong = False
           }
@@ -208,7 +275,17 @@ typedRight words char model =
                 model.wordIndex == List.length words - 1
 
             typed =
-                { model | letterIndex = letterIndex, correct = model.correct + 1, lastKeyWrong = False }
+                { model
+                    | letterIndex = letterIndex
+                    , correct = model.correct + 1
+                    , lastKeyWrong = False
+                    , sinceLetter =
+                        if wordDone then
+                            Nothing
+
+                        else
+                            Just 0
+                }
         in
         if wordDone && lastWord then
             -- The last sip: Alice walks to the door, then the closing story.
@@ -246,6 +323,7 @@ frame texts milliseconds model =
                         model.typingTime
                 , alicePixelSize = model.alicePixelSize + (targetSize - model.alicePixelSize) * min 1 (milliseconds * 0.004)
                 , walk = Maybe.map (\progress -> min 1 (progress + milliseconds / walkMilliseconds)) model.walk
+                , sinceLetter = Maybe.map ((+) milliseconds) model.sinceLetter
             }
     in
     case advanced.walk of
@@ -257,7 +335,29 @@ frame texts milliseconds model =
                 ( advanced, [] )
 
         Nothing ->
-            ( advanced, [] )
+            case advanced.sinceLetter of
+                Just pause ->
+                    if pause > pauseLimit && Story.isPlaying advanced.story then
+                        ( startOver advanced, [ PlaySound ErrorSound, ShowToast (.drinkMe >> .tooSlow) ] )
+
+                    else
+                        ( advanced, [] )
+
+                Nothing ->
+                    ( advanced, [] )
+
+
+{-| Too long a pause in the middle of a word: back to its first letter, and
+the word shows again.
+-}
+startOver : Model -> Model
+startOver model =
+    { model
+        | letterIndex = 0
+        , sinceLetter = Nothing
+        , lastKeyWrong = False
+        , startedOver = model.startedOver + 1
+    }
 
 
 accuracy : Model -> Float
@@ -285,24 +385,34 @@ percent fraction =
     String.fromInt (round (fraction * 100)) ++ "%"
 
 
+{-| The difficulty sets the most tarts there are (easy 1, challenge 2,
+mad 3); mistakes can cost some of them.
+-}
 score : Model -> Contract.Score
 score model =
     let
         fraction =
             accuracy model
+
+        difficulty =
+            Maybe.withDefault Easy model.difficulty
+
+        forAccuracy =
+            if fraction >= 0.95 then
+                3
+
+            else if fraction >= 0.85 then
+                2
+
+            else
+                1
     in
-    { tarts =
-        if fraction >= 0.95 then
-            3
-
-        else if fraction >= 0.85 then
-            2
-
-        else
-            1
+    { tarts = min (Difficulty.tarts difficulty) forAccuracy
     , stats =
-        [ { label = .results >> .accuracy, value = \_ -> percent fraction }
+        [ { label = .results >> .difficulty, value = \texts -> Difficulty.name texts difficulty }
+        , { label = .results >> .accuracy, value = \_ -> percent fraction }
         , { label = .results >> .wordsPerMinute, value = \_ -> String.fromInt (wordsPerMinute model) }
+        , { label = .drinkMe >> .startedOver, value = \_ -> String.fromInt model.startedOver }
         ]
     }
 
@@ -326,7 +436,7 @@ scene context model =
             currentWords context.texts model
 
         target =
-            if Story.isPlaying model.story && model.walk == Nothing then
+            if Story.isPlaying model.story && model.difficulty /= Nothing && model.walk == Nothing && not (isHidden model) then
                 expectedKey words model
 
             else
@@ -335,6 +445,17 @@ scene context model =
     { stage =
         Html.div [ A.class "stage-scene" ]
             [ Svg.svg [ SA.viewBox "0 0 320 192", SA.class "pixel-scene" ] (viewHall context.texts model)
+            , if model.difficulty == Nothing && Story.isPlaying model.story then
+                DifficultyChoice.view
+                    { texts = context.texts
+                    , title = context.texts.drinkMe.chooseTitle
+                    , hint = context.texts.drinkMe.chooseHint
+                    , info = difficultyInfo context.texts
+                    }
+                    model.choice
+
+              else
+                Html.text ""
             , Story.view context.texts model.story
             ]
     , panel = viewPanel context.texts words model
@@ -428,8 +549,34 @@ viewHall texts model =
            ]
 
 
+difficultyInfo : Texts -> Difficulty -> String
+difficultyInfo texts difficulty =
+    case difficulty of
+        Easy ->
+            texts.drinkMe.easyInfo
+
+        Challenge ->
+            texts.drinkMe.challengeInfo
+
+        Mad ->
+            texts.drinkMe.madInfo
+
+
 viewPanel : Texts -> List String -> Model -> Html msg
 viewPanel texts words model =
+    case model.difficulty of
+        Nothing ->
+            Html.div [ A.class "panel-content" ]
+                [ Html.p [ A.class "big" ] [ Html.text texts.drinkMe.chooseTitle ]
+                , Html.p [] [ Html.text texts.drinkMe.chooseHint ]
+                ]
+
+        Just difficulty ->
+            viewTyping texts words difficulty model
+
+
+viewTyping : Texts -> List String -> Difficulty -> Model -> Html msg
+viewTyping texts words difficulty model =
     let
         stat name value =
             Html.span [] [ Html.text name, Html.b [] [ Html.text value ] ]
@@ -438,7 +585,8 @@ viewPanel texts words model =
             max 0 (model.wordIndex - 2)
     in
     Html.div [ A.class "panel-content" ]
-        [ Html.div [ A.class "words" ]
+        [ Html.span [ A.class "eyebrow" ] [ Html.text (Difficulty.name texts difficulty) ]
+        , Html.div [ A.class "words" ]
             (words
                 |> List.indexedMap Tuple.pair
                 |> List.drop firstShown
@@ -449,7 +597,9 @@ viewPanel texts words model =
             [ stat texts.drinkMe.sips (String.fromInt model.wordIndex ++ "/" ++ String.fromInt (List.length words))
             , stat texts.results.accuracy (percent (accuracy model))
             , stat texts.results.wordsPerMinute (String.fromInt (wordsPerMinute model))
+            , stat texts.drinkMe.startedOver (String.fromInt model.startedOver)
             ]
+        , Html.p [ A.class "tip" ] [ Html.text texts.drinkMe.fromMemory ]
         ]
 
 
@@ -463,15 +613,32 @@ viewWord model index word =
 
     else
         let
+            -- Once the word hides, only the letters typed so far show, then
+            -- the cursor.
+            shownLetters =
+                if isHidden model then
+                    List.take model.letterIndex (String.toList word)
+
+                else
+                    String.toList word
+
             letter position char =
                 Html.span
                     [ A.classList
                         [ ( "typed", position < model.letterIndex )
+                        , ( "untyped", position >= model.letterIndex )
                         , ( "current", position == model.letterIndex && not model.waitingForSpace )
                         , ( "wrong", position == model.letterIndex && not model.waitingForSpace && model.lastKeyWrong )
                         ]
                     ]
                     [ Html.text (String.fromChar char) ]
+
+            hiddenCursor =
+                if isHidden model then
+                    [ Html.span [ A.classList [ ( "hidden-cursor", True ), ( "wrong", model.lastKeyWrong ) ] ] [ Html.text "\u{00A0}" ] ]
+
+                else
+                    []
 
             -- The space bar's place is always there, drawn inside the gap after
             -- the word, so the line never changes width. Only its underline
@@ -486,7 +653,7 @@ viewWord model index word =
                     ]
                     [ Html.text "\u{00A0}" ]
         in
-        Html.span [ A.class "word now" ] (List.indexedMap letter (String.toList word) ++ [ spaceSlot ])
+        Html.span [ A.class "word now" ] (List.indexedMap letter shownLetters ++ hiddenCursor ++ [ spaceSlot ])
 
 
 
