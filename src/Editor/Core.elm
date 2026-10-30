@@ -84,6 +84,9 @@ type Command
     | GotoLineEnd
     | GotoFirstNonWhitespace
     | GotoLastModification
+    | GotoFileStart
+    | GotoLastLine
+    | GotoLineNumber Int
     | MoveLineDown
     | MoveLineUp
     | GotoWord
@@ -309,6 +312,15 @@ apply command ((Buffer b) as buffer) =
                 Nothing ->
                     buffer
 
+        ( Normal, GotoFileStart ) ->
+            moveTo 0 buffer |> rememberColumn
+
+        ( Normal, GotoLastLine ) ->
+            moveTo (lineStart b.chars (max 0 (Array.length b.chars - 2))) buffer |> rememberColumn
+
+        ( Normal, GotoLineNumber number ) ->
+            moveTo (startOfLine number b.chars) buffer |> rememberColumn
+
         ( Normal, GotoWord ) ->
             -- Choosing the word needs labels; `Editor.Session` does that and
             -- then sends `SelectRange`.
@@ -424,6 +436,26 @@ select maybeSelection ((Buffer b) as buffer) =
 
         Nothing ->
             buffer
+
+
+{-| Where line `number` starts (counting from 1); past the end, the last
+line.
+-}
+startOfLine : Int -> Array Char -> Int
+startOfLine number chars =
+    let
+        go line position =
+            let
+                nextStart =
+                    lineEnd chars position + 1
+            in
+            if line >= number || nextStart >= Array.length chars then
+                position
+
+            else
+                go (line + 1) nextStart
+    in
+    go 1 0
 
 
 {-| Remember where the text last changed, for `g.`.

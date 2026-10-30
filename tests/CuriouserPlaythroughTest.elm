@@ -151,8 +151,10 @@ suite =
                 \_ -> trickReaches LineEnds { line = 0, column = 0 } [ "g", "l" ] |> Expect.equal True
             , test "or its start: gh" <|
                 \_ -> trickReaches LineEnds { line = 6, column = 26 } [ "g", "h" ] |> Expect.equal True
-            , test "on an indented line's first crumb: gs" <|
-                \_ -> trickReaches FirstNonBlank { line = 1, column = 16 } [ "g", "s" ] |> Expect.equal True
+            , test "on the last line, from near the top: ge" <|
+                \_ -> trickReaches FileEnds { line = 1, column = 6 } [ "g", "e" ] |> Expect.equal True
+            , test "or on the first line: gg" <|
+                \_ -> trickReaches FileEnds { line = 5, column = 12 } [ "g", "g" ] |> Expect.equal True
             , test "on the real line after a long wrapped one: gj" <|
                 \_ -> trickReaches RealLines { line = 2, column = 6 } [ "g", "j" ] |> Expect.equal True
             , test "from a short line, across the wrapped line above: gk gk" <|
@@ -303,7 +305,7 @@ suite =
                         texts =
                             context.texts.curiouser
                     in
-                    [ texts.intro4, texts.lineEnds, texts.firstNonBlank, texts.realLines, texts.lastChange, texts.allCheeky, (context.texts.chapter Curiouser).skill ]
+                    [ texts.intro4, texts.lineEnds, texts.fileEnds, texts.realLines, texts.lastChange, texts.allCheeky, (context.texts.chapter Curiouser).skill ]
                         |> List.filter (String.contains "gw")
                         |> Expect.equal []
             ]

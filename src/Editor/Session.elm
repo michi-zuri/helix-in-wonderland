@@ -169,8 +169,18 @@ pressNormally isUnlocked key (Session s) =
             Locked (Session { s | afterG = False, count = "" })
 
     else if mode == Normal && s.afterG then
-        -- The second key of a goto command; like Helix, it ignores a count.
-        run isUnlocked key (Session { s | afterG = False, count = "" }) (Keymap.gotoCommand key)
+        -- The second key of a goto command. A count only matters for `gg`:
+        -- `5gg` goes to line 5, as in Helix; the others ignore it.
+        let
+            command =
+                case ( Keymap.gotoCommand key, String.toInt s.count ) of
+                    ( Just GotoFileStart, Just number ) ->
+                        Just (GotoLineNumber number)
+
+                    ( other, _ ) ->
+                        other
+        in
+        run isUnlocked key (Session { s | afterG = False, count = "" }) command
 
     else if mode == Normal && key == "g" then
         waitFor { s | afterG = True }
