@@ -10,11 +10,13 @@ import Expect
 import Test exposing (Test, describe, test)
 
 
-press : List String -> Session -> Session
-press keys session =
+{-| Press keys with `pause` milliseconds between them.
+-}
+pressPausing : Float -> List String -> Session -> Session
+pressPausing pause keys session =
     List.foldl
         (\key current ->
-            case Session.pressWith (Just ( ';', ';' )) (always True) key current of
+            case Session.pressWith (Just { keys = ( ';', ';' ), sinceLastKey = pause }) (always True) key current of
                 Session.Ran ran ->
                     ran.session
 
@@ -29,6 +31,13 @@ press keys session =
         )
         session
         keys
+
+
+{-| Quick typing: 100 ms between keys.
+-}
+press : List String -> Session -> Session
+press =
+    pressPausing 100
 
 
 start : Session
@@ -54,6 +63,10 @@ suite =
             \_ -> press [ "i", ";", ";", ";" ] start |> textAndMode |> Expect.equal ( "Who are ?\n", Normal )
         , test "in Normal mode ;; does nothing to the text" <|
             \_ -> press [ "l", ";", ";" ] start |> textAndMode |> Expect.equal ( "Who are ?\n", Normal )
+        , test "a pause longer than the timeout between the two keys types both" <|
+            \_ -> pressPausing (Session.escapeTimeout + 1) [ "i", ";", ";" ] start |> textAndMode |> Expect.equal ( ";;Who are ?\n", Insert )
+        , test "a pause of exactly the timeout still counts" <|
+            \_ -> pressPausing Session.escapeTimeout [ "i", ";", ";" ] start |> textAndMode |> Expect.equal ( "Who are ?\n", Normal )
         , test "plain press has no escape keys" <|
             \_ ->
                 List.foldl

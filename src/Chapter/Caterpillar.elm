@@ -45,6 +45,7 @@ type alias Model =
     , escTipShown : Bool
     , backspaces : Int
     , clock : Float
+    , lastKeyAt : Float
     }
 
 
@@ -78,6 +79,7 @@ init =
     , escTipShown = False
     , backspaces = 0
     , clock = 0
+    , lastKeyAt = 0
     }
 
 
@@ -109,7 +111,9 @@ update context msg model =
             case Story.hear context.texts key model.story of
                 Story.NotTalking ->
                     if Story.isPlaying model.story then
+                        -- Remember when, for the escape keys' timeout.
                         edit context key model
+                            |> Tuple.mapFirst (\edited -> { edited | lastKeyAt = edited.clock })
 
                     else
                         ( model, [] )
@@ -136,7 +140,13 @@ edit context key model =
         work =
             currentWork context.texts model
     in
-    case Session.pressWith context.escapeKeys (always True) key work.session of
+    case
+        Session.pressWith
+            (Maybe.map (\keys -> { keys = keys, sinceLastKey = model.clock - model.lastKeyAt }) context.escapeKeys)
+            (always True)
+            key
+            work.session
+    of
         Session.Ran ran ->
             { model | work = Just { work | session = ran.session } }
                 |> notice ran.command
