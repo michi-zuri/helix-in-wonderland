@@ -1,7 +1,7 @@
 module Editor.Core exposing
     ( Buffer, Mode(..), Command(..)
-    , fromString, apply, applyTimes
-    , toString, mode, head, selectionRange, selectedText, wordUnderCursor, cursorLineColumn
+    , fromString, apply, applyTimes, splash
+    , toString, mode, head, selectionRange, selectedText, cursorLineColumn
     )
 
 {-| A small, pure model of the Helix editor: text, one selection, two modes.
@@ -23,8 +23,8 @@ In Insert mode, `head` is the insertion point: typed text goes in front of
 the character at `head`.
 
 @docs Buffer, Mode, Command
-@docs fromString, apply, applyTimes
-@docs toString, mode, head, selectionRange, selectedText, wordUnderCursor, cursorLineColumn
+@docs fromString, apply, applyTimes, splash
+@docs toString, mode, head, selectionRange, selectedText, cursorLineColumn
 
 -}
 
@@ -151,24 +151,6 @@ selectedText ((Buffer b) as buffer) =
             selectionRange buffer
     in
     String.fromList (Array.toList (Array.slice first (last + 1) b.chars))
-
-
-{-| The whole word the cursor sits in, or `""` when it is not on a word.
--}
-wordUnderCursor : Buffer -> String
-wordUnderCursor (Buffer b) =
-    if isClass b.chars Word b.head then
-        let
-            first =
-                scanBackward (isClass b.chars Word) b.head + 1
-
-            afterLast =
-                scanForward (isClass b.chars Word) b.head
-        in
-        String.fromList (Array.toList (Array.slice first afterLast b.chars))
-
-    else
-        ""
 
 
 {-| 1-based line and column of the cursor, as shown in Helix's status line.
@@ -387,6 +369,91 @@ saveHistory (Buffer b) =
                 { chars = b.chars, anchor = b.anchor, head = b.head }
                     :: List.take (historyLimit - 1) b.history
         }
+
+
+{-| Something from outside puts a word into the text: chapter 4's pool
+splashes words in while the player edits. The word goes in front of word
+number `word` (counting from 0) of line `line`, or at the end of the line
+when it has fewer words. The cursor and selection keep pointing at the same
+text, and the word goes into every undo snapshot too, so `u` undoes the
+player's changes but never the splash.
+-}
+splash : { line : Int, word : Int, text : String } -> Buffer -> Buffer
+splash where_ (Buffer b) =
+    let
+        ( chars, shift ) =
+            splashInto where_ b.chars
+    in
+    Buffer
+        { b
+            | chars = chars
+            , anchor = shift b.anchor
+            , head = shift b.head
+            , history =
+                List.map
+                    (\snapshot ->
+                        let
+                            ( snapshotChars, snapshotShift ) =
+                                splashInto where_ snapshot.chars
+                        in
+                        { chars = snapshotChars, anchor = snapshotShift snapshot.anchor, head = snapshotShift snapshot.head }
+                    )
+                    b.history
+        }
+
+
+{-| The text with the word put in, and how positions after it move.
+-}
+splashInto : { line : Int, word : Int, text : String } -> Array Char -> ( Array Char, Int -> Int )
+splashInto { line, word, text } chars =
+    let
+        lineStarts =
+            0
+                :: (Array.toIndexedList chars
+                        |> List.filter (\( position, char ) -> char == '\n' && position < Array.length chars - 1)
+                        |> List.map (\( position, _ ) -> position + 1)
+                   )
+
+        start =
+            lineStarts |> List.drop (clamp 0 (List.length lineStarts - 1) line) |> List.head |> Maybe.withDefault 0
+
+        end =
+            lineEnd chars start
+
+        -- Where each word of the line starts.
+        wordStarts =
+            List.range start (end - 1)
+                |> List.filter
+                    (\p ->
+                        not (isClass chars Whitespace p)
+                            && (p == start || isClass chars Whitespace (p - 1))
+                    )
+
+        ( at, inserted ) =
+            case List.drop word wordStarts |> List.head of
+                Just wordStart ->
+                    ( wordStart, text ++ " " )
+
+                Nothing ->
+                    if end == start then
+                        ( end, text )
+
+                    else
+                        ( end, " " ++ text )
+
+        length =
+            String.length inserted
+    in
+    ( Array.append
+        (Array.append (Array.slice 0 at chars) (Array.fromList (String.toList inserted)))
+        (Array.slice at (Array.length chars) chars)
+    , \p ->
+        if p >= at then
+            p + length
+
+        else
+            p
+    )
 
 
 undo : Buffer -> Buffer

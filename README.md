@@ -9,8 +9,8 @@ Keyboards: German and Swiss QWERTZ, US QWERTY, French AZERTY.
 |---|---------|---------|
 | 1 | Down the Rabbit Hole | the home row, finger by finger (catch jars by their letter) |
 | 2 | The Hall of Doors | Helix movement with `h j k l`, and counts like `5j` |
-| 3 | Drink Me | typing whole words, the keys `e` and `i`, the space bar |
-| 4 | The Pool of Tears | select first, then act: `w e b x`, then `d`; `u` undoes |
+| 3 | Drink Me | typing whole words from memory, the keys `e` and `i`, the space bar |
+| 4 | The Pool of Tears | select first, then act: `w x`, then `d`; `u` undoes; counts like `3w`, `2x` |
 | 5 | Advice from a Caterpillar | Insert mode: `i`, `a`, `c`, and Esc back to Normal |
 
 Each chapter earns up to three tarts. A chapter opens once the one before it

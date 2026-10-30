@@ -463,7 +463,7 @@ newChapter seed id =
             DrinkMeChapter DrinkMe.init
 
         PoolOfTears ->
-            PoolChapter Pool.init
+            PoolChapter (Pool.init seed)
 
         CaterpillarsAdvice ->
             CaterpillarChapter Caterpillar.init
