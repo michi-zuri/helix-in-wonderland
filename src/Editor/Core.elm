@@ -1,7 +1,7 @@
 module Editor.Core exposing
     ( Buffer, Mode(..), Command(..)
-    , fromString, apply, applyTimes, splash
-    , toString, mode, head, selectionRange, selectedText, cursorLineColumn
+    , fromString, withWrap, apply, applyTimes, splash, replaceChar
+    , toString, mode, head, selectionRange, selectedText, cursorLineColumn, wrapWidth, wordStarts
     )
 
 {-| A small, pure model of the Helix editor: text, one selection, two modes.
@@ -23,8 +23,8 @@ In Insert mode, `head` is the insertion point: typed text goes in front of
 the character at `head`.
 
 @docs Buffer, Mode, Command
-@docs fromString, apply, applyTimes, splash
-@docs toString, mode, head, selectionRange, selectedText, cursorLineColumn
+@docs fromString, withWrap, apply, applyTimes, splash, replaceChar
+@docs toString, mode, head, selectionRange, selectedText, cursorLineColumn, wrapWidth, wordStarts
 
 -}
 
@@ -51,6 +51,8 @@ type Buffer
         , mode : Mode
         , goalColumn : Int
         , history : List Snapshot
+        , wrap : Maybe Int
+        , lastChange : Maybe Int
         }
 
 
@@ -79,6 +81,13 @@ type Command
     | SelectPreviousWordStart
     | SelectLine
     | GotoLineStart
+    | GotoLineEnd
+    | GotoFirstNonWhitespace
+    | GotoLastModification
+    | MoveLineDown
+    | MoveLineUp
+    | GotoWord
+    | SelectRange { anchor : Int, head : Int }
     | CollapseSelection
     | Delete
     | Change
@@ -118,7 +127,52 @@ fromString text =
         , mode = Normal
         , goalColumn = 0
         , history = []
+        , wrap = Nothing
+        , lastChange = Nothing
         }
+
+
+{-| Soft wrap, as Helix's `soft-wrap` setting: lines longer than `width`
+characters continue on the next screen row. Then `j` and `k` move by screen
+row, and `gj` and `gk` by real line. `Editor.View` draws the same rows.
+-}
+withWrap : Int -> Buffer -> Buffer
+withWrap width (Buffer b) =
+    Buffer { b | wrap = Just (max 1 width) }
+
+
+wrapWidth : Buffer -> Maybe Int
+wrapWidth (Buffer b) =
+    b.wrap
+
+
+{-| Where every word starts, with the whole word as a selection: what
+`gw` puts its labels on. A word is a run of letters or of punctuation.
+-}
+wordStarts : Buffer -> List { anchor : Int, head : Int }
+wordStarts (Buffer b) =
+    List.range 0 (Array.length b.chars - 1)
+        |> List.filterMap
+            (\position ->
+                case classAt b.chars position of
+                    Just Word ->
+                        wordAt b.chars Word position
+
+                    Just Punctuation ->
+                        wordAt b.chars Punctuation position
+
+                    _ ->
+                        Nothing
+            )
+
+
+wordAt : Array Char -> CharClass -> Int -> Maybe { anchor : Int, head : Int }
+wordAt chars class position =
+    if position > 0 && classAt chars (position - 1) == Just class then
+        Nothing
+
+    else
+        Just { anchor = position, head = scanForward (isClass chars class) position - 1 }
 
 
 toString : Buffer -> String
@@ -193,7 +247,7 @@ largestCount =
 isRepeatable : Command -> Bool
 isRepeatable command =
     List.member command
-        [ MoveLeft, MoveRight, MoveDown, MoveUp, SelectNextWordStart, SelectNextWordEnd, SelectPreviousWordStart, SelectLine, Undo ]
+        [ MoveLeft, MoveRight, MoveDown, MoveUp, MoveLineDown, MoveLineUp, SelectNextWordStart, SelectNextWordEnd, SelectPreviousWordStart, SelectLine, Undo ]
 
 
 {-| Run one command. Commands that make no sense in the current mode (typing
@@ -218,10 +272,54 @@ apply command ((Buffer b) as buffer) =
                 |> rememberColumn
 
         ( Normal, MoveDown ) ->
-            moveTo (verticalTarget 1 b.chars b.goalColumn b.head) buffer
+            moveTo (screenRowTarget 1 b.wrap b.chars b.goalColumn b.head) buffer
 
         ( Normal, MoveUp ) ->
+            moveTo (screenRowTarget -1 b.wrap b.chars b.goalColumn b.head) buffer
+
+        ( Normal, MoveLineDown ) ->
+            moveTo (verticalTarget 1 b.chars b.goalColumn b.head) buffer
+
+        ( Normal, MoveLineUp ) ->
             moveTo (verticalTarget -1 b.chars b.goalColumn b.head) buffer
+
+        ( Normal, GotoLineEnd ) ->
+            moveTo (max (lineStart b.chars b.head) (lineEnd b.chars b.head - 1)) buffer
+                |> rememberColumn
+
+        ( Normal, GotoFirstNonWhitespace ) ->
+            let
+                start =
+                    lineStart b.chars b.head
+
+                firstNonBlank =
+                    scanForward (isClass b.chars Whitespace) start
+            in
+            if isClass b.chars Newline firstNonBlank then
+                buffer
+
+            else
+                moveTo firstNonBlank buffer |> rememberColumn
+
+        ( Normal, GotoLastModification ) ->
+            case b.lastChange of
+                Just position ->
+                    moveTo (clamp 0 (Array.length b.chars - 1) position) buffer |> rememberColumn
+
+                Nothing ->
+                    buffer
+
+        ( Normal, GotoWord ) ->
+            -- Choosing the word needs labels; `Editor.Session` does that and
+            -- then sends `SelectRange`.
+            buffer
+
+        ( Normal, SelectRange range ) ->
+            if range.anchor >= 0 && range.head < Array.length b.chars && range.anchor < Array.length b.chars && range.head >= 0 then
+                select (Just range) buffer
+
+            else
+                buffer
 
         ( Normal, SelectNextWordStart ) ->
             select (nextWordStart b.chars b.head) buffer
@@ -244,10 +342,12 @@ apply command ((Buffer b) as buffer) =
 
         ( Normal, Delete ) ->
             deleteSelection (saveHistory buffer)
+                |> changedAt (Tuple.first (selectionRange buffer))
 
         ( Normal, Change ) ->
             deleteSelection (saveHistory buffer)
                 |> enterInsertAt (Tuple.first (selectionRange buffer))
+                |> changedAt (Tuple.first (selectionRange buffer))
 
         ( Normal, Undo ) ->
             undo buffer
@@ -277,6 +377,7 @@ apply command ((Buffer b) as buffer) =
                     | chars = insertAt b.head char b.chars
                     , head = b.head + 1
                     , anchor = b.head + 1
+                    , lastChange = Just b.head
                 }
 
         ( Insert, Backspace ) ->
@@ -286,6 +387,7 @@ apply command ((Buffer b) as buffer) =
                         | chars = removeRange (b.head - 1) (b.head - 1) b.chars |> ensureFinalNewline
                         , head = b.head - 1
                         , anchor = b.head - 1
+                        , lastChange = Just (b.head - 1)
                     }
 
             else
@@ -322,6 +424,83 @@ select maybeSelection ((Buffer b) as buffer) =
 
         Nothing ->
             buffer
+
+
+{-| Remember where the text last changed, for `g.`.
+-}
+changedAt : Int -> Buffer -> Buffer
+changedAt position (Buffer b) =
+    Buffer { b | lastChange = Just position }
+
+
+{-| Something from outside changes one character, as a game does when a
+player squashes something: the text changes there, so `g.` goes back to it.
+Cursor, selection and undo history stay as they are.
+-}
+replaceChar : Int -> Char -> Buffer -> Buffer
+replaceChar position char (Buffer b) =
+    if position >= 0 && position < Array.length b.chars - 1 && charAt b.chars position /= Just '\n' then
+        Buffer { b | chars = Array.set position char b.chars, lastChange = Just position }
+
+    else
+        Buffer b
+
+
+{-| Where `j` (+1) or `k` (-1) lands with soft wrap: one screen row down or
+up, at the same column within the row. Without soft wrap a row is a line.
+-}
+screenRowTarget : Int -> Maybe Int -> Array Char -> Int -> Int -> Int
+screenRowTarget direction maybeWidth chars goalColumn position =
+    case maybeWidth of
+        Nothing ->
+            verticalTarget direction chars goalColumn position
+
+        Just width ->
+            let
+                start =
+                    lineStart chars position
+
+                length =
+                    lineEnd chars position - start
+
+                row =
+                    (position - start) // width
+
+                lastRow =
+                    length // width
+
+                goal =
+                    modBy width goalColumn
+            in
+            if direction > 0 && row < lastRow then
+                start + min ((row + 1) * width + goal) length
+
+            else if direction < 0 && row > 0 then
+                start + min ((row - 1) * width + goal) length
+
+            else if direction > 0 then
+                let
+                    nextStart =
+                        lineEnd chars position + 1
+                in
+                if nextStart < Array.length chars then
+                    nextStart + min goal (lineEnd chars nextStart - nextStart)
+
+                else
+                    position
+
+            else if start > 0 then
+                let
+                    previousStart =
+                        lineStart chars (start - 1)
+
+                    previousLength =
+                        lineEnd chars previousStart - previousStart
+                in
+                previousStart + min ((previousLength // width) * width + goal) previousLength
+
+            else
+                position
 
 
 rememberColumn : Buffer -> Buffer
@@ -426,7 +605,7 @@ splashInto { line, word, text } chars =
             lineEnd chars start
 
         -- Where each word of the line starts.
-        wordStarts =
+        startsInLine =
             List.range start (end - 1)
                 |> List.filter
                     (\p ->
@@ -435,7 +614,7 @@ splashInto { line, word, text } chars =
                     )
 
         ( at, inserted ) =
-            case List.drop word wordStarts |> List.head of
+            case List.drop word startsInLine |> List.head of
                 Just wordStart ->
                     ( wordStart, text ++ " " )
 

@@ -246,7 +246,7 @@ scene context model =
     { stage =
         Html.div [ A.class "stage-scene" ]
             [ viewMushroom model.clock
-            , Html.Lazy.lazy Editor.View.view buffer
+            , Html.Lazy.lazy viewEditor work.session
             , Story.view context.texts model.story
             ]
     , panel = viewPanel context.texts model work
@@ -381,3 +381,11 @@ dropCount work session model =
 
     else
         { model | work = Just { work | session = session } }
+
+
+{-| The editor with `gw`'s labels, drawn again only when the session
+changes (it is lazy on the session, which only changes on a key).
+-}
+viewEditor : Session -> Html msg
+viewEditor session =
+    Editor.View.viewWith { labels = Session.jumpLabels session, marks = [] } (Session.buffer session)
