@@ -133,6 +133,21 @@ h2{margin:0;font-family:var(--display);font-weight:400;font-size:22px}
 .status-mode{background:var(--lavender);color:var(--ink)}
 .status-mode.insert{background:var(--mint)}
 .status-gap{flex:1}
+.status-exit{background:transparent;border:0;color:var(--muted);font-family:var(--display);font-size:11px;padding:0 0 0 12px;cursor:pointer}
+.status-exit:hover{color:var(--lilac)}
+
+/* Fullscreen: no settings bar and nothing below the status line, which sits
+   at the bottom of the screen. The stage takes the height that is left over
+   and scales to fit it (a container, so its contents can size themselves by
+   it); the panel keeps its natural height. */
+.app.fullscreen{max-width:none;height:100vh;height:100dvh;box-sizing:border-box;padding:10px 14px;display:grid;grid-template-rows:minmax(0,1fr) auto auto;gap:10px}
+.app.fullscreen>.bar,.app.fullscreen>.page-footer{display:none}
+.app.fullscreen .stage{min-height:0;container-type:size;display:flex;justify-content:center;align-items:flex-start}
+.app.fullscreen .stage-scene{width:100%;height:100%;display:flex;flex-direction:column}
+.app.fullscreen .stage-scene:has(>.pixel-scene){width:min(100cqw,100cqh*5/3);height:auto}
+.app.fullscreen .banner{width:auto;max-width:100%;max-height:22cqh;margin:0 auto}
+.app.fullscreen .editor{flex:1 1 auto;min-height:0;overflow:auto}
+.app.fullscreen .panel{max-height:38vh;overflow:auto}
 .status-keys{color:var(--honey)}
 
 .footer{font-size:11px;color:var(--muted)}
@@ -215,6 +230,23 @@ h2{margin:0;font-family:var(--display);font-weight:400;font-size:22px}
     fanfare:() => [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => beep(f, 0.13), i * 110))
   };
   app.ports.playSound.subscribe((name) => (sounds[name] || (() => {}))());
+
+  // Fullscreen: the browser's own, where allowed. Esc is a game key, so where
+  // the browser lets a page keep it (Chrome, Edge), holding Esc leaves
+  // fullscreen and a short press reaches the game. Elsewhere Esc may leave
+  // fullscreen; Ctrl+[ always works as Esc in the game.
+  app.ports.setFullscreen.subscribe((on) => {
+    try {
+      if (on && !document.fullscreenElement && document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen()
+          .then(() => navigator.keyboard && navigator.keyboard.lock && navigator.keyboard.lock(['Escape']))
+          .catch(() => {});
+      } else if (!on && document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+      }
+    } catch (e) {}
+  });
+  document.addEventListener('fullscreenchange', () => app.ports.fullscreenChanged.send(!!document.fullscreenElement));
 
   // Stop the page from scrolling or button-clicking on keys the game uses.
   const gameKeys = new Set([' ', 'Backspace', 'Tab', 'Enter', '/', "'", 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);

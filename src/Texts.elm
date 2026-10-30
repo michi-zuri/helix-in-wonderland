@@ -31,6 +31,8 @@ type alias Texts =
     , menu : String
     , soundOn : String
     , soundOff : String
+    , fullscreen : String
+    , exitFullscreen : String
     , continueHint : String
     , footer : String
     , drawPictures : String
@@ -298,6 +300,8 @@ english =
     , menu = "Menu"
     , soundOn = "Sound on"
     , soundOff = "Sound off"
+    , fullscreen = "Fullscreen"
+    , exitFullscreen = "Leave fullscreen"
     , continueHint = "Enter ↵ to continue"
     , drawPictures = "Draw pictures for the game"
     , suggestChange = "Suggest a change to this screen"
@@ -582,6 +586,8 @@ german =
     , menu = "Menü"
     , soundOn = "Ton an"
     , soundOff = "Ton aus"
+    , fullscreen = "Vollbild"
+    , exitFullscreen = "Vollbild verlassen"
     , continueHint = "Enter ↵ zum Weiterlesen"
     , drawPictures = "Bilder fürs Spiel zeichnen"
     , suggestChange = "Änderung für diese Seite vorschlagen"
