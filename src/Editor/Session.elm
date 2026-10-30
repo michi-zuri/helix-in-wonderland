@@ -1,6 +1,6 @@
 module Editor.Session exposing
     ( Session, start, fromBuffer, buffer, keystrokes, recentKeys, pendingCount, isWaiting, jumpLabels
-    , Outcome(..), press, splash, matches, matchingLines
+    , Outcome(..), press, splash, replaceChar, matches, matchingLines
     )
 
 {-| One player working on one text: the buffer plus what the status line
@@ -22,7 +22,7 @@ key after `g` cancels it.
 selects that word, as in Helix. Esc or a key that matches no label cancels.
 
 @docs Session, start, fromBuffer, buffer, keystrokes, recentKeys, pendingCount, isWaiting, jumpLabels
-@docs Outcome, press, splash, matches, matchingLines
+@docs Outcome, press, splash, replaceChar, matches, matchingLines
 
 -}
 
@@ -257,6 +257,14 @@ run isUnlocked key (Session s) maybeCommand =
 splash : { line : Int, word : Int, text : String } -> Session -> Session
 splash where_ (Session s) =
     Session { s | buffer = Core.splash where_ s.buffer }
+
+
+{-| One character changed from outside, as a game does (see
+`Core.replaceChar`); `g.` goes back there.
+-}
+replaceChar : Int -> Char -> Session -> Session
+replaceChar position char (Session s) =
+    Session { s | buffer = Core.replaceChar position char s.buffer }
 
 
 {-| A count starts with 1-9; after that 0 is fine too.

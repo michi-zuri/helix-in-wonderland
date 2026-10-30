@@ -120,11 +120,24 @@ chunks width items =
 overlayFor : Decorations -> Int -> Maybe ( String, Char )
 overlayFor decorations =
     let
+        isMarked at =
+            List.any (\mark -> mark.position == at) decorations.marks
+
+        -- A label over a mark gets the mark's look too, so the player can
+        -- tell which label belongs to it.
         fromLabels =
             decorations.labels
                 |> List.concatMap
                     (\jump ->
-                        List.indexedMap (\index char -> ( jump.position + index, ( "jump-label", char ) )) (String.toList jump.label)
+                        let
+                            class =
+                                if isMarked jump.position then
+                                    "jump-label on-mark"
+
+                                else
+                                    "jump-label"
+                        in
+                        List.indexedMap (\index char -> ( jump.position + index, ( class, char ) )) (String.toList jump.label)
                     )
 
         fromMarks =

@@ -10,8 +10,9 @@ Keyboards: German and Swiss QWERTZ, US QWERTY, French AZERTY.
 | 1 | Down the Rabbit Hole | the home row, finger by finger (catch jars by their letter) |
 | 2 | The Hall of Doors | Helix movement with `h j k l`, and counts like `5j` |
 | 3 | Drink Me | typing whole words from memory, the keys `e` and `i`, the space bar |
-| 4 | The Pool of Tears | select first, then act: `w x`, then `d`; `u` undoes; counts like `3w`, `2x`; `gh` to the line start |
-| 5 | Advice from a Caterpillar | Insert mode: `i`, `a`, `c`, and Esc back to Normal |
+| 4 | Curiouser and Curiouser | Helix's jumps: `gh gl gs gj gk g. gw` (squash the currants) |
+| 5 | The Pool of Tears | select first, then act: `w x`, then `d`; `u` undoes; counts like `3w`, `2x`; `gh` to the line start |
+| 6 | Advice from a Caterpillar | Insert mode: `i`, `a`, `c`, and Esc back to Normal |
 
 Each chapter earns up to three tarts. A chapter opens once the one before it
 has at least one; a button on the title screen opens everything for grown-ups.
@@ -68,8 +69,9 @@ src/
   Chapter/RabbitHole.elm    chapter 1   (art in Chapter/RabbitHole/Well.elm)
   Chapter/Hall.elm          chapter 2   (tiles in Chapter/Hall/Tiles.elm)
   Chapter/DrinkMe.elm       chapter 3
-  Chapter/Pool.elm          chapter 4
-  Chapter/Caterpillar.elm   chapter 5
+  Chapter/Curiouser.elm     chapter 4   (the crumb table in Chapter/Curiouser/Table.elm)
+  Chapter/Pool.elm          chapter 5
+  Chapter/Caterpillar.elm   chapter 6
   Editor/Core.elm           a pure model of Helix: text, selection, modes, commands
   Editor/Keymap.elm         which key means which editor command
   Editor/Session.elm        one player working on one text: buffer, keystrokes, locks

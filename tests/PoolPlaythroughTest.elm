@@ -1,6 +1,6 @@
 module PoolPlaythroughTest exposing (suite)
 
-{-| Play chapter 4 with real Helix keystrokes, in all three difficulties.
+{-| Play chapter 5 with real Helix keystrokes, in all three difficulties.
 -}
 
 import Chapter.Contract exposing (Context)
@@ -159,7 +159,7 @@ fits clean text =
 
 suite : Test
 suite =
-    describe "Chapter 4: The Pool of Tears"
+    describe "Chapter 5: The Pool of Tears"
         [ describe "our best ways clean the poems in the number of keystrokes shown"
             (List.map
                 (\way ->

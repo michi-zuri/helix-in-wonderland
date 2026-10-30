@@ -8,13 +8,14 @@ type ChapterId
     = RabbitHole
     | HallOfDoors
     | DrinkMe
+    | Curiouser
     | PoolOfTears
     | CaterpillarsAdvice
 
 
 all : List ChapterId
 all =
-    [ RabbitHole, HallOfDoors, DrinkMe, PoolOfTears, CaterpillarsAdvice ]
+    [ RabbitHole, HallOfDoors, DrinkMe, Curiouser, PoolOfTears, CaterpillarsAdvice ]
 
 
 {-| 1-based, as shown on the title screen.
@@ -31,11 +32,14 @@ number id =
         DrinkMe ->
             3
 
-        PoolOfTears ->
+        Curiouser ->
             4
 
-        CaterpillarsAdvice ->
+        PoolOfTears ->
             5
+
+        CaterpillarsAdvice ->
+            6
 
 
 {-| Stable name for saving progress. Never change these: saved games use them.
@@ -51,6 +55,9 @@ toKey id =
 
         DrinkMe ->
             "drink-me"
+
+        Curiouser ->
+            "curiouser"
 
         PoolOfTears ->
             "pool-of-tears"

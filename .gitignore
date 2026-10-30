@@ -4,3 +4,6 @@ review/elm-stuff/
 build/
 build.log
 dist/
+
+# Screenshots from local test scripts never belong in the repository.
+/*.png

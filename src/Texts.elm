@@ -1,6 +1,6 @@
 module Texts exposing
     ( Texts, ChapterInfo, ResultTexts, EndTexts
-    , RabbitHoleTexts, HallTexts, DrinkMeTexts, PoolTexts, CaterpillarTexts
+    , RabbitHoleTexts, HallTexts, DrinkMeTexts, CuriouserTexts, PoolTexts, CaterpillarTexts
     , forLanguage
     )
 
@@ -14,7 +14,7 @@ Story lines come from Lewis Carroll's 1865 book (public domain) or are newly
 written for the game; the German versions are our own translations.
 
 @docs Texts, ChapterInfo, ResultTexts, EndTexts
-@docs RabbitHoleTexts, HallTexts, DrinkMeTexts, PoolTexts, CaterpillarTexts
+@docs RabbitHoleTexts, HallTexts, DrinkMeTexts, CuriouserTexts, PoolTexts, CaterpillarTexts
 @docs forLanguage
 
 -}
@@ -55,6 +55,7 @@ type alias Texts =
     , rabbitHole : RabbitHoleTexts
     , hall : HallTexts
     , drinkMe : DrinkMeTexts
+    , curiouser : CuriouserTexts
     , pool : PoolTexts
     , caterpillar : CaterpillarTexts
     }
@@ -91,7 +92,7 @@ type alias ResultTexts =
 
 type alias EndTexts =
     { title : String
-    , tarts : Int -> String
+    , tarts : { collected : Int, possible : Int } -> String
     , teaser : String
     }
 
@@ -177,7 +178,39 @@ type alias DrinkMeTexts =
     }
 
 
-{-| Chapter 4's poems, one per difficulty, all cleaned into `cleanPoem` by
+{-| The currant letters, in the order they hop off the cake, spell a
+hidden sentence per difficulty; the game never explains it.
+-}
+type alias CuriouserTexts =
+    { intro1 : String
+    , intro2 : String
+    , intro3 : String
+    , intro4 : String
+    , finale1 : String
+    , finale2 : String
+    , easyLetters : String
+    , challengeLetters : String
+    , madLetters : String
+    , cake : String
+    , chooseTitle : String
+    , chooseHint : String
+    , easyInfo : String
+    , challengeInfo : String
+    , madInfo : String
+    , lineEnds : String
+    , firstNonBlank : String
+    , realLines : String
+    , lastChange : String
+    , anywhere : String
+    , everything : String
+    , newTrick : String -> String
+    , escaped : String
+    , currants : String
+    , squashed : String
+    }
+
+
+{-| Chapter 5's poems, one per difficulty, all cleaned into `cleanPoem` by
 deleting words and lines. The words to delete carry a hidden meaning that
 the game never explains: on easy they spell a sentence, the tide on
 challenge splashes one in word by word (`tideWords`), and on mad they are
@@ -342,8 +375,11 @@ english =
                 DrinkMe ->
                     { name = "Drink Me", skill = "Typing words, new keys e and i", lesson = "Words with e and i, thumb on the space bar." }
 
+                Curiouser ->
+                    { name = "Curiouser and Curiouser", skill = "Helix jumps: gh gl gs gj gk g. gw", lesson = "Squash the currants with Helix's g jumps." }
+
                 PoolOfTears ->
-                    { name = "The Pool of Tears", skill = "Helix: w e b select, d deletes, x lines, u undo", lesson = "Select first, then act: w e b x, then d. u undoes." }
+                    { name = "The Pool of Tears", skill = "Helix: w x select, d deletes, u undo, counts", lesson = "Select first, then act: w or x, then d. u undoes." }
 
                 CaterpillarsAdvice ->
                     { name = "Advice from a Caterpillar", skill = "Helix: i and a insert, Esc returns", lesson = "i inserts before, a after, Esc goes back to NOR." }
@@ -369,7 +405,7 @@ english =
         }
     , theEnd =
         { title = "The end, for now"
-        , tarts = \count -> "You collected " ++ String.fromInt count ++ " of 15 tarts."
+        , tarts = \{ collected, possible } -> "You collected " ++ String.fromInt collected ++ " of " ++ String.fromInt possible ++ " tarts."
         , teaser = "Next in Wonderland: the Mad Tea-Party, where everyone moves one seat along at the same time. That is where Helix's multiple cursors come in."
         }
     , rabbitHole =
@@ -439,6 +475,33 @@ english =
         , sips = "Sips"
         , newKeys = "New keys: e and i. Middle fingers reach up."
         , bottle = "DRINK ME"
+        }
+    , curiouser =
+        { intro1 = "Soon Alice's eye fell on a little glass box under the table. Inside was a very small cake, with the words EAT ME beautifully marked in currants."
+        , intro2 = "Well, I'll eat it! If it makes me grow larger, I can reach the key."
+        , intro3 = "But as she lifted the lid, the currant letters hopped off the cake and scattered over the crumbs on the table!"
+        , intro4 = "Squash every currant before it rolls away: move the cursor onto it. Helix has jumps that start with g. They will come in handy."
+        , finale1 = "Alice ate the cake to the very last crumb. \"Curiouser and curiouser!\" she cried. She was opening out like the largest telescope that ever was."
+        , finale2 = "Good-bye, feet!"
+        , easyLetters = "EAT ME AND GROW TALL"
+        , challengeLetters = "OPENING OUT LIKE A TELESCOPE"
+        , madLetters = "GOOD BYE FEET WHO WILL PUT ON YOUR SHOES"
+        , cake = "EAT ME"
+        , chooseTitle = "How quick are the currants?"
+        , chooseHint = "j / k to choose · Enter to start"
+        , easyInfo = "Slow currants, one at a time."
+        , challengeInfo = "Quick currants."
+        , madInfo = "Very quick currants, two at once at the end."
+        , lineEnds = "A currant at the end of your line! g then l jumps to the end of the line, g then h to its start."
+        , firstNonBlank = "This line starts with spaces. g then s jumps to its first crumb."
+        , realLines = "Long lines go on over more rows (↪). j moves one row; g then j jumps to the next real line, g then k to the one before."
+        , lastChange = "Cheeky currants run back to where you squashed the last one! g then . jumps to your last change."
+        , anywhere = "Far away? Press g then w: every crumb gets two letters. Type the two letters on the currant to jump there."
+        , everything = "Now all your tricks: gh gl gs gj gk g. gw"
+        , newTrick = \keys -> "New trick: " ++ keys
+        , escaped = "A currant rolled away!"
+        , currants = "Currants"
+        , squashed = "Squashed"
         }
     , pool =
         { intro1 = "Alice cried so much that her tears made a pool. Now the words of her poem float in it, and the pool keeps splashing extra words in."
@@ -624,8 +687,11 @@ german =
                 DrinkMe ->
                     { name = "Trink mich", skill = "Wörter tippen, neue Tasten e und i", lesson = "Wörter mit e und i, Daumen auf der Leertaste." }
 
+                Curiouser ->
+                    { name = "Immer merkwürdiger", skill = "Helix-Sprünge: gh gl gs gj gk g. gw", lesson = "Zerdrück die Korinthen mit den g-Sprüngen von Helix." }
+
                 PoolOfTears ->
-                    { name = "Der Tränenteich", skill = "Helix: w e b wählen, d löscht, x Zeilen, u zurück", lesson = "Erst auswählen, dann handeln: w e b x, dann d. u macht rückgängig." }
+                    { name = "Der Tränenteich", skill = "Helix: w x wählen, d löscht, u zurück, Zahlen", lesson = "Erst auswählen, dann handeln: w oder x, dann d. u macht rückgängig." }
 
                 CaterpillarsAdvice ->
                     { name = "Die Raupe gibt Rat", skill = "Helix: i und a einfügen, Esc zurück", lesson = "i fügt davor ein, a dahinter, Esc zurück zu NOR." }
@@ -651,7 +717,7 @@ german =
         }
     , theEnd =
         { title = "Ende, fürs Erste"
-        , tarts = \count -> "Du hast " ++ String.fromInt count ++ " von 15 Törtchen gesammelt."
+        , tarts = \{ collected, possible } -> "Du hast " ++ String.fromInt collected ++ " von " ++ String.fromInt possible ++ " Törtchen gesammelt."
         , teaser = "Als Nächstes im Wunderland: die verrückte Teegesellschaft, wo alle gleichzeitig einen Platz weiterrücken. Genau dafür hat Helix mehrere Cursor."
         }
     , rabbitHole =
@@ -721,6 +787,33 @@ german =
         , sips = "Schlucke"
         , newKeys = "Neue Tasten: e und i. Die Mittelfinger greifen nach oben."
         , bottle = "TRINK MICH"
+        }
+    , curiouser =
+        { intro1 = "Bald fiel Alices Blick auf ein Glaskästchen unter dem Tisch. Darin lag ein winziger Kuchen, auf dem mit Korinthen wunderschön ISS MICH geschrieben stand."
+        , intro2 = "Gut, ich esse ihn! Wenn ich davon grösser werde, komme ich an den Schlüssel."
+        , intro3 = "Doch als sie den Deckel hob, hüpften die Korinthen-Buchstaben vom Kuchen und verteilten sich über die Krümel auf dem Tisch!"
+        , intro4 = "Zerdrück jede Korinthe, bevor sie wegrollt: Bring den Cursor auf sie. Helix hat Sprünge, die mit g anfangen. Die werden dir helfen."
+        , finale1 = "Alice ass den Kuchen bis zum letzten Krümel. «Immer merkwürdiger!», rief sie. Sie zog sich aus wie das grösste Fernrohr, das es je gab."
+        , finale2 = "Lebt wohl, Füsse!"
+        , easyLetters = "ISS MICH UND WACHSE"
+        , challengeLetters = "ICH GEHE AUF WIE EIN FERNROHR"
+        , madLetters = "LEBT WOHL FÜSSE WER ZIEHT EUCH SCHUHE AN"
+        , cake = "ISS MICH"
+        , chooseTitle = "Wie schnell sind die Korinthen?"
+        , chooseHint = "j / k zum Wählen · Enter zum Starten"
+        , easyInfo = "Langsame Korinthen, eine nach der anderen."
+        , challengeInfo = "Schnelle Korinthen."
+        , madInfo = "Sehr schnelle Korinthen, am Schluss zwei auf einmal."
+        , lineEnds = "Eine Korinthe am Ende deiner Zeile! g und dann l springt ans Zeilenende, g und dann h an den Anfang."
+        , firstNonBlank = "Diese Zeile beginnt mit Leerzeichen. g und dann s springt zum ersten Krümel."
+        , realLines = "Lange Zeilen gehen auf weiteren Reihen weiter (↪). j geht eine Reihe weiter; g und dann j springt zur nächsten echten Zeile, g und dann k zur vorherigen."
+        , lastChange = "Freche Korinthen rennen dorthin zurück, wo du die letzte zerdrückt hast! g und dann . springt zu deiner letzten Änderung."
+        , anywhere = "Weit weg? Drücke g und dann w: Jeder Krümel bekommt zwei Buchstaben. Tippe die zwei Buchstaben auf der Korinthe, um hinzuspringen."
+        , everything = "Jetzt alle Tricks: gh gl gs gj gk g. gw"
+        , newTrick = \keys -> "Neuer Trick: " ++ keys
+        , escaped = "Eine Korinthe ist weggerollt!"
+        , currants = "Korinthen"
+        , squashed = "Zerdrückt"
         }
     , pool =
         { intro1 = "Alice hatte so viel geweint, dass ihre Tränen einen Teich bildeten. Jetzt schwimmt ihr Gedicht darin, und der Teich spritzt immer neue Wörter hinein."
