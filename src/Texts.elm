@@ -201,8 +201,9 @@ type alias CuriouserTexts =
     , firstNonBlank : String
     , realLines : String
     , lastChange : String
-    , anywhere : String
-    , everything : String
+    , allCheeky : String
+    , cheshireAppears : String
+    , cheshireSays : String
     , newTrick : String -> String
     , escaped : String
     , currants : String
@@ -355,6 +356,9 @@ english =
 
                 Mouse ->
                     "Mouse"
+
+                CheshireCat ->
+                    "Cheshire Cat"
     , layoutDetected = \layout -> "Your keyboard looks like " ++ layout ++ ". Switched."
     , notYet = "That key belongs to a later chapter."
     , locked = "locked"
@@ -376,7 +380,7 @@ english =
                     { name = "Drink Me", skill = "Typing words, new keys e and i", lesson = "Words with e and i, thumb on the space bar." }
 
                 Curiouser ->
-                    { name = "Curiouser and Curiouser", skill = "Helix jumps: gh gl gs gj gk g. gw", lesson = "Squash the currants with Helix's g jumps." }
+                    { name = "Curiouser and Curiouser", skill = "Helix jumps: gh gl gs gj gk g.", lesson = "Squash the currants with Helix's g jumps." }
 
                 PoolOfTears ->
                     { name = "The Pool of Tears", skill = "Helix: w x select, d deletes, u undo, counts", lesson = "Select first, then act: w or x, then d. u undoes." }
@@ -495,9 +499,10 @@ english =
         , lineEnds = "A currant at the end of your line! g then l jumps to the end of the line, g then h to its start."
         , firstNonBlank = "This line starts with spaces. g then s jumps to its first crumb."
         , realLines = "Long lines go on over more rows (↪). j moves one row; g then j jumps to the next real line, g then k to the one before."
-        , lastChange = "Cheeky currants run back to where you squashed the last one! g then . jumps to your last change."
-        , anywhere = "Far away? Press g then w: every crumb gets two letters. Type the two letters on the currant to jump there."
-        , everything = "Now all your tricks: gh gl gs gj gk g. gw"
+        , lastChange = "Cheeky currants are shy: once you get onto their line or column, they run back to where you squashed the last one. g then . jumps to your last change."
+        , allCheeky = "Every currant is cheeky now! Get onto its line or column, then catch it with g then ."
+        , cheshireAppears = "Then, slowly, a grin appeared in the air above the table, and after it, the rest of a Cat."
+        , cheshireSays = "Every currant caught with gw, and not one slip! We're all mad here. You must be too, or you wouldn't have come."
         , newTrick = \keys -> "New trick: " ++ keys
         , escaped = "A currant rolled away!"
         , currants = "Currants"
@@ -667,6 +672,9 @@ german =
 
                 Mouse ->
                     "Maus"
+
+                CheshireCat ->
+                    "Grinsekatze"
     , layoutDetected = \layout -> "Deine Tastatur sieht nach " ++ layout ++ " aus. Umgestellt."
     , notYet = "Diese Taste kommt erst in einem späteren Kapitel."
     , locked = "gesperrt"
@@ -688,7 +696,7 @@ german =
                     { name = "Trink mich", skill = "Wörter tippen, neue Tasten e und i", lesson = "Wörter mit e und i, Daumen auf der Leertaste." }
 
                 Curiouser ->
-                    { name = "Immer merkwürdiger", skill = "Helix-Sprünge: gh gl gs gj gk g. gw", lesson = "Zerdrück die Korinthen mit den g-Sprüngen von Helix." }
+                    { name = "Immer merkwürdiger", skill = "Helix-Sprünge: gh gl gs gj gk g.", lesson = "Zerdrück die Korinthen mit den g-Sprüngen von Helix." }
 
                 PoolOfTears ->
                     { name = "Der Tränenteich", skill = "Helix: w x wählen, d löscht, u zurück, Zahlen", lesson = "Erst auswählen, dann handeln: w oder x, dann d. u macht rückgängig." }
@@ -807,9 +815,10 @@ german =
         , lineEnds = "Eine Korinthe am Ende deiner Zeile! g und dann l springt ans Zeilenende, g und dann h an den Anfang."
         , firstNonBlank = "Diese Zeile beginnt mit Leerzeichen. g und dann s springt zum ersten Krümel."
         , realLines = "Lange Zeilen gehen auf weiteren Reihen weiter (↪). j geht eine Reihe weiter; g und dann j springt zur nächsten echten Zeile, g und dann k zur vorherigen."
-        , lastChange = "Freche Korinthen rennen dorthin zurück, wo du die letzte zerdrückt hast! g und dann . springt zu deiner letzten Änderung."
-        , anywhere = "Weit weg? Drücke g und dann w: Jeder Krümel bekommt zwei Buchstaben. Tippe die zwei Buchstaben auf der Korinthe, um hinzuspringen."
-        , everything = "Jetzt alle Tricks: gh gl gs gj gk g. gw"
+        , lastChange = "Freche Korinthen sind scheu: Sobald du auf ihre Zeile oder Spalte kommst, rennen sie dorthin zurück, wo du die letzte zerdrückt hast. g und dann . springt zu deiner letzten Änderung."
+        , allCheeky = "Jetzt sind alle Korinthen frech! Komm auf ihre Zeile oder Spalte, dann fang sie mit g und dann ."
+        , cheshireAppears = "Da erschien langsam ein Grinsen in der Luft über dem Tisch, und danach der Rest einer Katze."
+        , cheshireSays = "Jede Korinthe mit gw erwischt, und kein einziger Fehler! Wir sind hier alle verrückt. Du musst es auch sein, sonst wärst du nicht hergekommen."
         , newTrick = \keys -> "Neuer Trick: " ++ keys
         , escaped = "Eine Korinthe ist weggerollt!"
         , currants = "Korinthen"

@@ -1,4 +1,4 @@
-module Chapter.Curiouser exposing (Model, Msg(..), init, lifetime, update, view)
+module Chapter.Curiouser exposing (Currant, Model, Msg(..), init, lifetime, update, view)
 
 {-| Chapter 4, "Curiouser and Curiouser": Helix's jumps that start with
 `g`, played like whack-a-mole. The currant letters of the EAT ME cake hop
@@ -6,8 +6,13 @@ onto the crumbs on the table; the cursor reaching one squashes it.
 
 Stages bring in one jump at a time, each with currants placed so that jump
 is the quick way there (`Chapter.Curiouser.Table`): `gl` and `gh`, then
-`gs`, then `gj` and `gk` on long wrapped lines, then `g.` (currants that
-run back to where the last one was squashed), then `gw`, then all of them.
+`gs`, then `gj` and `gk` on long wrapped lines, then `g.`: cheeky currants
+that run back to where the last one was squashed as soon as the cursor gets
+onto their line or column. In the last stage every currant is cheeky.
+
+`gw` works too, but nothing teaches it. A player who finishes the whole
+chapter with nothing but `gw` and labels, every one a catch, meets the
+Cheshire Cat at the end (`gwOnly`): an easter egg nothing announces.
 
 The table is a Helix buffer with soft wrap; squashing really changes the
 text (`Session.replaceChar`), which is what `g.` jumps back to. The
@@ -76,16 +81,11 @@ gapMilliseconds =
 
 
 {-| How much of the chapter each stage takes, in order; the rest is the
-final stage with every trick.
+final stage, where every currant is cheeky.
 -}
 stages : List ( Float, Trick )
 stages =
-    [ ( 0.2, LineEnds ), ( 0.35, FirstNonBlank ), ( 0.5, RealLines ), ( 0.65, LastChange ), ( 0.8, Anywhere ) ]
-
-
-allTricks : List Trick
-allTricks =
-    [ LineEnds, FirstNonBlank, RealLines, LastChange, Anywhere ]
+    [ ( 0.2, LineEnds ), ( 0.4, FirstNonBlank ), ( 0.6, RealLines ), ( 0.8, LastChange ) ]
 
 
 
@@ -107,11 +107,14 @@ type alias Model =
     , escaped : List Int
     , untilNext : Float
     , lastSquash : Maybe Int
+    , gwOnly : Bool
+    , gwStep : Int
+    , cheshire : Bool
     }
 
 
 {-| A currant on the table. `runsBack` currants run to the last squashed
-spot when the cursor comes near.
+spot once the cursor gets onto their line or column.
 -}
 type alias Currant =
     { index : Int
@@ -152,6 +155,9 @@ init seed =
     , escaped = []
     , untilNext = gapMilliseconds
     , lastSquash = Nothing
+    , gwOnly = True
+    , gwStep = 0
+    , cheshire = False
     }
 
 
@@ -269,21 +275,41 @@ isUnlocked command =
 
 jump : String -> Model -> ( Model, List Effect )
 jump key model =
+    let
+        -- For the easter egg: is this key the next one of `g w` + label?
+        fitsGw =
+            case model.gwStep of
+                0 ->
+                    key == "g"
+
+                1 ->
+                    key == "w"
+
+                _ ->
+                    True
+    in
     case Session.press isUnlocked key model.session of
         Session.Ran ran ->
-            { model | session = ran.session }
-                |> squash
-                |> Tuple.mapSecond ((::) (FlashKey key True))
+            let
+                ( squashed, effects ) =
+                    squash { model | session = ran.session }
+
+                caughtWithGw =
+                    fitsGw && model.gwStep == 3 && List.length squashed.squashed > List.length model.squashed
+            in
+            ( { squashed | gwOnly = model.gwOnly && caughtWithGw, gwStep = 0 }, FlashKey key True :: effects )
                 |> andThen runBack
 
         Session.Waiting session ->
-            ( { model | session = session }, [ FlashKey key True ] )
+            ( { model | session = session, gwOnly = model.gwOnly && fitsGw && model.gwStep < 3, gwStep = model.gwStep + 1 }
+            , [ FlashKey key True ]
+            )
 
         Session.Locked session ->
-            ( { model | session = session }, [ ShowToast .notYet, PlaySound ErrorSound, FlashKey key False ] )
+            ( { model | session = session, gwOnly = False, gwStep = 0 }, [ ShowToast .notYet, PlaySound ErrorSound, FlashKey key False ] )
 
         Session.Ignored session ->
-            ( { model | session = session }, [] )
+            ( { model | session = session, gwOnly = False, gwStep = 0 }, [] )
 
 
 andThen : (Model -> ( Model, List Effect )) -> ( Model, List Effect ) -> ( Model, List Effect )
@@ -328,8 +354,9 @@ squash model =
             )
 
 
-{-| A cheeky currant that the cursor comes near runs back to where the last
-one was squashed, and waits there as long as a new one would.
+{-| A shy, cheeky currant runs back to where the last one was squashed as
+soon as the cursor gets onto its line or column, and waits there as long
+as a new one would. Only one waits in that spot at a time.
 -}
 runBack : Model -> ( Model, List Effect )
 runBack model =
@@ -339,15 +366,22 @@ runBack model =
                 cursor =
                     cursorSpot model
 
+                holeTaken =
+                    List.any (\currant -> currant.position == hole) model.currants
+
                 runs currant =
-                    currant.runsBack && Table.isNear cursor (Table.spotOf currant.position) && hole /= currant.position
+                    currant.runsBack && not holeTaken && Table.isInSight cursor (Table.spotOf currant.position)
+
+                -- Only the first that wants to run goes; another waits its turn.
+                runner =
+                    model.currants |> List.filter runs |> List.head |> Maybe.map .index
             in
-            if List.any runs model.currants then
+            if runner /= Nothing then
                 ( { model
                     | currants =
                         List.map
                             (\currant ->
-                                if runs currant then
+                                if Just currant.index == runner then
                                     { currant | position = hole, age = 0, runsBack = False }
 
                                 else
@@ -389,6 +423,7 @@ flow milliseconds model =
                             | currants = staying
                             , escaped = model.escaped ++ List.map .index gone
                             , untilNext = model.untilNext - milliseconds
+                            , gwOnly = model.gwOnly && List.isEmpty gone
                         }
 
                     marked =
@@ -427,32 +462,22 @@ spawn model =
                     stage =
                         stageOf model model.nextLetter
 
-                    trickGenerator =
-                        case stage of
-                            Just learning ->
-                                Random.constant learning
-
-                            Nothing ->
-                                Random.uniform LineEnds (List.drop 1 allTricks)
+                    trick =
+                        Maybe.withDefault LastChange stage
 
                     taken =
                         Core.head (Session.buffer model.session) :: List.map .position model.currants
 
-                    ( ( trick, spot ), seed ) =
+                    ( spot, seed ) =
                         Random.step
-                            (trickGenerator
+                            (Table.place trick (cursorSpot model)
                                 |> Random.andThen
-                                    (\t ->
-                                        Table.place t (cursorSpot model)
-                                            |> Random.andThen
-                                                (\s ->
-                                                    if List.member (Table.positionOf s) taken then
-                                                        Table.place Anywhere (cursorSpot model)
+                                    (\placed ->
+                                        if List.member (Table.positionOf placed) taken then
+                                            Table.placeAway (cursorSpot model)
 
-                                                    else
-                                                        Random.constant s
-                                                )
-                                            |> Random.map (Tuple.pair t)
+                                        else
+                                            Random.constant placed
                                     )
                             )
                             model.seed
@@ -492,11 +517,32 @@ spawn model =
             ( model, [] )
 
 
+{-| The closing story; after a chapter of nothing but `gw`, every one a
+catch, the Cheshire Cat turns up in it.
+-}
 finishIfDone : Model -> ( Model, List Effect )
 finishIfDone model =
     if model.nextLetter >= List.length model.letters && List.isEmpty model.currants && not (List.isEmpty model.letters) && Story.isPlaying model.story then
-        ( { model | story = Story.conclude (Dialog.say Narrator (.curiouser >> .finale1)) [ Dialog.say Alice (.curiouser >> .finale2) ] }
-        , [ PlaySound PickupSound ]
+        let
+            cheshire =
+                model.gwOnly && List.length model.squashed == List.length model.letters
+
+            ending =
+                if cheshire then
+                    [ Dialog.say Alice (.curiouser >> .finale2)
+                    , Dialog.say Narrator (.curiouser >> .cheshireAppears)
+                    , Dialog.say CheshireCat (.curiouser >> .cheshireSays)
+                    ]
+
+                else
+                    [ Dialog.say Alice (.curiouser >> .finale2) ]
+        in
+        ( { model | story = Story.conclude (Dialog.say Narrator (.curiouser >> .finale1)) ending, cheshire = cheshire }
+        , if cheshire then
+            [ PlaySound PickupSound, PlaySound PortalSound ]
+
+          else
+            [ PlaySound PickupSound ]
         )
 
     else
@@ -544,11 +590,8 @@ keysOf stage =
         Just LastChange ->
             "g."
 
-        Just Anywhere ->
-            "gw"
-
         Nothing ->
-            "gh gl gs gj gk g. gw"
+            "g."
 
 
 {-| The difficulty sets the most tarts there are (easy 1, challenge 2,
@@ -654,11 +697,8 @@ secondKeys stage =
         Just LastChange ->
             [ "." ]
 
-        Just Anywhere ->
-            [ "w" ]
-
         Nothing ->
-            [ "s", ".", "w" ]
+            [ "." ]
 
 
 viewTable : Session -> List Mark -> Html msg
@@ -694,11 +734,8 @@ hintFor texts stage =
         Just LastChange ->
             texts.curiouser.lastChange
 
-        Just Anywhere ->
-            texts.curiouser.anywhere
-
         Nothing ->
-            texts.curiouser.everything
+            texts.curiouser.allCheeky
 
 
 viewPanel : Texts -> Model -> Maybe Trick -> Html msg

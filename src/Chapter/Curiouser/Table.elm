@@ -1,7 +1,7 @@
 module Chapter.Curiouser.Table exposing
     ( text, wrapWidth
     , Spot, positionOf, spotOf
-    , Trick(..), place, isNear
+    , Trick(..), place, placeAway, isInSight
     )
 
 {-| The table chapter 4 plays on: lines of cake crumbs (`.`), some indented,
@@ -12,13 +12,14 @@ the wrap width), so `gj` and `gk` always land on a crumb.
 
 `place` decides where a currant appears so that one of Helix's `g` jumps is
 the quick way there: at the end of the cursor's line (`gl`, `gh`), on the
-first crumb of an indented line (`gs`), on the real line after a long
-wrapped one (`gj`, `gk`), or anywhere far away (`gw`). `g.` needs no place
-of its own: its currants run back to where the last one was squashed.
+first crumb of an indented line (`gs`), or on the real line after a long
+wrapped one (`gj`, `gk`). Cheeky currants (`g.`) start far away and out of
+sight, and run back to where the last one was squashed once the cursor gets
+onto their line or column (`isInSight`).
 
 @docs text, wrapWidth
 @docs Spot, positionOf, spotOf
-@docs Trick, place, isNear
+@docs Trick, place, placeAway, isInSight
 
 -}
 
@@ -135,11 +136,11 @@ onScreen spot =
     ( rowsBefore + spot.column // wrapWidth, modBy wrapWidth spot.column )
 
 
-{-| Close enough to the cursor that a cheeky currant runs off: on the same
-screen row or the next one, a few columns away.
+{-| A shy, cheeky currant runs off once the cursor is on its line (the
+same real line, or the same row on screen) or in its column on screen.
 -}
-isNear : Spot -> Spot -> Bool
-isNear a b =
+isInSight : Spot -> Spot -> Bool
+isInSight a b =
     let
         ( rowA, columnA ) =
             onScreen a
@@ -147,7 +148,7 @@ isNear a b =
         ( rowB, columnB ) =
             onScreen b
     in
-    abs (rowA - rowB) <= 1 && abs (columnA - columnB) <= 8
+    a.line == b.line || rowA == rowB || columnA == columnB
 
 
 isFar : Spot -> Spot -> Bool
@@ -166,19 +167,17 @@ isFar a b =
 -- PLACING CURRANTS
 
 
-{-| Which of Helix's jumps a currant is placed for.
+{-| Which of Helix's jumps a currant is placed for. `LastChange` is a
+cheeky currant, caught with `g.`.
 -}
 type Trick
     = LineEnds
     | FirstNonBlank
     | RealLines
     | LastChange
-    | Anywhere
 
 
 {-| Where a currant for `trick` appears, given where the cursor is.
-`LastChange` currants start somewhere far away, like `Anywhere`; the
-chapter sends them running back to the last squashed spot.
 -}
 place : Trick -> Spot -> Random.Generator Spot
 place trick cursor =
@@ -193,10 +192,7 @@ place trick cursor =
             Random.constant (realLine cursor)
 
         LastChange ->
-            farFrom cursor
-
-        Anywhere ->
-            farFrom cursor
+            placeAway cursor
 
 
 {-| The end of the cursor's line further from the cursor: its first or
@@ -287,9 +283,12 @@ realLine cursor =
     { line = target, column = column }
 
 
-farFrom : Spot -> Random.Generator Spot
-farFrom cursor =
-    case List.filter (isFar cursor) allSpots of
+{-| Somewhere far from the cursor and out of its sight: not on its line,
+row or column.
+-}
+placeAway : Spot -> Random.Generator Spot
+placeAway cursor =
+    case List.filter (\spot -> isFar cursor spot && not (isInSight cursor spot)) allSpots of
         first :: others ->
             Random.uniform first others
 

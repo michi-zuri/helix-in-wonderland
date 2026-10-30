@@ -6,6 +6,7 @@ module CuriouserPlaythroughTest exposing (suite)
 import Chapter.Contract exposing (Context)
 import Chapter.Curiouser as Curiouser
 import Chapter.Curiouser.Table as Table exposing (Trick(..))
+import Chapter.Id exposing (ChapterId(..))
 import Difficulty exposing (Difficulty(..))
 import Editor.Core as Core
 import Editor.Session as Session exposing (Session)
@@ -121,6 +122,27 @@ sessionPress keys session =
         keys
 
 
+{-| Catch currants with `gw` until a cheeky one appears.
+-}
+findRunner : Int -> Run Curiouser.Model -> Maybe ( Curiouser.Currant, Run Curiouser.Model )
+findRunner steps run =
+    case List.filter .runsBack run.model.currants of
+        runner :: _ ->
+            Just ( runner, run )
+
+        [] ->
+            if steps <= 0 then
+                Nothing
+
+            else
+                case run.model.currants of
+                    currant :: _ ->
+                        findRunner (steps - 1) (press (gwTo currant.position run) run)
+
+                    [] ->
+                        findRunner (steps - 1) (wait 100 run)
+
+
 suite : Test
 suite =
     describe "Chapter 4: Curiouser and Curiouser"
@@ -189,47 +211,102 @@ suite =
                     |> Core.head
                     |> Just
                     |> Expect.equal squashedAt
-        , test "a cheeky currant runs back to the last squashed spot when the cursor comes near" <|
-            \_ ->
-                let
-                    -- Catch currants until one that runs back appears.
-                    findRunner steps run =
-                        case List.filter .runsBack run.model.currants of
-                            runner :: _ ->
-                                Just ( runner, run )
+        , describe "cheeky currants are shy"
+            [ test "one runs back to the last squashed spot once the cursor is on its line" <|
+                \_ ->
+                    case findRunner 2000 (start "1") of
+                        Just ( runner, run ) ->
+                            let
+                                -- A crumb on the runner's line.
+                                beside =
+                                    if Table.spotOf runner.position |> .column |> (\c -> c >= 3) then
+                                        runner.position - 3
 
-                            [] ->
-                                if steps <= 0 then
-                                    Nothing
+                                    else
+                                        runner.position + 3
+                            in
+                            press (gwTo beside run) run
+                                |> .model
+                                |> .currants
+                                |> List.map .position
+                                |> Expect.equal (List.filterMap identity [ run.model.lastSquash ])
 
-                                else
-                                    case run.model.currants of
-                                        currant :: _ ->
-                                            findRunner (steps - 1) (press (gwTo currant.position run) run)
+                        Nothing ->
+                            Expect.fail "no cheeky currant came"
+            , test "near, but not on its line or column, it stays put" <|
+                \_ ->
+                    case findRunner 2000 (start "1") of
+                        Just ( runner, run ) ->
+                            let
+                                runnerSpot =
+                                    Table.spotOf runner.position
 
-                                        [] ->
-                                            findRunner (steps - 1) (wait 100 run)
-                in
-                case findRunner 2000 (start "1") of
-                    Just ( runner, run ) ->
-                        let
-                            -- Land on a crumb next to the runner.
-                            beside =
-                                if Table.spotOf runner.position |> .column |> (\c -> c >= 3) then
-                                    runner.position - 3
+                                outOfSight =
+                                    (press [ "g", "w" ] run).model.session
+                                        |> Session.jumpLabels
+                                        |> List.map .position
+                                        |> List.filter (\position -> position /= runner.position && not (Table.isInSight runnerSpot (Table.spotOf position)))
+                                        |> List.sortBy (\position -> abs (position - runner.position))
+                                        |> List.head
+                                        |> Maybe.withDefault 0
+                            in
+                            press (gwTo outOfSight run) run
+                                |> .model
+                                |> .currants
+                                |> List.map .position
+                                |> Expect.equal [ runner.position ]
 
-                                else
-                                    runner.position + 3
+                        Nothing ->
+                            Expect.fail "no cheeky currant came"
+            , test "in the last stage, every currant is cheeky" <|
+                \_ ->
+                    let
+                        lastStage run =
+                            List.filter (\currant -> toFloat currant.index >= 0.8 * toFloat (List.length run.model.letters)) run.model.currants
 
-                            near =
-                                press (gwTo beside run) run
-                        in
-                        near.model.currants
-                            |> List.map .position
-                            |> Expect.equal (List.filterMap identity [ run.model.lastSquash ])
+                        collect steps found run =
+                            if steps <= 0 || Playthrough.finishedWith run /= Nothing then
+                                found
 
-                    Nothing ->
-                        Expect.fail "no cheeky currant came"
+                            else
+                                case run.model.currants of
+                                    currant :: _ ->
+                                        collect (steps - 1) (found ++ lastStage run) (press (gwTo currant.position run) run)
+
+                                    [] ->
+                                        collect (steps - 1) found (wait 100 run)
+                    in
+                    collect 3000 [] (start "2")
+                        |> Expect.all
+                            [ List.isEmpty >> Expect.equal False
+                            , List.all .runsBack >> Expect.equal True
+                            ]
+            ]
+        , describe "the easter egg"
+            [ test "a chapter of nothing but gw, every one a catch, brings the Cheshire Cat" <|
+                \_ -> start "1" |> catchAll 3000 |> wait 200 |> .model |> .cheshire |> Expect.equal True
+            , test "one other key, and the Cat stays away" <|
+                \_ -> start "1" |> press [ "h" ] |> catchAll 3000 |> wait 200 |> .model |> .cheshire |> Expect.equal False
+            , test "a gw that catches nothing spoils it too" <|
+                \_ ->
+                    start "1"
+                        |> wait 1000
+                        |> (\run -> press (gwTo 0 run) run)
+                        |> catchAll 3000
+                        |> wait 200
+                        |> .model
+                        |> .cheshire
+                        |> Expect.equal False
+            , test "nothing teaches gw" <|
+                \_ ->
+                    let
+                        texts =
+                            context.texts.curiouser
+                    in
+                    [ texts.intro4, texts.lineEnds, texts.firstNonBlank, texts.realLines, texts.lastChange, texts.allCheeky, (context.texts.chapter Curiouser).skill ]
+                        |> List.filter (String.contains "gw")
+                        |> Expect.equal []
+            ]
         , test "selecting and editing keys wait for later chapters" <|
             \_ ->
                 start "1"
