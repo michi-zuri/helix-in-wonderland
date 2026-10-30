@@ -158,16 +158,19 @@ edit texts key model =
                 |> Tuple.mapSecond ((::) (FlashKey key True))
                 |> finishIfClean work.puzzle ran.session
 
-        Session.Locked ->
-            ( model, [ ShowToast .notYet, PlaySound ErrorSound, FlashKey key False ] )
+        Session.Counting session ->
+            ( { model | work = Just { work | session = session } }, [ FlashKey key True, PlaySound TickSound ] )
 
-        Session.Ignored ->
-            ( model, [] )
+        Session.Locked session ->
+            ( dropCount work session model, [ ShowToast .notYet, PlaySound ErrorSound, FlashKey key False ] )
+
+        Session.Ignored session ->
+            ( dropCount work session model, [] )
 
 
 {-| Tick off objectives and judge deletions.
 -}
-notice : Puzzle -> { command : Command, before : Buffer, session : Session } -> Model -> ( Model, List Effect )
+notice : Puzzle -> { a | command : Command, before : Buffer, session : Session } -> Model -> ( Model, List Effect )
 notice puzzle ran model =
     let
         buffer =
@@ -428,3 +431,15 @@ wavePath row =
 fractional : Float -> Float
 fractional value =
     value - toFloat (floor value)
+
+
+{-| A key that ran nothing drops a count typed before it. Otherwise the
+model stays as it was, so the text keeps following the language setting.
+-}
+dropCount : Work -> Session -> Model -> Model
+dropCount work session model =
+    if Session.pendingCount work.session == "" then
+        model
+
+    else
+        { model | work = Just { work | session = session } }

@@ -143,11 +143,14 @@ edit texts key model =
                 |> Tuple.mapSecond ((::) (FlashKey key True))
                 |> finishIfAnswered work.puzzle ran.session
 
-        Session.Locked ->
-            ( model, [] )
+        Session.Counting session ->
+            ( { model | work = Just { work | session = session } }, [ FlashKey key True ] )
 
-        Session.Ignored ->
-            ( model, [] )
+        Session.Locked session ->
+            ( dropCount work session model, [] )
+
+        Session.Ignored session ->
+            ( dropCount work session model, [] )
 
 
 notice : Command -> Model -> ( Model, List Effect )
@@ -366,3 +369,15 @@ grass () =
 fractional : Float -> Float
 fractional value =
     value - toFloat (floor value)
+
+
+{-| A key that ran nothing drops a count typed before it. Otherwise the
+model stays as it was, so the text keeps following the language setting.
+-}
+dropCount : Work -> Session -> Model -> Model
+dropCount work session model =
+    if Session.pendingCount work.session == "" then
+        model
+
+    else
+        { model | work = Just { work | session = session } }

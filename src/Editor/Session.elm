@@ -1,5 +1,5 @@
 module Editor.Session exposing
-    ( Session, start, buffer, keystrokes, recentKeys
+    ( Session, start, buffer, keystrokes, recentKeys, pendingCount
     , Outcome(..), press, matches, matchingLines
     )
 
@@ -10,7 +10,11 @@ Chapters decide which commands are unlocked by passing a predicate to
 `press`. A locked command is reported, not run, so the chapter can explain
 that it comes later.
 
-@docs Session, start, buffer, keystrokes, recentKeys
+In Normal mode, digits before a command are a count, as in Helix: `3x`
+selects three lines, `5w` the fifth word ahead (see `Core.applyTimes`). A
+count can't start with 0, and Esc or any key that isn't a command drops it.
+
+@docs Session, start, buffer, keystrokes, recentKeys, pendingCount
 @docs Outcome, press, matches, matchingLines
 
 -}
@@ -24,12 +28,13 @@ type Session
         { buffer : Buffer
         , keystrokes : Int
         , recentKeys : List String
+        , count : String
         }
 
 
 start : String -> Session
 start text =
-    Session { buffer = Core.fromString text, keystrokes = 0, recentKeys = [] }
+    Session { buffer = Core.fromString text, keystrokes = 0, recentKeys = [], count = "" }
 
 
 buffer : Session -> Buffer
@@ -50,33 +55,81 @@ recentKeys (Session s) =
     List.reverse s.recentKeys
 
 
+{-| The count typed so far, `""` when there is none: Helix shows it in the
+status line.
+-}
+pendingCount : Session -> String
+pendingCount (Session s) =
+    s.count
+
+
+{-| `Counting` is a digit added to the count; the command after it runs
+with that count (`count` is 1 without one).
+-}
 type Outcome
-    = Ran { command : Command, before : Buffer, session : Session }
-    | Locked
-    | Ignored
+    = Ran { command : Command, count : Int, before : Buffer, session : Session }
+    | Counting Session
+    | Locked Session
+    | Ignored Session
 
 
 press : (Command -> Bool) -> String -> Session -> Outcome
 press isUnlocked key (Session s) =
-    case Keymap.commandFor (Core.mode s.buffer) key of
-        Just command ->
-            if isUnlocked command then
-                Ran
-                    { command = command
-                    , before = s.buffer
-                    , session =
-                        Session
-                            { buffer = Core.apply command s.buffer
-                            , keystrokes = s.keystrokes + 1
-                            , recentKeys = remember (Core.mode s.buffer) key s.recentKeys
-                            }
-                    }
+    let
+        mode =
+            Core.mode s.buffer
 
-            else
-                Locked
+        withoutCount =
+            Session { s | count = "" }
+    in
+    if mode == Normal && isCountDigit key s.count then
+        Counting
+            (Session
+                { s
+                    | count = s.count ++ key
+                    , keystrokes = s.keystrokes + 1
+                    , recentKeys = remember mode key s.recentKeys
+                }
+            )
 
-        Nothing ->
-            Ignored
+    else
+        case Keymap.commandFor mode key of
+            Just command ->
+                if isUnlocked command then
+                    let
+                        count =
+                            String.toInt s.count |> Maybe.withDefault 1
+                    in
+                    Ran
+                        { command = command
+                        , count = count
+                        , before = s.buffer
+                        , session =
+                            Session
+                                { buffer = Core.applyTimes count command s.buffer
+                                , keystrokes = s.keystrokes + 1
+                                , recentKeys = remember mode key s.recentKeys
+                                , count = ""
+                                }
+                        }
+
+                else
+                    Locked withoutCount
+
+            Nothing ->
+                Ignored withoutCount
+
+
+{-| A count starts with 1-9; after that 0 is fine too.
+-}
+isCountDigit : String -> String -> Bool
+isCountDigit key count =
+    case String.toList key of
+        [ char ] ->
+            Char.isDigit char && (char /= '0' || count /= "")
+
+        _ ->
+            False
 
 
 remember : Mode -> String -> List String -> List String
