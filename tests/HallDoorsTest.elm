@@ -165,6 +165,30 @@ suite =
                             Maybe.andThen (\exit -> Doors.leadsTo exit after) (Doors.leadsTo door after) /= Just door
                         )
                     |> Expect.equal []
+        , fuzz2 Fuzz.int (Fuzz.list (Fuzz.intRange 0 6)) "steering away: the door no longer leads to the curtain, the way back stays, nothing can trap Alice" <|
+            \seed choices ->
+                journey seed choices
+                    |> List.filterMap
+                        (\( door, after ) ->
+                            let
+                                alice =
+                                    Doors.leadsTo door after |> Maybe.andThen (\exit -> Map.inFrontOf exit madMap) |> Maybe.withDefault { x = 1, y = 10 }
+                            in
+                            Doors.toTheCurtain madMap alice after
+                                |> Maybe.map
+                                    (\toCurtain ->
+                                        let
+                                            steered =
+                                                Doors.steerAway toCurtain after
+                                        in
+                                        ( Doors.leadsTo toCurtain steered |> Maybe.map partOf
+                                        , Doors.leadsTo door steered == Doors.leadsTo door after
+                                        , problems steered
+                                        )
+                                    )
+                        )
+                    |> List.filter (\( target, wayBackKept, trouble ) -> target == Just "curtain" || not wayBackKept || not (List.isEmpty trouble))
+                    |> Expect.equal []
         , test "the other doors really do change" <|
             \_ ->
                 List.range 1 20
