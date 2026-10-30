@@ -1,6 +1,6 @@
 module Editor.Session exposing
     ( Session, start, fromBuffer, buffer, keystrokes, recentKeys, pendingCount, isWaiting, jumpLabels
-    , Outcome(..), press, splash, replaceChar, matches, matchingLines
+    , Outcome(..), press, pressWith, splash, replaceChar, matches, matchingLines
     )
 
 {-| One player working on one text: the buffer plus what the status line
@@ -22,7 +22,7 @@ key after `g` cancels it.
 selects that word, as in Helix. Esc or a key that matches no label cancels.
 
 @docs Session, start, fromBuffer, buffer, keystrokes, recentKeys, pendingCount, isWaiting, jumpLabels
-@docs Outcome, press, splash, replaceChar, matches, matchingLines
+@docs Outcome, press, pressWith, splash, replaceChar, matches, matchingLines
 
 -}
 
@@ -38,6 +38,7 @@ type Session
         , count : String
         , afterG : Bool
         , jump : Maybe Jump
+        , lastKey : String
         }
 
 
@@ -58,7 +59,7 @@ start text =
 -}
 fromBuffer : Buffer -> Session
 fromBuffer startingBuffer =
-    Session { buffer = startingBuffer, keystrokes = 0, recentKeys = [], count = "", afterG = False, jump = Nothing }
+    Session { buffer = startingBuffer, keystrokes = 0, recentKeys = [], count = "", afterG = False, jump = Nothing, lastKey = "" }
 
 
 {-| The labels `gw` shows, at the start of each word they belong to. Once
@@ -137,13 +138,75 @@ type Outcome
 
 
 press : (Command -> Bool) -> String -> Session -> Outcome
-press isUnlocked key (Session s) =
-    case s.jump of
-        Just jump ->
-            pickLabel key jump (Session { s | jump = Nothing })
+press =
+    pressWith Nothing
 
-        Nothing ->
-            pressNormally isUnlocked key (Session s)
+
+{-| `press`, with the player's own escape keys: two keys that leave Insert
+mode like Esc, as a Helix config can set up (`;;`, say). In fullscreen the
+browser takes Esc for itself, so the game asks for these. They only work
+in Insert mode: the first key is typed as text, and the second takes it
+back and leaves Insert mode.
+-}
+pressWith : Maybe ( Char, Char ) -> (Command -> Bool) -> String -> Session -> Outcome
+pressWith escapeKeys isUnlocked key ((Session s) as session) =
+    let
+        completesEscape =
+            case escapeKeys of
+                Just ( first, second ) ->
+                    Core.mode s.buffer == Insert && key == String.fromChar second && s.lastKey == String.fromChar first
+
+                Nothing ->
+                    False
+
+        outcome =
+            if completesEscape then
+                Ran
+                    { command = ExitInsert
+                    , count = 1
+                    , before = s.buffer
+                    , session =
+                        Session
+                            { s
+                                | buffer = s.buffer |> Core.apply Backspace |> Core.apply ExitInsert
+                                , keystrokes = s.keystrokes + 1
+                            }
+                    }
+
+            else
+                case s.jump of
+                    Just jump ->
+                        pickLabel key jump (Session { s | jump = Nothing })
+
+                    Nothing ->
+                        pressNormally isUnlocked key session
+
+        -- Remember the key, so the next one can complete the escape keys;
+        -- once they did, start afresh (so ";;;" doesn't escape twice).
+        remembered =
+            if completesEscape then
+                ""
+
+            else
+                key
+    in
+    mapSession (\(Session next) -> Session { next | lastKey = remembered }) outcome
+
+
+mapSession : (Session -> Session) -> Outcome -> Outcome
+mapSession change outcome =
+    case outcome of
+        Ran ran ->
+            Ran { ran | session = change ran.session }
+
+        Waiting next ->
+            Waiting (change next)
+
+        Locked next ->
+            Locked (change next)
+
+        Ignored next ->
+            Ignored (change next)
 
 
 pressNormally : (Command -> Bool) -> String -> Session -> Outcome
@@ -252,6 +315,7 @@ run isUnlocked key (Session s) maybeCommand =
                             , count = ""
                             , afterG = False
                             , jump = Nothing
+                            , lastKey = s.lastKey
                             }
                     }
 

@@ -109,7 +109,7 @@ update context msg model =
             case Story.hear context.texts key model.story of
                 Story.NotTalking ->
                     if Story.isPlaying model.story then
-                        edit context.texts key model
+                        edit context key model
 
                     else
                         ( model, [] )
@@ -130,13 +130,13 @@ update context msg model =
             ( { model | clock = model.clock + milliseconds, story = Story.tick milliseconds model.story }, [] )
 
 
-edit : Texts -> String -> Model -> ( Model, List Effect )
-edit texts key model =
+edit : Context -> String -> Model -> ( Model, List Effect )
+edit context key model =
     let
         work =
-            currentWork texts model
+            currentWork context.texts model
     in
-    case Session.press (always True) key work.session of
+    case Session.pressWith context.escapeKeys (always True) key work.session of
         Session.Ran ran ->
             { model | work = Just { work | session = ran.session } }
                 |> notice ran.command
@@ -248,7 +248,7 @@ scene context model =
             , Html.Lazy.lazy viewEditor work.session
             , Story.view context.texts model.story
             ]
-    , panel = viewPanel context.texts model work
+    , panel = viewPanel context model work
     , status =
         { mode = Editor.View.modeName buffer
         , file = file
@@ -258,9 +258,12 @@ scene context model =
     }
 
 
-viewPanel : Texts -> Model -> Work -> Html msg
-viewPanel texts model work =
+viewPanel : Context -> Model -> Work -> Html msg
+viewPanel context model work =
     let
+        texts =
+            context.texts
+
         filled =
             Session.matchingLines work.puzzle.answer work.session
 
@@ -270,14 +273,22 @@ viewPanel texts model work =
     Html.div [ A.class "panel-content" ]
         [ Html.div [ A.class "columns" ]
             [ Html.div [ A.class "column" ]
-                [ Checklist.view
+                ([ Checklist.view
                     [ ( model.enteredInsert, texts.caterpillar.pressI )
                     , ( model.typedInInsert, texts.caterpillar.typeWord )
                     , ( model.leftInsert, texts.caterpillar.pressEsc )
                     , ( filled == 3 && backInNormal, texts.caterpillar.fillAll filled )
                     ]
-                , Html.p [ A.class "eyebrow" ] [ Html.text texts.caterpillar.tip ]
-                ]
+                 , Html.p [ A.class "eyebrow" ] [ Html.text texts.caterpillar.tip ]
+                 ]
+                    ++ (case context.escapeKeys of
+                            Just ( first, second ) ->
+                                [ Html.p [ A.class "tip" ] [ Html.text (texts.escapeKeysWork (String.fromList [ first, second ])) ] ]
+
+                            Nothing ->
+                                []
+                       )
+                )
             , Checklist.goal texts.caterpillar.goal work.puzzle.answer
             ]
         ]

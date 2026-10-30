@@ -20,11 +20,14 @@ import Keyboard.Layout exposing (Layout)
 import Texts exposing (Texts)
 
 
-{-| Settings a chapter may read but not change.
+{-| Settings a chapter may read but not change. `escapeKeys` are the
+player's own two keys that leave Insert mode like Esc (asked for when
+entering fullscreen; see `Editor.Session.pressWith`).
 -}
 type alias Context =
     { texts : Texts
     , layout : Layout
+    , escapeKeys : Maybe ( Char, Char )
     }
 
 

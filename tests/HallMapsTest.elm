@@ -33,7 +33,7 @@ import Texts
 
 context : Context
 context =
-    { texts = Texts.forLanguage English, layout = UsQwerty }
+    { texts = Texts.forLanguage English, layout = UsQwerty, escapeKeys = Nothing }
 
 
 mapOf : Difficulty -> Map

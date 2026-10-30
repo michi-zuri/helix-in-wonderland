@@ -18,7 +18,7 @@ import Texts
 
 context : Context
 context =
-    { texts = Texts.forLanguage German, layout = SwissQwertz }
+    { texts = Texts.forLanguage German, layout = SwissQwertz, escapeKeys = Nothing }
 
 
 press : String -> Run Hall.Model -> Run Hall.Model
