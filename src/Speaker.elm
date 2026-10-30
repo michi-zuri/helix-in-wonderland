@@ -11,3 +11,4 @@ type Speaker
     | WhiteRabbit
     | Caterpillar
     | Mouse
+    | CheshireCat

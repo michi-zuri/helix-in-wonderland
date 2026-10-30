@@ -108,6 +108,9 @@ portrait speaker =
 
                 Mouse ->
                     Just Sprites.mouse
+
+                CheshireCat ->
+                    Just Sprites.cheshireCat
     in
     case sprite of
         Just s ->

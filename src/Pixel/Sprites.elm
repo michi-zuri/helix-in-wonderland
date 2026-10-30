@@ -1,4 +1,4 @@
-module Pixel.Sprites exposing (alice, aliceFalling, aliceStepping, aliceSwimming, catalogue, caterpillar, goldenKey, mouse, tart, whiteRabbit)
+module Pixel.Sprites exposing (alice, aliceFalling, aliceStepping, aliceSwimming, catalogue, caterpillar, cheshireCat, goldenKey, mouse, tart, whiteRabbit)
 
 {-| The game's characters and props. Original pixel art, in the spirit of the
 1865 book rather than any film.
@@ -171,6 +171,26 @@ mouse =
         ]
 
 
+{-| The Cheshire Cat, who turns up only for a very particular player.
+Purple stripes and the famous grin.
+-}
+cheshireCat : Sprite
+cheshireCat =
+    Sprite.fromRows
+        [ ( 'p', "#9b5fc0" ), ( 's', "#6a3d8a" ), ( 'y', "#efba5d" ), ( 'k', "#120a18" ), ( 'w', "#f4ead2" ), ( 'r', "#e88aa8" ) ]
+        [ ".p........p."
+        , ".pp......pp."
+        , ".pspppppsp.."
+        , "pppppppppppp"
+        , "psykppppkysp"
+        , "pppppppppppp"
+        , "pswwwwwwwwsp"
+        , "ppwkwkwkwwpp"
+        , ".pprrrrrrpp."
+        , "..pspppsp..."
+        ]
+
+
 goldenKey : Sprite
 goldenKey =
     Sprite.fromRows [ ( 'y', "#efba5d" ) ]
@@ -216,6 +236,7 @@ catalogue =
     , { name = "whiteRabbit", sprite = whiteRabbit }
     , { name = "caterpillar", sprite = caterpillar }
     , { name = "mouse", sprite = mouse }
+    , { name = "cheshireCat", sprite = cheshireCat }
     , { name = "goldenKey", sprite = goldenKey }
     , { name = "tart", sprite = tart }
     ]
