@@ -75,14 +75,31 @@ normalCommand key =
             Nothing
 
 
-{-| The key after `g` in Normal mode (Helix's goto mode): `gh` goes to the
-start of the line.
+{-| The key after `g` in Normal mode (Helix's goto mode).
 -}
 gotoCommand : String -> Maybe Command
 gotoCommand key =
     case key of
         "h" ->
             Just GotoLineStart
+
+        "l" ->
+            Just GotoLineEnd
+
+        "s" ->
+            Just GotoFirstNonWhitespace
+
+        "." ->
+            Just GotoLastModification
+
+        "j" ->
+            Just MoveLineDown
+
+        "k" ->
+            Just MoveLineUp
+
+        "w" ->
+            Just GotoWord
 
         _ ->
             Nothing

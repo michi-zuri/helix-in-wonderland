@@ -1,8 +1,13 @@
-module Editor.View exposing (modeName, position, view)
+module Editor.View exposing (Decorations, modeName, position, view, viewWith)
 
 {-| Draws a buffer the way Helix does: line numbers in the gutter, the
 selection in purple, the cursor as a block (or, in Insert mode, as a bar in
 front of the character where typing goes).
+
+With soft wrap (`Core.withWrap`), a long line continues on more rows, marked
+with ↪ in the gutter. `viewWith` can also draw `gw`'s jump labels and marks
+a chapter puts on the text (chapter 4's currants).
+
 -}
 
 import Editor.Core as Core exposing (Buffer, Mode(..))
@@ -38,25 +43,101 @@ type Look
     | Selected
     | Cursor
     | InsertionPoint
+    | Marked String
+
+
+{-| Extra things drawn over the text: `gw`'s labels (two letters over the
+start of a word) and a chapter's marks (one character, with a CSS class).
+The cursor stays visible on top of a mark.
+-}
+type alias Decorations =
+    { labels : List { position : Int, label : String }
+    , marks : List { position : Int, text : Char, class : String }
+    }
 
 
 view : Buffer -> Html msg
-view buffer =
+view =
+    viewWith { labels = [], marks = [] }
+
+
+viewWith : Decorations -> Buffer -> Html msg
+viewWith decorations buffer =
     let
         ( cursorLine, _ ) =
             Core.cursorLineColumn buffer
 
         lookAt =
             lookFor buffer
+
+        overlay =
+            overlayFor decorations
+
+        rowsOf line =
+            case Core.wrapWidth buffer of
+                Just width ->
+                    chunks width line
+
+                Nothing ->
+                    [ line ]
     in
     Html.div [ A.class "editor" ]
         (Core.toString buffer
             |> linesWithOffsets
             |> List.indexedMap
                 (\index ( offset, line ) ->
-                    viewLine (index + 1 == cursorLine) (index + 1) (cells lookAt offset line)
+                    rowsOf (List.indexedMap (\column char -> ( offset + column, char )) (String.toList line))
+                        |> List.indexedMap
+                            (\row rowCells ->
+                                viewLine (index + 1 == cursorLine)
+                                    (if row == 0 then
+                                        String.fromInt (index + 1)
+
+                                     else
+                                        "↪"
+                                    )
+                                    (cells lookAt overlay rowCells)
+                            )
                 )
+            |> List.concat
         )
+
+
+{-| A line's characters split into screen rows of `width`; the final space
+(where the newline is) stays on the last row unless that row is full.
+-}
+chunks : Int -> List a -> List (List a)
+chunks width items =
+    if List.length items <= width then
+        [ items ]
+
+    else
+        List.take width items :: chunks width (List.drop width items)
+
+
+{-| What to draw at a position instead of the character, if anything.
+-}
+overlayFor : Decorations -> Int -> Maybe ( String, Char )
+overlayFor decorations =
+    let
+        fromLabels =
+            decorations.labels
+                |> List.concatMap
+                    (\jump ->
+                        List.indexedMap (\index char -> ( jump.position + index, ( "jump-label", char ) )) (String.toList jump.label)
+                    )
+
+        fromMarks =
+            List.map (\mark -> ( mark.position, ( mark.class, mark.text ) )) decorations.marks
+
+        all =
+            fromLabels ++ fromMarks
+    in
+    \at ->
+        all
+            |> List.filter (\( markedAt, _ ) -> markedAt == at)
+            |> List.head
+            |> Maybe.map Tuple.second
 
 
 {-| Each line with the position of its first character. The newline that
@@ -113,10 +194,24 @@ lookFor buffer =
 {-| Neighbouring characters that look the same are grouped into one run,
 so a line becomes a handful of spans instead of one per character.
 -}
-cells : (Int -> Look) -> Int -> String -> List ( Look, String )
-cells lookAt offset line =
-    String.toList line
-        |> List.indexedMap (\index char -> ( lookAt (offset + index), char ))
+cells : (Int -> Look) -> (Int -> Maybe ( String, Char )) -> List ( Int, Char ) -> List ( Look, String )
+cells lookAt overlay positioned =
+    positioned
+        |> List.map
+            (\( at, char ) ->
+                case ( lookAt at, overlay at ) of
+                    ( Cursor, _ ) ->
+                        ( Cursor, char )
+
+                    ( InsertionPoint, _ ) ->
+                        ( InsertionPoint, char )
+
+                    ( _, Just ( class, shown ) ) ->
+                        ( Marked class, shown )
+
+                    ( look, Nothing ) ->
+                        ( look, char )
+            )
         |> List.foldr
             (\( look, char ) runs ->
                 case runs of
@@ -133,10 +228,10 @@ cells lookAt offset line =
             []
 
 
-viewLine : Bool -> Int -> List ( Look, String ) -> Html msg
-viewLine isCurrent number runs =
+viewLine : Bool -> String -> List ( Look, String ) -> Html msg
+viewLine isCurrent gutter runs =
     Html.div [ A.classList [ ( "editor-line", True ), ( "current", isCurrent ) ] ]
-        [ Html.span [ A.class "editor-gutter" ] [ Html.text (String.fromInt number) ]
+        [ Html.span [ A.class "editor-gutter" ] [ Html.text gutter ]
         , Html.span [ A.class "editor-code" ] (List.map viewRun runs)
         ]
 
@@ -155,3 +250,6 @@ viewRun ( look, text ) =
 
         InsertionPoint ->
             Html.span [ A.class "insertion-point" ] [ Html.text text ]
+
+        Marked class ->
+            Html.span [ A.class class ] [ Html.text text ]

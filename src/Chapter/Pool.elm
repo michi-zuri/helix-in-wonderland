@@ -621,7 +621,7 @@ scene context model =
     { stage =
         Html.div [ A.class "stage-scene" ]
             [ viewPool model.clock (waterLevel work.puzzle buffer)
-            , Html.Lazy.lazy Editor.View.view buffer
+            , Html.Lazy.lazy viewEditor work.session
             , if model.difficulty == Nothing && Story.isPlaying model.story then
                 DifficultyChoice.view
                     { texts = context.texts
@@ -800,3 +800,11 @@ wavePath row =
 fractional : Float -> Float
 fractional value =
     value - toFloat (floor value)
+
+
+{-| The editor with `gw`'s labels, drawn again only when the session
+changes (it is lazy on the session, which only changes on a key).
+-}
+viewEditor : Session -> Html msg
+viewEditor session =
+    Editor.View.viewWith { labels = Session.jumpLabels session, marks = [] } (Session.buffer session)
