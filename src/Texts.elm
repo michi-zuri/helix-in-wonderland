@@ -177,6 +177,18 @@ type alias DrinkMeTexts =
     }
 
 
+{-| Chapter 4's poems, one per difficulty, all cleaned into `cleanPoem` by
+deleting words and lines. The words to delete carry a hidden meaning that
+the game never explains: on easy they spell a sentence, the tide on
+challenge splashes one in word by word (`tideWords`), and on mad they are
+Isaac Watts' busy-bee poem, which Alice mixes up with the crocodile in the
+book.
+
+`easyBest` and `madBest` are the keystrokes of our own best way to clean
+those poems, shown on the results card as a number to beat. A test plays
+that way through the chapter and checks the number.
+
+-}
 type alias PoolTexts =
     { intro1 : String
     , intro2 : String
@@ -184,17 +196,27 @@ type alias PoolTexts =
     , intro4 : String
     , finale : String
     , mouse : String
-    , poem : String
+    , easyPoem : String
+    , challengePoem : String
+    , madPoem : String
     , cleanPoem : String
-    , junk : String
-    , flood : String
-    , walkToJunk : String
-    , pressW : String
-    , pressD : String
-    , removeAll : Int -> String
-    , removeLine : String
+    , tideWords : List String
+    , easyBest : Int
+    , madBest : Int
+    , ourBest : String
+    , chooseTitle : String
+    , chooseHint : String
+    , easyInfo : String
+    , challengeInfo : String
+    , madInfo : String
+    , hintFind : String
+    , hintDelete : String
+    , hintLines : Int -> String
+    , hintAnyLine : String
+    , hintUndo : String
+    , hintCount : String
+    , wordsLeft : Int -> String
     , goal : String
-    , undoTip : String
     , wrongDeletion : String
     , idea : String
     }
@@ -421,16 +443,36 @@ english =
         { intro1 = "Alice cried so much that her tears made a pool. Now the words of her poem float in it, and the pool keeps splashing extra words in."
         , intro2 = "I'll try if I know all the things I used to know. How doth the little..."
         , intro3 = "Here is the big Helix idea: first you select, then you act. Press w and Helix selects the next word. Press d and the selection is deleted."
-        , intro4 = "Clean every splash out of the poem. e selects to the end of a word, b goes back one word. Deleted the wrong thing? u undoes it."
+        , intro4 = "Clean the poem: delete every word that doesn't belong. Deleted the wrong thing? u undoes it."
         , finale = "The poem is clean and the pool is calm. A Mouse swims up to lead everyone to the shore."
         , mouse = "Sit down, all of you, and listen to me! I'll soon make you dry enough!"
-        , poem =
+        , easyPoem =
             lines
-                [ "How doth the little splash crocodile"
-                , "Improve splash his shining tail,"
+                [ "How doth the little SWIM crocodile"
+                , "Improve his TO shining tail,"
                 , "tears tears tears tears tears"
-                , "And pour the waters of splash the Nile"
-                , "On every golden scale! splash"
+                , "tears tears tears tears tears"
+                , "And pour the THE waters of the Nile"
+                , "On every golden scale! SHORE"
+                ]
+        , challengePoem =
+            lines
+                [ "How doth the LOOK little crocodile"
+                , "Improve his shining tail, OUT"
+                , "tears tears tears tears tears"
+                , "tears tears tears tears tears"
+                , "tears tears tears tears tears"
+                , "And pour the waters of the Nile"
+                , "On every golden scale!"
+                ]
+        , madPoem =
+            lines
+                [ "How doth the little busy crocodile"
+                , "Improve his shining golden tail,"
+                , "And gather honey all the day"
+                , "From every opening flower!"
+                , "And pour the honey waters of the Nile"
+                , "On every opening golden scale!"
                 ]
         , cleanPoem =
             lines
@@ -439,15 +481,29 @@ english =
                 , "And pour the waters of the Nile"
                 , "On every golden scale!"
                 ]
-        , junk = "splash"
-        , flood = "tears"
-        , walkToJunk = "Walk the cursor onto a \"splash\" with h j k l."
-        , pressW = "Press w. The word lights up: that is a selection."
-        , pressD = "Press d to delete what is selected."
-        , removeAll = \left -> "Remove every \"splash\" (" ++ String.fromInt left ++ " left)."
-        , removeLine = "A whole line of tears! x selects the line, then d."
+        , tideWords = [ "A", "MOUSE", "IS", "COMING", "TO", "HELP" ]
+        , easyBest = 19
+        , madBest = 18
+        , ourBest = "Our best"
+        , chooseTitle = "How wild is the pool?"
+        , chooseHint = "j / k to choose · Enter to swim"
+        , easyInfo = "Odd words in capitals."
+        , challengeInfo = "The pool keeps splashing new words in."
+        , madInfo = "Some words almost belong. Read carefully!"
+        , hintFind = "Find a word that doesn't belong. Walk with h j k l, or press w: it selects the next word."
+        , hintDelete = "Selected! d deletes the selection."
+        , hintLines =
+            \count ->
+                if count == 1 then
+                    "This whole line doesn't belong. x selects the line."
+
+                else
+                    "These " ++ String.fromInt count ++ " lines don't belong. " ++ String.fromInt count ++ "x selects " ++ String.fromInt count ++ " lines at once."
+        , hintAnyLine = "x selects a whole line. A number first selects more lines: 2x."
+        , hintUndo = "A word of the poem went missing. u undoes the last change."
+        , hintCount = "A number first repeats a key: 3w selects the third word ahead."
+        , wordsLeft = \count -> "Words to delete: " ++ String.fromInt count
         , goal = "The poem should read:"
-        , undoTip = "Oops? u undoes the last change."
         , wrongDeletion = "A poem word went missing. Press u to undo."
         , idea = "Helix: select first, then act."
         }
@@ -668,16 +724,36 @@ german =
         { intro1 = "Alice hatte so viel geweint, dass ihre Tränen einen Teich bildeten. Jetzt schwimmt ihr Gedicht darin, und der Teich spritzt immer neue Wörter hinein."
         , intro2 = "Mal sehen, ob ich noch alles weiss, was ich früher wusste. Wie putzt das kleine..."
         , intro3 = "Hier ist die grosse Idee von Helix: erst auswählen, dann handeln. Drücke w und Helix wählt das nächste Wort aus. Drücke d und die Auswahl wird gelöscht."
-        , intro4 = "Fisch jedes platsch aus dem Gedicht. e wählt bis zum Wortende, b geht ein Wort zurück. Das Falsche gelöscht? u macht es rückgängig."
+        , intro4 = "Räum das Gedicht auf: Lösche jedes Wort, das nicht hineingehört. Das Falsche gelöscht? u macht es rückgängig."
         , finale = "Das Gedicht ist sauber und der Teich wird still. Eine Maus schwimmt heran, um alle ans Ufer zu führen."
         , mouse = "Setzt euch alle hin und hört mir zu! Ich mache euch gleich trocken genug!"
-        , poem =
+        , easyPoem =
             lines
-                [ "Wie putzt das platsch kleine Krokodil"
-                , "den Schwanz platsch so blank und fein,"
+                [ "Wie putzt das kleine SCHWIMM Krokodil"
+                , "den Schwanz so SCHNELL blank und fein,"
                 , "tränen tränen tränen tränen tränen"
-                , "und giesst das Wasser platsch aus dem Nil"
-                , "auf jede Schuppe ein! platsch"
+                , "tränen tränen tränen tränen tränen"
+                , "und giesst das ANS Wasser aus dem Nil"
+                , "auf jede Schuppe ein! UFER"
+                ]
+        , challengePoem =
+            lines
+                [ "Wie putzt das PASS kleine Krokodil"
+                , "den Schwanz so blank und fein, AUF"
+                , "tränen tränen tränen tränen tränen"
+                , "tränen tränen tränen tränen tränen"
+                , "tränen tränen tränen tränen tränen"
+                , "und giesst das Wasser aus dem Nil"
+                , "auf jede Schuppe ein!"
+                ]
+        , madPoem =
+            lines
+                [ "Wie putzt das kleine fleissige Krokodil"
+                , "den hellen Schwanz so blank und fein,"
+                , "sie sammelt Honig jeden Tag"
+                , "aus jeder offnen Blüte,"
+                , "und giesst das süsse Wasser aus dem Nil"
+                , "auf jede kleine Schuppe ein!"
                 ]
         , cleanPoem =
             lines
@@ -686,15 +762,29 @@ german =
                 , "und giesst das Wasser aus dem Nil"
                 , "auf jede Schuppe ein!"
                 ]
-        , junk = "platsch"
-        , flood = "tränen"
-        , walkToJunk = "Geh mit h j k l auf ein \"platsch\"."
-        , pressW = "Drücke w. Das Wort leuchtet auf: das ist eine Auswahl."
-        , pressD = "Drücke d, um die Auswahl zu löschen."
-        , removeAll = \left -> "Entferne jedes \"platsch\" (noch " ++ String.fromInt left ++ ")."
-        , removeLine = "Eine ganze Zeile Tränen! x wählt die Zeile, dann d."
+        , tideWords = [ "EINE", "MAUS", "KOMMT", "UND", "HILFT", "DIR" ]
+        , easyBest = 19
+        , madBest = 21
+        , ourBest = "Unser Rekord"
+        , chooseTitle = "Wie wild ist der Teich?"
+        , chooseHint = "j / k zum Wählen · Enter zum Schwimmen"
+        , easyInfo = "Fremde Wörter in Grossbuchstaben."
+        , challengeInfo = "Der Teich spritzt immer neue Wörter hinein."
+        , madInfo = "Manche Wörter passen fast. Lies genau!"
+        , hintFind = "Finde ein Wort, das nicht hineingehört. Geh mit h j k l, oder drücke w: Es wählt das nächste Wort aus."
+        , hintDelete = "Ausgewählt! d löscht die Auswahl."
+        , hintLines =
+            \count ->
+                if count == 1 then
+                    "Diese ganze Zeile gehört nicht hinein. x wählt die Zeile aus."
+
+                else
+                    "Diese " ++ String.fromInt count ++ " Zeilen gehören nicht hinein. " ++ String.fromInt count ++ "x wählt " ++ String.fromInt count ++ " Zeilen auf einmal aus."
+        , hintAnyLine = "x wählt eine ganze Zeile aus. Eine Zahl davor wählt mehr Zeilen: 2x."
+        , hintUndo = "Ein Wort aus dem Gedicht fehlt. u macht die letzte Änderung rückgängig."
+        , hintCount = "Eine Zahl davor wiederholt eine Taste: 3w wählt das dritte Wort voraus."
+        , wordsLeft = \count -> "Noch zu löschen: " ++ String.fromInt count
         , goal = "So soll das Gedicht lauten:"
-        , undoTip = "Hoppla? u macht die letzte Änderung rückgängig."
         , wrongDeletion = "Ein Wort aus dem Gedicht fehlt jetzt. Drücke u."
         , idea = "Helix: erst auswählen, dann handeln."
         }

@@ -1,6 +1,6 @@
 module Editor.Session exposing
     ( Session, start, buffer, keystrokes, recentKeys, pendingCount
-    , Outcome(..), press, matches, matchingLines
+    , Outcome(..), press, splash, matches, matchingLines
     )
 
 {-| One player working on one text: the buffer plus what the status line
@@ -15,7 +15,7 @@ selects three lines, `5w` the fifth word ahead (see `Core.applyTimes`). A
 count can't start with 0, and Esc or any key that isn't a command drops it.
 
 @docs Session, start, buffer, keystrokes, recentKeys, pendingCount
-@docs Outcome, press, matches, matchingLines
+@docs Outcome, press, splash, matches, matchingLines
 
 -}
 
@@ -118,6 +118,13 @@ press isUnlocked key (Session s) =
 
             Nothing ->
                 Ignored withoutCount
+
+
+{-| A word put in from outside, not typed (see `Core.splash`).
+-}
+splash : { line : Int, word : Int, text : String } -> Session -> Session
+splash where_ (Session s) =
+    Session { s | buffer = Core.splash where_ s.buffer }
 
 
 {-| A count starts with 1-9; after that 0 is fine too.

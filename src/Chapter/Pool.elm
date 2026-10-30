@@ -1,15 +1,29 @@
 module Chapter.Pool exposing (Model, Msg(..), init, update, view)
 
 {-| Chapter 4, "The Pool of Tears": the big Helix idea, select first and
-then act. The player cleans junk words out of Carroll's crocodile poem with
-`w e b` (select a word), `x` (select a line), `d` (delete) and `u` (undo).
+then act. The player cleans a poem with `w` (select the next word), `x`
+(select the line), `d` (delete) and `u` (undo), with counts like `3w` and
+`2x` (see `Editor.Session`). `e` and `b` wait for a later chapter, and
+Insert-mode keys for chapter 5.
 
-Insert-mode keys stay locked until chapter 5.
+Three difficulties (see `Texts.PoolTexts` for the poems):
+
+  - easy: odd words in capitals, and lines of tears;
+  - challenge: the pool keeps splashing new words in, one every few
+    seconds, until the tide is over;
+  - mad: the odd words almost belong; they come from the poem Alice mixes
+    the crocodile up with.
+
+A deletion is judged by one rule for all three: it is wrong if the clean
+poem no longer fits inside the text (`cleanFits`), right if it removed
+words and the clean poem still fits. Hints show one at a time, when they
+are useful (`hints`); on mad none of them give away which words are odd.
 
 -}
 
 import Chapter.Contract as Contract exposing (Context, Effect(..), Sound(..))
 import Chapter.Story as Story exposing (Story)
+import Difficulty exposing (Difficulty(..))
 import Editor.Core as Core exposing (Buffer, Command(..))
 import Editor.Session as Session exposing (Session)
 import Editor.View
@@ -18,6 +32,7 @@ import Html.Attributes as A
 import Html.Lazy
 import Pixel.Sprite as Sprite
 import Pixel.Sprites as Sprites
+import Random
 import Speaker exposing (Speaker(..))
 import Svg exposing (Svg)
 import Svg.Attributes as SA
@@ -25,6 +40,7 @@ import Svg.Lazy
 import Texts exposing (PoolTexts, Texts)
 import Ui.Checklist as Checklist
 import Ui.Dialog as Dialog
+import Ui.DifficultyChoice as DifficultyChoice exposing (Choice)
 
 
 file : String
@@ -33,23 +49,51 @@ file =
 
 
 
+-- TUNING
+
+
+{-| On challenge, a new word splashes in this often, in milliseconds.
+-}
+tideMilliseconds : Float
+tideMilliseconds =
+    6000
+
+
+{-| When the poem is clean but the tide isn't over, the next word comes
+sooner, so nobody waits around.
+-}
+calmMilliseconds : Float
+calmMilliseconds =
+    1500
+
+
+{-| After this many `w` presses in a row, a tip suggests a count.
+-}
+wordsBeforeCountTip : Int
+wordsBeforeCountTip =
+    3
+
+
+
 -- MODEL
 
 
 type alias Model =
     { story : Story
+    , choice : Choice
+    , difficulty : Maybe Difficulty
     , work : Maybe Work
-    , reachedJunk : Bool
-    , selectedSomething : Bool
-    , deletedJunk : Bool
+    , seed : Random.Seed
+    , tide : Tide
     , wrongDeletions : Int
+    , wordsInARow : Int
+    , usedCount : Bool
     , clock : Float
     }
 
 
-{-| The poem in the language the player started in. Until the first key
-press it follows the language setting, so switching language before
-starting just shows the other poem.
+{-| The poem being cleaned, fixed when a difficulty is picked (until then
+the text follows the language setting).
 -}
 type alias Work =
     { puzzle : Puzzle
@@ -60,26 +104,53 @@ type alias Work =
 type alias Puzzle =
     { poem : String
     , cleanPoem : String
-    , junk : String
-    , flood : String
+    , tideWords : List String
+    , ourBest : Maybe Int
     }
 
 
-init : Model
-init =
+{-| How many of the tide's words have splashed in, and how long until the
+next one.
+-}
+type alias Tide =
+    { splashed : Int
+    , untilNext : Float
+    }
+
+
+{-| The seed decides where the tide splashes its words.
+-}
+init : Random.Seed -> Model
+init seed =
     { story =
         Story.begin (Dialog.say Narrator (.pool >> .intro1))
             [ Dialog.say Alice (.pool >> .intro2)
             , Dialog.say Narrator (.pool >> .intro3)
             , Dialog.say Narrator (.pool >> .intro4)
             ]
+    , choice = DifficultyChoice.start 0
+    , difficulty = Nothing
     , work = Nothing
-    , reachedJunk = False
-    , selectedSomething = False
-    , deletedJunk = False
+    , seed = seed
+    , tide = { splashed = 0, untilNext = tideMilliseconds }
     , wrongDeletions = 0
+    , wordsInARow = 0
+    , usedCount = False
     , clock = 0
     }
+
+
+puzzleFor : PoolTexts -> Difficulty -> Puzzle
+puzzleFor texts difficulty =
+    case difficulty of
+        Easy ->
+            { poem = texts.easyPoem, cleanPoem = texts.cleanPoem, tideWords = [], ourBest = Just texts.easyBest }
+
+        Challenge ->
+            { poem = texts.challengePoem, cleanPoem = texts.cleanPoem, tideWords = texts.tideWords, ourBest = Nothing }
+
+        Mad ->
+            { poem = texts.madPoem, cleanPoem = texts.cleanPoem, tideWords = [], ourBest = Just texts.madBest }
 
 
 currentWork : Texts -> Model -> Work
@@ -91,14 +162,9 @@ currentWork texts model =
         Nothing ->
             let
                 puzzle =
-                    puzzleFrom texts.pool
+                    puzzleFor texts.pool (Maybe.withDefault Easy model.difficulty)
             in
             { puzzle = puzzle, session = Session.start puzzle.poem }
-
-
-puzzleFrom : PoolTexts -> Puzzle
-puzzleFrom texts =
-    { poem = texts.poem, cleanPoem = texts.cleanPoem, junk = texts.junk, flood = texts.flood }
 
 
 
@@ -117,7 +183,12 @@ update context msg model =
             case Story.hear context.texts key model.story of
                 Story.NotTalking ->
                     if Story.isPlaying model.story then
-                        edit context.texts key model
+                        case model.difficulty of
+                            Just _ ->
+                                edit context.texts key model
+
+                            Nothing ->
+                                choose context.texts key model
 
                     else
                         ( model, [] )
@@ -129,20 +200,41 @@ update context msg model =
                     ( { model | story = story }, [ PlaySound TickSound ] )
 
                 Story.IntroOver story ->
-                    ( { model | story = story }, [] )
+                    ( { model | story = story, choice = DifficultyChoice.start model.clock }, [] )
 
                 Story.OutroOver story ->
                     ( { model | story = story }, [ Finish (score context.texts model) ] )
 
         Frame milliseconds ->
-            ( { model | clock = model.clock + milliseconds, story = Story.tick milliseconds model.story }, [] )
+            { model | clock = model.clock + milliseconds, story = Story.tick milliseconds model.story }
+                |> flow milliseconds
 
 
-{-| Everything except inserting text, which chapter 5 teaches.
+choose : Texts -> String -> Model -> ( Model, List Effect )
+choose texts key model =
+    case DifficultyChoice.press model.clock key model.choice of
+        DifficultyChoice.Moved choice ->
+            ( { model | choice = choice }, [ PlaySound TickSound ] )
+
+        DifficultyChoice.Picked difficulty ->
+            let
+                puzzle =
+                    puzzleFor texts.pool difficulty
+            in
+            ( { model | difficulty = Just difficulty, work = Just { puzzle = puzzle, session = Session.start puzzle.poem } }
+            , [ PlaySound PickupSound ]
+            )
+
+        DifficultyChoice.Unchanged ->
+            ( model, [] )
+
+
+{-| Moving, `w`, `x`, `d`, `u` and counts. `e` and `b` come in a later
+chapter, inserting text in chapter 5.
 -}
 isUnlocked : Command -> Bool
 isUnlocked command =
-    not (List.member command [ InsertBefore, InsertAfter, Change ])
+    not (List.member command [ SelectNextWordEnd, SelectPreviousWordStart, InsertBefore, InsertAfter, Change ])
 
 
 edit : Texts -> String -> Model -> ( Model, List Effect )
@@ -153,8 +245,17 @@ edit texts key model =
     in
     case Session.press isUnlocked key work.session of
         Session.Ran ran ->
-            { model | work = Just { work | session = ran.session } }
-                |> notice work.puzzle ran
+            { model
+                | work = Just { work | session = ran.session }
+                , usedCount = model.usedCount || ran.count > 1
+                , wordsInARow =
+                    if ran.command == SelectNextWordStart && ran.count == 1 then
+                        model.wordsInARow + 1
+
+                    else
+                        0
+            }
+                |> judge work.puzzle ran
                 |> Tuple.mapSecond ((::) (FlashKey key True))
                 |> finishIfClean work.puzzle ran.session
 
@@ -162,60 +263,55 @@ edit texts key model =
             ( { model | work = Just { work | session = session } }, [ FlashKey key True, PlaySound TickSound ] )
 
         Session.Locked session ->
-            ( dropCount work session model, [ ShowToast .notYet, PlaySound ErrorSound, FlashKey key False ] )
+            ( keepCount work session model, [ ShowToast .notYet, PlaySound ErrorSound, FlashKey key False ] )
 
         Session.Ignored session ->
-            ( dropCount work session model, [] )
+            ( keepCount work session model, [] )
 
 
-{-| Tick off objectives and judge deletions.
+{-| A key that ran nothing drops a count typed before it.
 -}
-notice : Puzzle -> { a | command : Command, before : Buffer, session : Session } -> Model -> ( Model, List Effect )
-notice puzzle ran model =
-    let
-        buffer =
-            Session.buffer ran.session
+keepCount : Work -> Session -> Model -> Model
+keepCount work session model =
+    if Session.pendingCount work.session == "" then
+        model
 
-        noticed =
-            { model
-                | reachedJunk = model.reachedJunk || touchesJunk puzzle buffer
-                , selectedSomething = model.selectedSomething || isSelection ran.command
-            }
-    in
+    else
+        { model | work = Just { work | session = session } }
+
+
+{-| A deletion is wrong when the clean poem no longer fits inside the
+text, right when it removed words and the poem still fits. Deleting only
+spaces is neither.
+-}
+judge : Puzzle -> { a | command : Command, before : Buffer, session : Session } -> Model -> ( Model, List Effect )
+judge puzzle ran model =
     if ran.command == Delete then
-        judgeDeletion puzzle (Core.selectedText ran.before) noticed
+        let
+            after =
+                Core.toString (Session.buffer ran.session)
+
+            removedWords =
+                List.length (wordsIn (Core.toString ran.before)) > List.length (wordsIn after)
+        in
+        if cleanFits puzzle.cleanPoem (Core.toString ran.before) && not (cleanFits puzzle.cleanPoem after) then
+            ( { model | wrongDeletions = model.wrongDeletions + 1 }
+            , [ ShowToast (.pool >> .wrongDeletion), PlaySound ErrorSound ]
+            )
+
+        else if removedWords then
+            ( model, [ PlaySound CorrectSound ] )
+
+        else
+            ( model, [] )
 
     else
-        ( noticed, [] )
-
-
-{-| Deleting junk is good. Deleting a word of the poem counts as a mistake
-(the child is told to press `u`). Deleting only spaces is neither.
--}
-judgeDeletion : Puzzle -> String -> Model -> ( Model, List Effect )
-judgeDeletion puzzle deleted model =
-    let
-        words =
-            wordsIn deleted
-
-        isJunk word =
-            word == puzzle.junk || word == puzzle.flood
-    in
-    if List.isEmpty words then
         ( model, [] )
-
-    else if List.all isJunk words then
-        ( { model | deletedJunk = model.deletedJunk || List.member puzzle.junk words }, [ PlaySound CorrectSound ] )
-
-    else
-        ( { model | wrongDeletions = model.wrongDeletions + 1 }
-        , [ ShowToast (.pool >> .wrongDeletion), PlaySound ErrorSound ]
-        )
 
 
 finishIfClean : Puzzle -> Session -> ( Model, List Effect ) -> ( Model, List Effect )
 finishIfClean puzzle session ( model, effects ) =
-    if Session.matches puzzle.cleanPoem session then
+    if Session.matches puzzle.cleanPoem session && model.tide.splashed >= List.length puzzle.tideWords then
         ( { model
             | story =
                 Story.conclude (Dialog.say Narrator (.pool >> .finale))
@@ -228,18 +324,86 @@ finishIfClean puzzle session ( model, effects ) =
         ( model, effects )
 
 
-touchesJunk : Puzzle -> Buffer -> Bool
-touchesJunk puzzle buffer =
-    Core.wordUnderCursor buffer == puzzle.junk || List.member puzzle.junk (wordsIn (Core.selectedText buffer))
+{-| Time passing: on challenge, the tide splashes its next word in.
+-}
+flow : Float -> Model -> ( Model, List Effect )
+flow milliseconds model =
+    case model.work of
+        Just work ->
+            let
+                tide =
+                    model.tide
+
+                waiting =
+                    if Session.matches work.puzzle.cleanPoem work.session then
+                        min tide.untilNext calmMilliseconds - milliseconds
+
+                    else
+                        tide.untilNext - milliseconds
+            in
+            if Story.isPlaying model.story && tide.splashed < List.length work.puzzle.tideWords then
+                if waiting <= 0 then
+                    splashNext work { model | tide = { tide | untilNext = tideMilliseconds } }
+
+                else
+                    ( { model | tide = { tide | untilNext = waiting } }, [] )
+
+            else
+                ( model, [] )
+
+        Nothing ->
+            ( model, [] )
 
 
-isSelection : Command -> Bool
-isSelection command =
-    List.member command [ SelectNextWordStart, SelectNextWordEnd, SelectPreviousWordStart, SelectLine ]
+{-| The tide's next word lands in front of a random word of a random line.
+-}
+splashNext : Work -> Model -> ( Model, List Effect )
+splashNext work model =
+    let
+        text =
+            Core.toString (Session.buffer work.session)
+
+        lineWords =
+            String.lines text
+                |> List.map (String.words >> List.length)
+                |> List.indexedMap Tuple.pair
+                |> List.filter (\( _, count ) -> count > 0)
+
+        placeGenerator =
+            case lineWords of
+                first :: others ->
+                    Random.uniform first others
+                        |> Random.andThen (\( lineIndex, count ) -> Random.map (\wordIndex -> ( lineIndex, wordIndex )) (Random.int 0 count))
+
+                [] ->
+                    Random.constant ( 0, 0 )
+
+        ( ( line, word ), seed ) =
+            Random.step placeGenerator model.seed
+
+        tide =
+            model.tide
+    in
+    case List.drop tide.splashed work.puzzle.tideWords |> List.head of
+        Just tideWord ->
+            ( { model
+                | seed = seed
+                , tide = { tide | splashed = tide.splashed + 1 }
+                , work = Just { work | session = Session.splash { line = line, word = word, text = tideWord } work.session }
+              }
+            , [ PlaySound PortalSound ]
+            )
+
+        Nothing ->
+            ( model, [] )
 
 
-{-| The words of a text, without punctuation: "scale! splash" gives
-["scale", "splash"].
+
+-- READING THE POEM
+
+
+{-| The words of a text, without punctuation: "scale! SHORE" gives
+["scale", "SHORE"].
 -}
 wordsIn : String -> List String
 wordsIn text =
@@ -248,31 +412,163 @@ wordsIn text =
         |> List.filter (not << String.isEmpty)
 
 
-junkLeft : Puzzle -> Buffer -> Int
-junkLeft puzzle buffer =
-    wordsIn (Core.toString buffer) |> List.filter ((==) puzzle.junk) |> List.length
+{-| Can the clean poem still be made by deleting words from the text? Its
+words must all be there, in the same order.
+-}
+cleanFits : String -> String -> Bool
+cleanFits clean text =
+    isInside (wordsIn clean) (wordsIn text)
 
 
-floodGone : Puzzle -> Buffer -> Bool
-floodGone puzzle buffer =
-    not (List.member puzzle.flood (wordsIn (Core.toString buffer)))
+isInside : List String -> List String -> Bool
+isInside wanted words =
+    case ( wanted, words ) of
+        ( [], _ ) ->
+            True
+
+        ( _, [] ) ->
+            False
+
+        ( first :: restWanted, word :: restWords ) ->
+            if first == word then
+                isInside restWanted restWords
+
+            else
+                isInside wanted restWords
 
 
+{-| How high the water stands, from 0 (the poem is clean) to 1 (as many
+words to delete as at the start, or more after splashes).
+-}
+waterLevel : Puzzle -> Buffer -> Float
+waterLevel puzzle buffer =
+    let
+        atStart =
+            max 1 (List.length (wordsIn puzzle.poem) - List.length (wordsIn puzzle.cleanPoem))
+    in
+    min 1 (toFloat (wordsToDelete puzzle buffer) / toFloat atStart)
+
+
+wordsToDelete : Puzzle -> Buffer -> Int
+wordsToDelete puzzle buffer =
+    max 0 (List.length (wordsIn (Core.toString buffer)) - List.length (wordsIn puzzle.cleanPoem))
+
+
+{-| How many lines from the cursor's line on could go entirely, with the
+clean poem still fitting: 0 when the cursor's line belongs to the poem.
+-}
+oddLinesHere : Puzzle -> Buffer -> Int
+oddLinesHere puzzle buffer =
+    let
+        allLines =
+            String.lines (Core.toString buffer)
+
+        ( cursorLine, _ ) =
+            Core.cursorLineColumn buffer
+
+        withoutLines first count =
+            List.take first allLines ++ List.drop (first + count) allLines
+
+        isOdd count =
+            let
+                removed =
+                    allLines |> List.drop (cursorLine - 1) |> List.take count
+            in
+            List.length removed
+                == count
+                && List.all (\line -> not (List.isEmpty (wordsIn line))) removed
+                && cleanFits puzzle.cleanPoem (String.join "\n" (withoutLines (cursorLine - 1) count))
+
+        grow count =
+            if isOdd (count + 1) then
+                grow (count + 1)
+
+            else
+                count
+    in
+    grow 0
+
+
+hasSelection : Buffer -> Bool
+hasSelection buffer =
+    let
+        ( first, last ) =
+            Core.selectionRange buffer
+    in
+    first /= last && not (List.isEmpty (wordsIn (Core.selectedText buffer)))
+
+
+{-| The hints to show now, most important first. Only one main hint at a
+time, so a child reads it; mad never says which words or lines are odd.
+-}
+hints : PoolTexts -> Difficulty -> Model -> Puzzle -> Buffer -> List String
+hints texts difficulty model puzzle buffer =
+    let
+        oddLines =
+            oddLinesHere puzzle buffer
+
+        main =
+            if not (cleanFits puzzle.cleanPoem (Core.toString buffer)) then
+                [ texts.hintUndo ]
+
+            else if hasSelection buffer then
+                [ texts.hintDelete ]
+
+            else if difficulty /= Mad && oddLines > 0 then
+                [ texts.hintLines oddLines ]
+
+            else if difficulty == Mad then
+                [ texts.hintFind, texts.hintAnyLine ]
+
+            else
+                [ texts.hintFind ]
+
+        countTip =
+            if model.wordsInARow >= wordsBeforeCountTip && not model.usedCount then
+                [ texts.hintCount ]
+
+            else
+                []
+    in
+    main ++ countTip
+
+
+{-| The difficulty sets the most tarts there are (easy 1, challenge 2,
+mad 3); wrong deletions can cost some of them.
+-}
 score : Texts -> Model -> Contract.Score
 score texts model =
-    { tarts =
-        if model.wrongDeletions == 0 then
-            3
+    let
+        work =
+            currentWork texts model
 
-        else if model.wrongDeletions <= 2 then
-            2
+        difficulty =
+            Maybe.withDefault Easy model.difficulty
 
-        else
-            1
+        forMistakes =
+            if model.wrongDeletions == 0 then
+                3
+
+            else if model.wrongDeletions <= 2 then
+                2
+
+            else
+                1
+    in
+    { tarts = min (Difficulty.tarts difficulty) forMistakes
     , stats =
-        [ { label = .results >> .keystrokes, value = \_ -> String.fromInt (Session.keystrokes (currentWork texts model).session) }
-        , { label = .results >> .wrongDeletions, value = \_ -> String.fromInt model.wrongDeletions }
-        ]
+        List.concat
+            [ [ { label = .results >> .difficulty, value = \t -> Difficulty.name t difficulty }
+              , { label = .results >> .keystrokes, value = \_ -> String.fromInt (Session.keystrokes work.session) }
+              ]
+            , case work.puzzle.ourBest of
+                Just best ->
+                    [ { label = .pool >> .ourBest, value = \_ -> String.fromInt best } ]
+
+                Nothing ->
+                    []
+            , [ { label = .results >> .wrongDeletions, value = \_ -> String.fromInt model.wrongDeletions } ]
+            ]
     }
 
 
@@ -299,8 +595,19 @@ scene context model =
     in
     { stage =
         Html.div [ A.class "stage-scene" ]
-            [ viewPool model.clock
+            [ viewPool model.clock (waterLevel work.puzzle buffer)
             , Html.Lazy.lazy Editor.View.view buffer
+            , if model.difficulty == Nothing && Story.isPlaying model.story then
+                DifficultyChoice.view
+                    { texts = context.texts
+                    , title = context.texts.pool.chooseTitle
+                    , hint = context.texts.pool.chooseHint
+                    , info = difficultyInfo context.texts
+                    }
+                    model.choice
+
+              else
+                Html.text ""
             , Story.view context.texts model.story
             ]
     , panel = viewPanel context.texts model work.puzzle buffer
@@ -310,46 +617,82 @@ scene context model =
         , pendingKeys = String.join " " (Session.recentKeys work.session)
         , position = Editor.View.position buffer
         }
-    , keyboard = { target = Nothing, helpers = [ "h", "j", "k", "l", "w", "e", "b", "x", "d", "u" ] }
+    , keyboard =
+        { target = Nothing
+        , helpers =
+            if model.difficulty == Nothing then
+                [ "j", "k" ]
+
+            else
+                [ "h", "j", "k", "l", "w", "x", "d", "u" ]
+        }
     }
+
+
+difficultyInfo : Texts -> Difficulty -> String
+difficultyInfo texts difficulty =
+    case difficulty of
+        Easy ->
+            texts.pool.easyInfo
+
+        Challenge ->
+            texts.pool.challengeInfo
+
+        Mad ->
+            texts.pool.madInfo
 
 
 viewPanel : Texts -> Model -> Puzzle -> Buffer -> Html msg
 viewPanel texts model puzzle buffer =
-    let
-        left =
-            junkLeft puzzle buffer
-    in
-    Html.div [ A.class "panel-content" ]
-        [ Html.p [ A.class "idea" ] [ Html.text texts.pool.idea ]
-        , Html.div [ A.class "columns" ]
-            [ Html.div [ A.class "column" ]
-                [ Checklist.view
-                    [ ( model.reachedJunk, texts.pool.walkToJunk )
-                    , ( model.selectedSomething, texts.pool.pressW )
-                    , ( model.deletedJunk, texts.pool.pressD )
-                    , ( left == 0, texts.pool.removeAll left )
-                    , ( floodGone puzzle buffer, texts.pool.removeLine )
-                    ]
-                , Html.p [ A.class "eyebrow" ] [ Html.text texts.pool.undoTip ]
+    case model.difficulty of
+        Nothing ->
+            Html.div [ A.class "panel-content" ]
+                [ Html.p [ A.class "big" ] [ Html.text texts.pool.chooseTitle ]
+                , Html.p [] [ Html.text texts.pool.chooseHint ]
                 ]
-            , Checklist.goal texts.pool.goal puzzle.cleanPoem
-            ]
-        ]
+
+        Just difficulty ->
+            let
+                ( main, tips ) =
+                    case hints texts.pool difficulty model puzzle buffer of
+                        first :: rest ->
+                            ( first, rest )
+
+                        [] ->
+                            ( "", [] )
+            in
+            Html.div [ A.class "panel-content" ]
+                [ Html.span [ A.class "eyebrow" ] [ Html.text (Difficulty.name texts difficulty ++ " · " ++ texts.pool.idea) ]
+                , Html.div [ A.class "columns" ]
+                    [ Html.div [ A.class "column" ]
+                        (Html.p [ A.class "big" ] [ Html.text main ]
+                            :: List.map (\tip -> Html.p [ A.class "tip" ] [ Html.text tip ]) tips
+                            ++ [ Html.p [ A.class "eyebrow" ] [ Html.text (texts.pool.wordsLeft (wordsToDelete puzzle buffer)) ] ]
+                        )
+                    , Checklist.goal texts.pool.goal puzzle.cleanPoem
+                    ]
+                ]
 
 
-{-| Water, Alice swimming, the Mouse paddling about, tears falling.
+{-| Water, Alice swimming, the Mouse paddling about, tears falling. The
+water stands at `level` (see `waterLevel`): it sinks as the poem gets
+clean, and rises with every word the tide splashes in.
 -}
-viewPool : Float -> Svg msg
-viewPool clock =
+viewPool : Float -> Float -> Svg msg
+viewPool clock level =
     let
         seconds =
             clock / 1000
 
+        -- How far below its highest the water stands; at most 12 pixels, so
+        -- the Mouse stays in the picture.
+        sink =
+            12 * (1 - level)
+
         -- Each wave is drawn once (`wavePath`) and slid sideways; sliding by
         -- one wavelength looks exactly like the start again.
         wave row =
-            Svg.g [ SA.transform ("translate(" ++ String.fromFloat (negate (waveShift seconds)) ++ " 0)") ]
+            Svg.g [ SA.transform ("translate(" ++ String.fromFloat (negate (waveShift seconds)) ++ " " ++ String.fromFloat sink ++ ")") ]
                 [ Svg.Lazy.lazy waveLine row ]
 
         tear index =
@@ -363,14 +706,15 @@ viewPool clock =
             Svg.rect [ SA.x (String.fromFloat x), SA.y (String.fromFloat y), SA.width "1", SA.height "2", SA.fill "#dbbfef", SA.fillOpacity "0.5" ] []
 
         bob =
-            sin (seconds * 2) * 2
+            sin (seconds * 2) * 2 + sink
     in
     Svg.svg [ SA.viewBox "0 0 320 56", SA.class "banner" ]
-        (Svg.rect [ SA.width "320", SA.height "56", SA.fill "#1f3550" ] []
+        (Svg.rect [ SA.width "320", SA.height "56", SA.fill "#2a1c35" ] []
+            :: Svg.rect [ SA.y (String.fromFloat (4 + sink)), SA.width "320", SA.height "56", SA.fill "#1f3550" ] []
             :: List.map wave (List.range 0 4)
             ++ [ Sprite.viewAt { x = 120, y = 18 + bob, pixelSize = 2 } Sprites.aliceSwimming
                , Svg.rect [ SA.x "122", SA.y (String.fromFloat (34 + bob)), SA.width "20", SA.height "2", SA.fill "#6fa8dc" ] []
-               , Sprite.viewAt { x = 200 + sin (seconds * 0.8) * 16, y = 30 + sin (seconds * 2.4) * 1.5, pixelSize = 2 } Sprites.mouse
+               , Sprite.viewAt { x = 200 + sin (seconds * 0.8) * 16, y = 27 + sin (seconds * 2.4) * 1.5 + sink, pixelSize = 2 } Sprites.mouse
                ]
             ++ List.map tear (List.range 0 7)
         )
@@ -431,15 +775,3 @@ wavePath row =
 fractional : Float -> Float
 fractional value =
     value - toFloat (floor value)
-
-
-{-| A key that ran nothing drops a count typed before it. Otherwise the
-model stays as it was, so the text keeps following the language setting.
--}
-dropCount : Work -> Session -> Model -> Model
-dropCount work session model =
-    if Session.pendingCount work.session == "" then
-        model
-
-    else
-        { model | work = Just { work | session = session } }
