@@ -1,5 +1,5 @@
 module Editor.Session exposing
-    ( Session, start, buffer, keystrokes, recentKeys, pendingCount
+    ( Session, start, buffer, keystrokes, recentKeys, pendingCount, isWaiting
     , Outcome(..), press, splash, matches, matchingLines
     )
 
@@ -14,7 +14,10 @@ In Normal mode, digits before a command are a count, as in Helix: `3x`
 selects three lines, `5w` the fifth word ahead (see `Core.applyTimes`). A
 count can't start with 0, and Esc or any key that isn't a command drops it.
 
-@docs Session, start, buffer, keystrokes, recentKeys, pendingCount
+`g` starts a two-key command (Helix's goto mode): `gh` goes to the start of
+the line (see `Keymap.gotoCommand`). Any other key after `g` cancels it.
+
+@docs Session, start, buffer, keystrokes, recentKeys, pendingCount, isWaiting
 @docs Outcome, press, splash, matches, matchingLines
 
 -}
@@ -29,12 +32,13 @@ type Session
         , keystrokes : Int
         , recentKeys : List String
         , count : String
+        , afterG : Bool
         }
 
 
 start : String -> Session
 start text =
-    Session { buffer = Core.fromString text, keystrokes = 0, recentKeys = [], count = "" }
+    Session { buffer = Core.fromString text, keystrokes = 0, recentKeys = [], count = "", afterG = False }
 
 
 buffer : Session -> Buffer
@@ -63,12 +67,20 @@ pendingCount (Session s) =
     s.count
 
 
-{-| `Counting` is a digit added to the count; the command after it runs
-with that count (`count` is 1 without one).
+{-| Is a count or a `g` waiting for the rest of its command?
+-}
+isWaiting : Session -> Bool
+isWaiting (Session s) =
+    s.count /= "" || s.afterG
+
+
+{-| `Waiting` is a key that starts a command without finishing it: a digit
+of a count, or `g`. The command after a count runs with that count (`count`
+is 1 without one).
 -}
 type Outcome
     = Ran { command : Command, count : Int, before : Buffer, session : Session }
-    | Counting Session
+    | Waiting Session
     | Locked Session
     | Ignored Session
 
@@ -79,45 +91,66 @@ press isUnlocked key (Session s) =
         mode =
             Core.mode s.buffer
 
-        withoutCount =
-            Session { s | count = "" }
+        waitFor next =
+            Waiting
+                (Session
+                    { next
+                        | keystrokes = s.keystrokes + 1
+                        , recentKeys = remember mode key s.recentKeys
+                    }
+                )
     in
-    if mode == Normal && isCountDigit key s.count then
-        Counting
-            (Session
-                { s
-                    | count = s.count ++ key
-                    , keystrokes = s.keystrokes + 1
-                    , recentKeys = remember mode key s.recentKeys
-                }
-            )
+    if mode == Normal && s.afterG then
+        -- The second key of a goto command; like Helix, it ignores a count.
+        run isUnlocked key (Session { s | afterG = False, count = "" }) (Keymap.gotoCommand key)
+
+    else if mode == Normal && key == "g" then
+        waitFor { s | afterG = True }
+
+    else if mode == Normal && isCountDigit key s.count then
+        waitFor { s | count = s.count ++ key }
 
     else
-        case Keymap.commandFor mode key of
-            Just command ->
-                if isUnlocked command then
-                    let
-                        count =
-                            String.toInt s.count |> Maybe.withDefault 1
-                    in
-                    Ran
-                        { command = command
-                        , count = count
-                        , before = s.buffer
-                        , session =
-                            Session
-                                { buffer = Core.applyTimes count command s.buffer
-                                , keystrokes = s.keystrokes + 1
-                                , recentKeys = remember mode key s.recentKeys
-                                , count = ""
-                                }
-                        }
+        run isUnlocked key (Session s) (Keymap.commandFor mode key)
 
-                else
-                    Locked withoutCount
 
-            Nothing ->
-                Ignored withoutCount
+{-| Run `maybeCommand` (the command `key` finished), if it is unlocked.
+-}
+run : (Command -> Bool) -> String -> Session -> Maybe Command -> Outcome
+run isUnlocked key (Session s) maybeCommand =
+    let
+        mode =
+            Core.mode s.buffer
+
+        withoutCount =
+            Session { s | count = "", afterG = False }
+    in
+    case maybeCommand of
+        Just command ->
+            if isUnlocked command then
+                let
+                    count =
+                        String.toInt s.count |> Maybe.withDefault 1
+                in
+                Ran
+                    { command = command
+                    , count = count
+                    , before = s.buffer
+                    , session =
+                        Session
+                            { buffer = Core.applyTimes count command s.buffer
+                            , keystrokes = s.keystrokes + 1
+                            , recentKeys = remember mode key s.recentKeys
+                            , count = ""
+                            , afterG = False
+                            }
+                    }
+
+            else
+                Locked withoutCount
+
+        Nothing ->
+            Ignored withoutCount
 
 
 {-| A word put in from outside, not typed (see `Core.splash`).
