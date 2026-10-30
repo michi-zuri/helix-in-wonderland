@@ -153,8 +153,8 @@ view texts (Story s) =
 
 {-| Instructions wait until they are relevant. While the opening story
 plays nothing can be typed yet, so a chapter's instructions would only be
-read too early and forgotten: the panel below the stage stays empty and the
-on-screen keyboard shows no hints. Every chapter's `view` goes through this:
+read too early and forgotten: the panel below the stage stays empty. Every
+chapter's `view` goes through this:
 
     view context model =
         Story.instructions model.story (scene context model)
@@ -164,10 +164,7 @@ instructions : Story -> Contract.View msg -> Contract.View msg
 instructions (Story s) chapterView =
     case s.phase of
         Intro ->
-            { chapterView
-                | panel = Html.text ""
-                , keyboard = { target = Nothing, helpers = [] }
-            }
+            { chapterView | panel = Html.text "" }
 
         _ ->
             chapterView

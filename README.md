@@ -76,8 +76,7 @@ src/
   Editor/Keymap.elm         which key means which editor command
   Editor/Session.elm        one player working on one text: buffer, keystrokes, locks
   Editor/View.elm           draws a buffer the way Helix does
-  Keyboard/Layout.elm       layouts, fingers, home row, layout detection
-  Keyboard/View.elm         the colour-coded on-screen keyboard
+  Keyboard/Layout.elm       layouts, home row, layout detection
   Texts.elm                 every word the player reads, per language
   Language.elm, Settings.elm, Progress.elm, Speaker.elm
   Pixel/Sprite.elm          pixel art from text; Pixel/Sprites.elm holds the art
@@ -132,7 +131,7 @@ tools/                      build script, plus offline helpers (see below)
   (`press [ "w", "d" ]`) and fuzz tests for invariants that must hold for
   *any* text and *any* key sequence: the text keeps its final newline, the
   selection stays inside the text, `d` then `u` restores the text.
-- **Keyboard.Layout** pins down fingers, home rows and layout detection for
+- **Keyboard.Layout** pins down home rows and layout detection for
   all four layouts.
 - **Playthroughs** play each chapter through messages, the way a child
   would: a perfect run earns three tarts, mistakes cost tarts, locked keys
@@ -142,12 +141,12 @@ tools/                      build script, plus offline helpers (see below)
 
 - German texts use Swiss spelling: `ss`, never `ß`.
 - Keys are handled by the character they type (`KeyboardEvent.key`), so
-  Helix commands work on every layout. Layouts only affect teaching: the
-  on-screen keyboard, finger hints, and chapter 1's home-row stages.
+  Helix commands work on every layout. Layouts only affect teaching:
+  chapter 1's home-row stages and a digits hint on AZERTY.
 - Instructions wait until they are relevant. While a story plays nothing
   can be typed, so a chapter shows no instructions then: its `view` goes
-  through `Chapter.Story.instructions`, which empties the panel and the
-  keyboard hints during the opening story. Show
+  through `Chapter.Story.instructions`, which empties the panel during the
+  opening story. Show
   each hint at the moment the player can act on it (the difficulty question
   after the story, the movement keys once there is a hall to walk in).
 - A chapter's puzzle text (words, poem) follows the language setting until

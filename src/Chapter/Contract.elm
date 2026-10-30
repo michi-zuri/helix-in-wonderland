@@ -1,6 +1,6 @@
 module Chapter.Contract exposing
     ( Context, Effect(..), Sound(..), soundName
-    , Score, Stat, View, Status, KeyboardFocus
+    , Score, Stat, View, Status
     )
 
 {-| What every chapter receives and what it may ask for.
@@ -11,7 +11,7 @@ touches ports, storage or other chapters. Instead, `update` returns a list of
 which keeps the glue between chapters in one place.
 
 @docs Context, Effect, Sound, soundName
-@docs Score, Stat, View, Status, KeyboardFocus
+@docs Score, Stat, View, Status
 
 -}
 
@@ -31,7 +31,6 @@ type alias Context =
 type Effect
     = PlaySound Sound
     | ShowToast (Texts -> String)
-    | FlashKey String Bool
     | Finish Score
 
 
@@ -84,14 +83,13 @@ type alias Stat =
     }
 
 
-{-| A chapter fills the stage, the panel below it, the status line and the
-keyboard hints. `Main` arranges them on the page.
+{-| A chapter fills the stage, the panel below it and the status line.
+`Main` arranges them on the page.
 -}
 type alias View msg =
     { stage : Html msg
     , panel : Html msg
     , status : Status
-    , keyboard : KeyboardFocus
     }
 
 
@@ -102,12 +100,4 @@ type alias Status =
     , file : String
     , pendingKeys : String
     , position : String
-    }
-
-
-{-| `target` glows on the on-screen keyboard; `helpers` get an outline.
--}
-type alias KeyboardFocus =
-    { target : Maybe Char
-    , helpers : List String
     }

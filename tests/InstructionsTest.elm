@@ -2,14 +2,13 @@ module InstructionsTest exposing (suite)
 
 {-| Instructions wait until they are relevant: while a chapter's opening
 story plays nothing can be typed, so the panel below the stage stays empty
-and the on-screen keyboard shows no hints (`Chapter.Story.instructions`). Once the story is over, the panel shows what to do
+(`Chapter.Story.instructions`). Once the story is over, the panel shows what to do
 next.
 -}
 
 import Chapter.Contract exposing (Context)
 import Chapter.Hall as Hall
 import Chapter.RabbitHole as RabbitHole
-import Expect
 import Keyboard.Layout exposing (Layout(..))
 import Language exposing (Language(..))
 import Playthrough
@@ -52,14 +51,6 @@ suite =
                 (RabbitHole.view context rabbitHoleAfterStory).panel
                     |> Query.fromHtml
                     |> Query.has [ text context.texts.rabbitHole.chooseHint ]
-        , test "chapter 1: no keyboard hints while the story plays" <|
-            \_ ->
-                (RabbitHole.view context (RabbitHole.init (Random.initialSeed 1))).keyboard
-                    |> Expect.equal { target = Nothing, helpers = [] }
-        , test "chapter 1: j and k are marked once the difficulty question is up" <|
-            \_ ->
-                (RabbitHole.view context rabbitHoleAfterStory).keyboard.helpers
-                    |> Expect.equal [ "j", "k" ]
         , test "chapter 2: no task while the story plays" <|
             \_ ->
                 (Hall.view context (Hall.init (Random.initialSeed 1))).panel

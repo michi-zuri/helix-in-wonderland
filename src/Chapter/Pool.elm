@@ -274,14 +274,13 @@ edit texts key model =
                 , usedLineStart = model.usedLineStart || ran.command == GotoLineStart
             }
                 |> judge work.puzzle ran
-                |> Tuple.mapSecond ((::) (FlashKey key True))
                 |> finishIfClean work.puzzle ran.session
 
         Session.Waiting session ->
-            ( { model | work = Just { work | session = session } }, [ FlashKey key True, PlaySound TickSound ] )
+            ( { model | work = Just { work | session = session } }, [ PlaySound TickSound ] )
 
         Session.Locked session ->
-            ( keepCount work session model, [ ShowToast .notYet, PlaySound ErrorSound, FlashKey key False ] )
+            ( keepCount work session model, [ ShowToast .notYet, PlaySound ErrorSound ] )
 
         Session.Ignored session ->
             ( keepCount work session model, [] )
@@ -641,15 +640,6 @@ scene context model =
         , file = file
         , pendingKeys = String.join " " (Session.recentKeys work.session)
         , position = Editor.View.position buffer
-        }
-    , keyboard =
-        { target = Nothing
-        , helpers =
-            if model.difficulty == Nothing then
-                [ "j", "k" ]
-
-            else
-                [ "h", "j", "k", "l", "w", "x", "d", "u", "g" ]
         }
     }
 

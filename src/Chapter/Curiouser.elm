@@ -314,16 +314,16 @@ jump key model =
                 caughtWithGw =
                     fitsGw && model.gwStep == 3 && List.length squashed.squashed > List.length model.squashed
             in
-            ( { squashed | gwOnly = model.gwOnly && caughtWithGw, gwStep = 0 }, FlashKey key True :: effects )
+            ( { squashed | gwOnly = model.gwOnly && caughtWithGw, gwStep = 0 }, effects )
                 |> andThen runBack
 
         Session.Waiting session ->
             ( { model | session = session, gwOnly = model.gwOnly && fitsGw && model.gwStep < 3, gwStep = model.gwStep + 1 }
-            , [ FlashKey key True ]
+            , []
             )
 
         Session.Locked session ->
-            ( { model | session = session, gwOnly = False, gwStep = 0 }, [ ShowToast .notYet, PlaySound ErrorSound, FlashKey key False ] )
+            ( { model | session = session, gwOnly = False, gwStep = 0 }, [ ShowToast .notYet, PlaySound ErrorSound ] )
 
         Session.Ignored session ->
             ( { model | session = session, gwOnly = False, gwStep = 0 }, [] )
@@ -590,7 +590,7 @@ withMarks model =
     }
 
 
-{-| The keys a stage teaches, for the toast and the on-screen keyboard.
+{-| The keys a stage teaches, for the toast.
 -}
 keysOf : Maybe Trick -> String
 keysOf stage =
@@ -687,35 +687,7 @@ scene context model =
         , pendingKeys = String.join " " (Session.recentKeys model.session)
         , position = Editor.View.position buffer
         }
-    , keyboard =
-        { target = Nothing
-        , helpers =
-            if model.difficulty == Nothing then
-                [ "j", "k" ]
-
-            else
-                [ "h", "j", "k", "l", "g" ] ++ secondKeys stage
-        }
     }
-
-
-secondKeys : Maybe Trick -> List String
-secondKeys stage =
-    case stage of
-        Just LineEnds ->
-            [ "h", "l" ]
-
-        Just FileEnds ->
-            [ "e" ]
-
-        Just RealLines ->
-            [ "j", "k" ]
-
-        Just LastChange ->
-            [ "." ]
-
-        Nothing ->
-            [ "." ]
 
 
 viewTable : Session -> List Mark -> Html msg

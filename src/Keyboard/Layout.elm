@@ -1,19 +1,18 @@
 module Keyboard.Layout exposing
     ( Layout(..), all, name, toKey, fromKey
-    , Finger(..), allFingers, fingerFor, rows, homeKeys, stretchKeys
+    , homeKeys, stretchKeys
     , needsShiftForDigits, detect
     )
 
-{-| Physical keyboard layouts: where each letter sits and which finger
-presses it.
+{-| Physical keyboard layouts: where the letters sit.
 
 The game always reacts to the character a key _types_ (the browser's
 `KeyboardEvent.key`), so Helix commands work on every layout. The layout only
-matters for teaching: the on-screen keyboard, finger hints and home-row
-lessons.
+matters for teaching: chapter 1's home-row lessons, and a hint about digits
+on AZERTY.
 
 @docs Layout, all, name, toKey, fromKey
-@docs Finger, allFingers, fingerFor, rows, homeKeys, stretchKeys
+@docs homeKeys, stretchKeys
 @docs needsShiftForDigits, detect
 
 -}
@@ -70,23 +69,6 @@ fromKey key =
     all |> List.filter (\layout -> toKey layout == key) |> List.head
 
 
-type Finger
-    = LeftLittle
-    | LeftRing
-    | LeftMiddle
-    | LeftIndex
-    | RightIndex
-    | RightMiddle
-    | RightRing
-    | RightLittle
-    | Thumb
-
-
-allFingers : List Finger
-allFingers =
-    [ LeftLittle, LeftRing, LeftMiddle, LeftIndex, RightIndex, RightMiddle, RightRing, RightLittle, Thumb ]
-
-
 {-| The three letter rows, top to bottom, as the characters typed without
 Shift. Dead keys (like the Swiss ¨) are shown as their symbol.
 -}
@@ -104,61 +86,6 @@ rows layout =
 
         FrenchAzerty ->
             [ "azertyuiop^$", "qsdfghjklmù*", "wxcvbn,;:!" ]
-
-
-{-| Which finger presses a key, in standard ten-finger typing: each column
-belongs to one finger, the index fingers take two columns each, and the
-little fingers take everything on the outside.
--}
-fingerFor : Layout -> Char -> Maybe Finger
-fingerFor layout char =
-    if char == ' ' then
-        Just Thumb
-
-    else
-        rows layout
-            |> List.filterMap (columnOf char)
-            |> List.head
-            |> Maybe.map fingerForColumn
-
-
-fingerForColumn : Int -> Finger
-fingerForColumn column =
-    case column of
-        0 ->
-            LeftLittle
-
-        1 ->
-            LeftRing
-
-        2 ->
-            LeftMiddle
-
-        3 ->
-            LeftIndex
-
-        4 ->
-            LeftIndex
-
-        5 ->
-            RightIndex
-
-        6 ->
-            RightIndex
-
-        7 ->
-            RightMiddle
-
-        8 ->
-            RightRing
-
-        _ ->
-            RightLittle
-
-
-columnOf : Char -> String -> Maybe Int
-columnOf char row =
-    String.indexes (String.fromChar char) row |> List.head
 
 
 {-| Where the eight fingers rest: the home row without the two middle

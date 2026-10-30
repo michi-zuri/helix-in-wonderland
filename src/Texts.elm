@@ -20,7 +20,6 @@ written for the game; the German versions are our own translations.
 -}
 
 import Chapter.Id exposing (ChapterId(..))
-import Keyboard.Layout exposing (Finger(..))
 import Language exposing (Language(..))
 import Speaker exposing (Speaker(..))
 
@@ -36,10 +35,6 @@ type alias Texts =
     , footer : String
     , drawPictures : String
     , suggestChange : String
-    , keyboardLegend : String
-    , space : String
-    , nextKey : String -> String -> String
-    , finger : Finger -> String
     , speaker : Speaker -> String
     , layoutDetected : String -> String
     , notYet : String
@@ -307,38 +302,6 @@ english =
     , drawPictures = "Draw pictures for the game"
     , suggestChange = "Suggest a change to this screen"
     , footer = "Story and characters from Lewis Carroll's Alice's Adventures in Wonderland (1865), which is in the public domain. Helix is a free, open-source editor; this game is not affiliated with it."
-    , keyboardLegend = "Each colour is one finger. Matching colours, matching finger."
-    , space = "space"
-    , nextKey = \key finger -> "Next key: " ++ key ++ " · " ++ finger
-    , finger =
-        \finger ->
-            case finger of
-                LeftLittle ->
-                    "left little finger"
-
-                LeftRing ->
-                    "left ring finger"
-
-                LeftMiddle ->
-                    "left middle finger"
-
-                LeftIndex ->
-                    "left index finger"
-
-                RightIndex ->
-                    "right index finger"
-
-                RightMiddle ->
-                    "right middle finger"
-
-                RightRing ->
-                    "right ring finger"
-
-                RightLittle ->
-                    "right little finger"
-
-                Thumb ->
-                    "thumb"
     , speaker =
         \speaker ->
             case speaker of
@@ -623,38 +586,6 @@ german =
     , drawPictures = "Bilder fürs Spiel zeichnen"
     , suggestChange = "Änderung für diese Seite vorschlagen"
     , footer = "Geschichte und Figuren aus Lewis Carrolls Alice im Wunderland (1865), gemeinfrei. Helix ist ein freier Open-Source-Editor; dieses Spiel gehört nicht zum Helix-Projekt."
-    , keyboardLegend = "Jede Farbe ist ein Finger. Gleiche Farbe, gleicher Finger."
-    , space = "Leertaste"
-    , nextKey = \key finger -> "Nächste Taste: " ++ key ++ " · " ++ finger
-    , finger =
-        \finger ->
-            case finger of
-                LeftLittle ->
-                    "linker kleiner Finger"
-
-                LeftRing ->
-                    "linker Ringfinger"
-
-                LeftMiddle ->
-                    "linker Mittelfinger"
-
-                LeftIndex ->
-                    "linker Zeigefinger"
-
-                RightIndex ->
-                    "rechter Zeigefinger"
-
-                RightMiddle ->
-                    "rechter Mittelfinger"
-
-                RightRing ->
-                    "rechter Ringfinger"
-
-                RightLittle ->
-                    "rechter kleiner Finger"
-
-                Thumb ->
-                    "Daumen"
     , speaker =
         \speaker ->
             case speaker of
