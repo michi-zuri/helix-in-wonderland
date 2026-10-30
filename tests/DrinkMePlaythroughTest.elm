@@ -18,7 +18,7 @@ import Texts exposing (Texts)
 
 context : Context
 context =
-    { texts = Texts.forLanguage English, layout = UsQwerty }
+    { texts = Texts.forLanguage English, layout = UsQwerty, escapeKeys = Nothing }
 
 
 send : DrinkMe.Msg -> Run DrinkMe.Model -> Run DrinkMe.Model

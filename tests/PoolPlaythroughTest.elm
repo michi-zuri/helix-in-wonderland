@@ -20,7 +20,7 @@ import Texts exposing (Texts)
 
 contextIn : Language -> Context
 contextIn language =
-    { texts = Texts.forLanguage language, layout = UsQwerty }
+    { texts = Texts.forLanguage language, layout = UsQwerty, escapeKeys = Nothing }
 
 
 english : Context

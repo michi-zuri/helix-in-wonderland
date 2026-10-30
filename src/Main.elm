@@ -61,6 +61,7 @@ type alias Model =
     , toast : Maybe Toast
     , links : Project.Links
     , fullscreen : Bool
+    , escapePrompt : Maybe String
     }
 
 
@@ -125,6 +126,7 @@ init flags =
       , seed = Random.initialSeed (decodeFlag "seed" Decode.int 1865)
       , toast = Nothing
       , fullscreen = False
+      , escapePrompt = Nothing
       , links = decodeFlag "links" Project.decoder Project.fallback
       }
     , Cmd.none
@@ -168,8 +170,13 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         KeyDown press ->
-            detectLayout press model
-                |> andThen (handleKey press.key)
+            case model.escapePrompt of
+                Just typed ->
+                    chooseEscapeKeys press.key typed model
+
+                Nothing ->
+                    detectLayout press model
+                        |> andThen (handleKey press.key)
 
         Frame elapsed ->
             let
@@ -189,7 +196,19 @@ update msg model =
             saveSettings (\s -> { s | soundOn = not s.soundOn }) model
 
         ToggledFullscreen ->
-            ( { model | fullscreen = not model.fullscreen }, Ports.setFullscreen (not model.fullscreen) )
+            -- Entering fullscreen asks for the escape keys first: the browser
+            -- will use Esc to leave fullscreen.
+            ( { model
+                | fullscreen = not model.fullscreen
+                , escapePrompt =
+                    if model.fullscreen then
+                        Nothing
+
+                    else
+                        Just ""
+              }
+            , Ports.setFullscreen (not model.fullscreen)
+            )
 
         FullscreenChanged inBrowserFullscreen ->
             -- Leaving the browser's fullscreen (holding Esc, F11) leaves the
@@ -199,7 +218,7 @@ update msg model =
                 ( model, Cmd.none )
 
             else
-                ( { model | fullscreen = False }, Cmd.none )
+                ( { model | fullscreen = False, escapePrompt = Nothing }, Cmd.none )
 
         ToggledUnlockAll ->
             saveSettings (\s -> { s | unlockAll = not s.unlockAll }) model
@@ -401,7 +420,42 @@ context : Model -> Context
 context model =
     { texts = Texts.forLanguage model.settings.language
     , layout = model.settings.layout
+    , escapeKeys =
+        case Maybe.map String.toList model.settings.escapeKeys of
+            Just [ first, second ] ->
+                Just ( first, second )
+
+            _ ->
+                Nothing
     }
+
+
+{-| A key while the escape-keys card is open: two keys that type a
+character become the escape keys; Enter keeps the ones from before, Esc
+closes the card without changing them.
+-}
+chooseEscapeKeys : String -> String -> Model -> ( Model, Cmd Msg )
+chooseEscapeKeys key typed model =
+    if key == "Escape" || (key == "Enter" && model.settings.escapeKeys /= Nothing) then
+        ( { model | escapePrompt = Nothing }, Cmd.none )
+
+    else if String.length key == 1 && key /= " " then
+        let
+            keys =
+                typed ++ key
+        in
+        if String.length keys == 2 then
+            saveSettings (\s -> { s | escapeKeys = Just keys })
+                { model
+                    | escapePrompt = Nothing
+                    , toast = Just { text = \texts -> texts.escapeKeys.chosen keys, remaining = toastMilliseconds }
+                }
+
+        else
+            ( { model | escapePrompt = Just keys }, Cmd.none )
+
+    else
+        ( model, Cmd.none )
 
 
 shiftChapter : Int -> ChapterId -> ChapterId
@@ -669,6 +723,12 @@ view model =
 
                 Nothing ->
                     Html.text ""
+            , case model.escapePrompt of
+                Just typed ->
+                    viewEscapePrompt texts model.settings.escapeKeys typed
+
+                Nothing ->
+                    Html.text ""
             ]
         , Html.section [ A.class "panel", A.attribute "aria-live" "polite" ] [ screen.panel ]
         , Chrome.statusLine
@@ -680,6 +740,26 @@ view model =
             )
             screen.status
         , Html.Lazy.lazy3 viewFooter model.links texts (screenName model)
+        ]
+
+
+{-| The card that asks for the escape keys when entering fullscreen: the
+keys typed so far, and the ones from before, which Enter keeps.
+-}
+viewEscapePrompt : Texts -> Maybe String -> String -> Html Msg
+viewEscapePrompt texts saved typed =
+    Html.div [ A.class "overlay" ]
+        [ Html.div [ A.class "card" ]
+            [ Html.h2 [] [ Html.text texts.escapeKeys.title ]
+            , Html.p [] [ Html.text texts.escapeKeys.explain ]
+            , Html.p [ A.class "escape-keys" ] [ Html.text (String.padRight 2 '_' typed) ]
+            , case saved of
+                Just keys ->
+                    Html.p [ A.class "hint" ] [ Html.text (texts.escapeKeys.keep keys) ]
+
+                Nothing ->
+                    Html.text ""
+            ]
         ]
 
 

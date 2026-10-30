@@ -15,7 +15,7 @@ import Texts
 
 context : Context
 context =
-    { texts = Texts.forLanguage English, layout = SwissQwertz }
+    { texts = Texts.forLanguage English, layout = SwissQwertz, escapeKeys = Nothing }
 
 
 press : List String -> Run Caterpillar.Model -> Run Caterpillar.Model
@@ -59,6 +59,30 @@ suite =
                     |> readStory
                     |> press (fillTheGaps [ "Escape" ])
                     |> readStory
+                    |> Playthrough.finishedWith
+                    |> Expect.equal (Just 3)
+        , test "the player's own escape keys work like Esc: ;; earns three tarts too" <|
+            \_ ->
+                let
+                    withEscapeKeys =
+                        { context | escapeKeys = Just ( ';', ';' ) }
+                in
+                Playthrough.start Caterpillar.init
+                    |> Playthrough.sendAll (Caterpillar.update withEscapeKeys) (List.repeat 12 (Caterpillar.KeyPressed "Enter"))
+                    |> Playthrough.sendAll (Caterpillar.update withEscapeKeys)
+                        (List.map Caterpillar.KeyPressed
+                            (List.concatMap
+                                (\key ->
+                                    if key == "Escape" then
+                                        [ ";", ";" ]
+
+                                    else
+                                        [ key ]
+                                )
+                                (fillTheGaps [ "Escape" ])
+                            )
+                        )
+                    |> Playthrough.sendAll (Caterpillar.update withEscapeKeys) (List.repeat 12 (Caterpillar.KeyPressed "Enter"))
                     |> Playthrough.finishedWith
                     |> Expect.equal (Just 3)
         , test "the chapter waits until the player is back in Normal mode" <|

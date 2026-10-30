@@ -33,6 +33,8 @@ type alias Texts =
     , soundOff : String
     , fullscreen : String
     , exitFullscreen : String
+    , escapeKeys : { title : String, explain : String, keep : String -> String, chosen : String -> String }
+    , escapeKeysWork : String -> String
     , continueHint : String
     , footer : String
     , drawPictures : String
@@ -302,6 +304,13 @@ english =
     , soundOff = "Sound off"
     , fullscreen = "Fullscreen"
     , exitFullscreen = "Leave fullscreen"
+    , escapeKeys =
+        { title = "Your escape keys"
+        , explain = "In Helix, Esc takes you from Insert mode back to Normal mode. But in fullscreen the browser uses Esc to leave fullscreen. So choose two keys that do it instead, for example ;; or ,, and type them now."
+        , keep = \keys -> "Enter keeps " ++ keys
+        , chosen = \keys -> "Your escape keys: " ++ keys
+        }
+    , escapeKeysWork = \keys -> "Your escape keys " ++ keys ++ " work like Esc."
     , continueHint = "Enter ↵ to continue"
     , drawPictures = "Draw pictures for the game"
     , suggestChange = "Suggest a change to this screen"
@@ -588,6 +597,13 @@ german =
     , soundOff = "Ton aus"
     , fullscreen = "Vollbild"
     , exitFullscreen = "Vollbild verlassen"
+    , escapeKeys =
+        { title = "Deine Escape-Tasten"
+        , explain = "In Helix bringt dich Esc vom Einfügemodus zurück in den Normalmodus. Im Vollbild verlässt der Browser mit Esc aber das Vollbild. Wähle darum zwei Tasten, die das stattdessen tun, zum Beispiel ;; oder ,, und tippe sie jetzt."
+        , keep = \keys -> "Enter behält " ++ keys
+        , chosen = \keys -> "Deine Escape-Tasten: " ++ keys
+        }
+    , escapeKeysWork = \keys -> "Deine Escape-Tasten " ++ keys ++ " wirken wie Esc."
     , continueHint = "Enter ↵ zum Weiterlesen"
     , drawPictures = "Bilder fürs Spiel zeichnen"
     , suggestChange = "Änderung für diese Seite vorschlagen"

@@ -58,7 +58,7 @@ suite =
                 \_ ->
                     let
                         settings =
-                            { language = English, layout = FrenchAzerty, soundOn = False, unlockAll = True }
+                            { language = English, layout = FrenchAzerty, soundOn = False, unlockAll = True, escapeKeys = Just ";;" }
                     in
                     Settings.encode settings
                         |> Decode.decodeValue (Settings.decoder (Settings.guess "de-CH"))

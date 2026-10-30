@@ -14,6 +14,7 @@ type alias Settings =
     , layout : Layout
     , soundOn : Bool
     , unlockAll : Bool
+    , escapeKeys : Maybe String
     }
 
 
@@ -48,6 +49,7 @@ guess browserLanguage =
     , layout = layout
     , soundOn = True
     , unlockAll = False
+    , escapeKeys = Nothing
     }
 
 
@@ -55,11 +57,12 @@ guess browserLanguage =
 -}
 decoder : Settings -> Decoder Settings
 decoder default =
-    Decode.map4 Settings
+    Decode.map5 Settings
         (optional "language" (Decode.map Language.fromCode Decode.string) default.language)
         (optional "layout" (Decode.map Layout.fromKey Decode.string) default.layout)
         (optional "soundOn" (Decode.map Just Decode.bool) default.soundOn)
         (optional "unlockAll" (Decode.map Just Decode.bool) default.unlockAll)
+        (optional "escapeKeys" (Decode.map (Just << Just) Decode.string) default.escapeKeys)
 
 
 optional : String -> Decoder (Maybe a) -> a -> Decoder a
@@ -77,4 +80,5 @@ encode settings =
         , ( "layout", Encode.string (Layout.toKey settings.layout) )
         , ( "soundOn", Encode.bool settings.soundOn )
         , ( "unlockAll", Encode.bool settings.unlockAll )
+        , ( "escapeKeys", Maybe.map Encode.string settings.escapeKeys |> Maybe.withDefault Encode.null )
         ]
