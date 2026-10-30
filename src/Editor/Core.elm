@@ -78,6 +78,7 @@ type Command
     | SelectNextWordEnd
     | SelectPreviousWordStart
     | SelectLine
+    | GotoLineStart
     | CollapseSelection
     | Delete
     | Change
@@ -233,6 +234,10 @@ apply command ((Buffer b) as buffer) =
 
         ( Normal, SelectLine ) ->
             select (Just (lineSelection b.chars (selectionRange buffer))) buffer
+
+        ( Normal, GotoLineStart ) ->
+            moveTo (lineStart b.chars b.head) buffer
+                |> rememberColumn
 
         ( Normal, CollapseSelection ) ->
             Buffer { b | anchor = b.head }

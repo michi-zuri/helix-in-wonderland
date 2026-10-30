@@ -20,7 +20,7 @@ press keys session =
                 Session.Ran ran ->
                     ran.session
 
-                Session.Counting next ->
+                Session.Waiting next ->
                     next
 
                 Session.Locked next ->
@@ -112,7 +112,7 @@ suite =
                             Session.Ran ran ->
                                 ran.session
 
-                            Session.Counting next ->
+                            Session.Waiting next ->
                                 next
 
                             Session.Locked next ->
@@ -131,6 +131,27 @@ suite =
                 press [ "3", "x", "d" ] poem
                     |> Session.keystrokes
                     |> Expect.equal 3
+        , describe "gh: go to the start of the line"
+            [ test "gh jumps to the start of the line, from anywhere on it" <|
+                \_ ->
+                    press [ "j", "1", "2", "l", "g", "h" ] poem
+                        |> Session.buffer
+                        |> Core.cursorLineColumn
+                        |> Expect.equal ( 2, 1 )
+            , test "it leaves nothing selected" <|
+                \_ -> press [ "3", "w", "g", "h" ] poem |> selected |> Expect.equal "H"
+            , test "the g waits for the next key" <|
+                \_ -> press [ "g" ] poem |> Session.isWaiting |> Expect.equal True
+            , test "another key after g cancels it, and does nothing" <|
+                \_ ->
+                    press [ "l", "g", "z", "x" ] poem
+                        |> Expect.all
+                            [ Session.isWaiting >> Expect.equal False
+                            , selected >> Expect.equal "How doth the little splash crocodile\n"
+                            ]
+            , test "g and h are two keystrokes" <|
+                \_ -> press [ "g", "h" ] poem |> Session.keystrokes |> Expect.equal 2
+            ]
         , test "in Insert mode digits are typed, not counted" <|
             \_ ->
                 press [ "i", "4", "2", "Escape" ] poem

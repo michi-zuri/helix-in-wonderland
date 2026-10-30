@@ -143,7 +143,7 @@ edit texts key model =
                 |> Tuple.mapSecond ((::) (FlashKey key True))
                 |> finishIfAnswered work.puzzle ran.session
 
-        Session.Counting session ->
+        Session.Waiting session ->
             ( { model | work = Just { work | session = session } }, [ FlashKey key True ] )
 
         Session.Locked session ->
@@ -376,7 +376,7 @@ model stays as it was, so the text keeps following the language setting.
 -}
 dropCount : Work -> Session -> Model -> Model
 dropCount work session model =
-    if Session.pendingCount work.session == "" then
+    if not (Session.isWaiting work.session) then
         model
 
     else

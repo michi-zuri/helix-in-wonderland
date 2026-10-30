@@ -1,4 +1,4 @@
-module Editor.Keymap exposing (commandFor)
+module Editor.Keymap exposing (commandFor, gotoCommand)
 
 {-| Translate a pressed key into an editor command, the way Helix does.
 
@@ -6,7 +6,7 @@ Keys arrive as the browser's `KeyboardEvent.key` string (`"w"`, `"Escape"`,
 `"Backspace"`), which already reflects the player's keyboard layout. So `w`
 means "the key that types w", whether that is QWERTY, QWERTZ or AZERTY.
 
-@docs commandFor
+@docs commandFor, gotoCommand
 
 -}
 
@@ -70,6 +70,19 @@ normalCommand key =
 
         "a" ->
             Just InsertAfter
+
+        _ ->
+            Nothing
+
+
+{-| The key after `g` in Normal mode (Helix's goto mode): `gh` goes to the
+start of the line.
+-}
+gotoCommand : String -> Maybe Command
+gotoCommand key =
+    case key of
+        "h" ->
+            Just GotoLineStart
 
         _ ->
             Nothing

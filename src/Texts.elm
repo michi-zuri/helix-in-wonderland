@@ -215,6 +215,7 @@ type alias PoolTexts =
     , hintAnyLine : String
     , hintUndo : String
     , hintCount : String
+    , hintLineStart : String
     , wordsLeft : Int -> String
     , goal : String
     , wrongDeletion : String
@@ -502,6 +503,7 @@ english =
         , hintAnyLine = "x selects a whole line. A number first selects more lines: 2x."
         , hintUndo = "A word of the poem went missing. u undoes the last change."
         , hintCount = "A number first repeats a key: 3w selects the third word ahead."
+        , hintLineStart = "A shortcut: g, then h, jumps to the start of the line."
         , wordsLeft = \count -> "Words to delete: " ++ String.fromInt count
         , goal = "The poem should read:"
         , wrongDeletion = "A poem word went missing. Press u to undo."
@@ -783,6 +785,7 @@ german =
         , hintAnyLine = "x wählt eine ganze Zeile aus. Eine Zahl davor wählt mehr Zeilen: 2x."
         , hintUndo = "Ein Wort aus dem Gedicht fehlt. u macht die letzte Änderung rückgängig."
         , hintCount = "Eine Zahl davor wiederholt eine Taste: 3w wählt das dritte Wort voraus."
+        , hintLineStart = "Eine Abkürzung: g und dann h springt an den Zeilenanfang."
         , wordsLeft = \count -> "Noch zu löschen: " ++ String.fromInt count
         , goal = "So soll das Gedicht lauten:"
         , wrongDeletion = "Ein Wort aus dem Gedicht fehlt jetzt. Drücke u."

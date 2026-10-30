@@ -3,7 +3,7 @@ module Chapter.Pool exposing (Model, Msg(..), init, update, view)
 {-| Chapter 4, "The Pool of Tears": the big Helix idea, select first and
 then act. The player cleans a poem with `w` (select the next word), `x`
 (select the line), `d` (delete) and `u` (undo), with counts like `3w` and
-`2x` (see `Editor.Session`). `e` and `b` wait for a later chapter, and
+`2x`, and `gh` to jump to the start of the line (see `Editor.Session`). `e` and `b` wait for a later chapter, and
 Insert-mode keys for chapter 5.
 
 Three difficulties (see `Texts.PoolTexts` for the poems):
@@ -74,6 +74,13 @@ wordsBeforeCountTip =
     3
 
 
+{-| After walking this many steps left in a row, a tip suggests `gh`.
+-}
+stepsBeforeLineStartTip : Int
+stepsBeforeLineStartTip =
+    3
+
+
 
 -- MODEL
 
@@ -88,6 +95,8 @@ type alias Model =
     , wrongDeletions : Int
     , wordsInARow : Int
     , usedCount : Bool
+    , stepsLeftInARow : Int
+    , usedLineStart : Bool
     , clock : Float
     }
 
@@ -136,6 +145,8 @@ init seed =
     , wrongDeletions = 0
     , wordsInARow = 0
     , usedCount = False
+    , stepsLeftInARow = 0
+    , usedLineStart = False
     , clock = 0
     }
 
@@ -254,12 +265,19 @@ edit texts key model =
 
                     else
                         0
+                , stepsLeftInARow =
+                    if ran.command == MoveLeft then
+                        model.stepsLeftInARow + ran.count
+
+                    else
+                        0
+                , usedLineStart = model.usedLineStart || ran.command == GotoLineStart
             }
                 |> judge work.puzzle ran
                 |> Tuple.mapSecond ((::) (FlashKey key True))
                 |> finishIfClean work.puzzle ran.session
 
-        Session.Counting session ->
+        Session.Waiting session ->
             ( { model | work = Just { work | session = session } }, [ FlashKey key True, PlaySound TickSound ] )
 
         Session.Locked session ->
@@ -273,7 +291,7 @@ edit texts key model =
 -}
 keepCount : Work -> Session -> Model -> Model
 keepCount work session model =
-    if Session.pendingCount work.session == "" then
+    if not (Session.isWaiting work.session) then
         model
 
     else
@@ -529,8 +547,15 @@ hints texts difficulty model puzzle buffer =
 
             else
                 []
+
+        lineStartTip =
+            if model.stepsLeftInARow >= stepsBeforeLineStartTip && not model.usedLineStart then
+                [ texts.hintLineStart ]
+
+            else
+                []
     in
-    main ++ countTip
+    main ++ countTip ++ lineStartTip
 
 
 {-| The difficulty sets the most tarts there are (easy 1, challenge 2,
@@ -624,7 +649,7 @@ scene context model =
                 [ "j", "k" ]
 
             else
-                [ "h", "j", "k", "l", "w", "x", "d", "u" ]
+                [ "h", "j", "k", "l", "w", "x", "d", "u", "g" ]
         }
     }
 

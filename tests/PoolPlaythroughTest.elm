@@ -248,6 +248,10 @@ suite =
                 \_ -> start english "3" |> press english (keys "2j") |> panelHasNot (english.texts.pool.hintLines 2)
             , test "after w three times in a row: try a count" <|
                 \_ -> start english "1" |> press english [ "w", "w", "w" ] |> panelHas english.texts.pool.hintCount
+            , test "after walking left a few steps: try gh" <|
+                \_ -> start english "1" |> press english (keys "8l h h h") |> panelHas english.texts.pool.hintLineStart
+            , test "no gh tip once gh was used" <|
+                \_ -> start english "1" |> press english (keys "8l gh 3l h h h") |> panelHasNot english.texts.pool.hintLineStart
             , test "no count tip once a count was used" <|
                 \_ -> start english "1" |> press english [ "2", "w", "w", "w", "w" ] |> panelHasNot english.texts.pool.hintCount
             ]
