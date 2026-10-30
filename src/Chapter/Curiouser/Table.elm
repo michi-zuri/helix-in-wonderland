@@ -4,11 +4,11 @@ module Chapter.Curiouser.Table exposing
     , Trick(..), place, placeAway, isInSight
     )
 
-{-| The table chapter 4 plays on: lines of cake crumbs (`.`), some indented,
-two so long that they wrap onto more screen rows. Every crumb is a word of
-its own, so `gw` gives each one a label; two spaces between crumbs keep the
-two-letter labels apart. Crumbs sit on every third column (indents too, and
-the wrap width), so `gj` and `gk` always land on a crumb.
+{-| The table chapter 4 plays on: lines of cake crumbs (`.`) of different
+lengths, two so long that they wrap onto more screen rows. Every crumb is a
+word of its own, so `gw` gives each one a label; two spaces between crumbs
+keep the two-letter labels apart. Crumbs sit on every third column (the
+wrap width too), so `gj` and `gk` always land on a crumb.
 
 `place` decides where a currant appears so that one of Helix's `g` jumps is
 the quick way there: at the end of the cursor's line (`gl`, `gh`), on the
@@ -42,19 +42,19 @@ wrapWidth =
 
 rows : List String
 rows =
-    [ crumbs 0 10
-    , crumbs 3 8
-    , crumbs 0 25
-    , crumbs 3 9
-    , crumbs 0 18
-    , crumbs 6 7
-    , crumbs 0 10
+    [ crumbs 10
+    , crumbs 8
+    , crumbs 25
+    , crumbs 9
+    , crumbs 18
+    , crumbs 7
+    , crumbs 10
     ]
 
 
-crumbs : Int -> Int -> String
-crumbs indent count =
-    String.repeat indent " " ++ String.join "  " (List.repeat count ".")
+crumbs : Int -> String
+crumbs count =
+    String.join "  " (List.repeat count ".")
 
 
 
