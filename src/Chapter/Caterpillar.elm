@@ -8,7 +8,7 @@ and editing finally meet.
 
 import Chapter.Contract as Contract exposing (Context, Effect(..), Sound(..))
 import Chapter.Story as Story exposing (Story)
-import Editor.Core as Core exposing (Buffer, Command(..), Mode(..))
+import Editor.Core as Core exposing (Command(..), Mode(..))
 import Editor.Session as Session exposing (Session)
 import Editor.View
 import Html exposing (Html)
@@ -140,11 +140,10 @@ edit texts key model =
         Session.Ran ran ->
             { model | work = Just { work | session = ran.session } }
                 |> notice ran.command
-                |> Tuple.mapSecond ((::) (FlashKey key True))
                 |> finishIfAnswered work.puzzle ran.session
 
         Session.Waiting session ->
-            ( { model | work = Just { work | session = session } }, [ FlashKey key True ] )
+            ( { model | work = Just { work | session = session } }, [] )
 
         Session.Locked session ->
             ( dropCount work session model, [] )
@@ -256,20 +255,7 @@ scene context model =
         , pendingKeys = String.join " " (Session.recentKeys work.session)
         , position = Editor.View.position buffer
         }
-    , keyboard = { target = Nothing, helpers = helpers buffer }
     }
-
-
-{-| In Normal mode the editing keys are outlined; in Insert mode, Esc.
--}
-helpers : Buffer -> List String
-helpers buffer =
-    case Core.mode buffer of
-        Normal ->
-            [ "h", "j", "k", "l", "w", "e", "b", "i", "a", "c", "d", "u" ]
-
-        Insert ->
-            [ "Escape" ]
 
 
 viewPanel : Texts -> Model -> Work -> Html msg

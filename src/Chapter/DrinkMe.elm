@@ -233,13 +233,13 @@ typeKey texts key model =
                     currentWords texts model
             in
             if Just char == expectedKey words model then
-                typedRight words char model
+                typedRight words model
 
             else
                 -- A wrong key doesn't stop the clock: the pause since the
                 -- last right letter keeps counting.
                 ( { model | errors = model.errors + 1, lastKeyWrong = True }
-                , [ PlaySound ErrorSound, FlashKey (String.fromChar char) False ]
+                , [ PlaySound ErrorSound ]
                 )
 
         _ ->
@@ -249,8 +249,8 @@ typeKey texts key model =
 {-| A right key: a letter moves along the word, space moves to the next
 word. The last word needs no space: its last letter is the last sip.
 -}
-typedRight : List String -> Char -> Model -> ( Model, List Effect )
-typedRight words char model =
+typedRight : List String -> Model -> ( Model, List Effect )
+typedRight words model =
     if model.waitingForSpace then
         ( { model
             | waitingForSpace = False
@@ -260,7 +260,7 @@ typedRight words char model =
             , correct = model.correct + 1
             , lastKeyWrong = False
           }
-        , [ PlaySound CorrectSound, FlashKey " " True ]
+        , [ PlaySound CorrectSound ]
         )
 
     else
@@ -290,12 +290,12 @@ typedRight words char model =
         if wordDone && lastWord then
             -- The last sip: Alice walks to the door, then the closing story.
             ( { typed | wordIndex = model.wordIndex + 1, letterIndex = 0, walk = Just 0 }
-            , [ PlaySound PickupSound, FlashKey (String.fromChar char) True ]
+            , [ PlaySound PickupSound ]
             )
 
         else
             ( { typed | waitingForSpace = wordDone }
-            , [ PlaySound TickSound, FlashKey (String.fromChar char) True ]
+            , [ PlaySound TickSound ]
             )
 
 
@@ -434,13 +434,6 @@ scene context model =
     let
         words =
             currentWords context.texts model
-
-        target =
-            if Story.isPlaying model.story && model.difficulty /= Nothing && model.walk == Nothing && not (isHidden model) then
-                expectedKey words model
-
-            else
-                Nothing
     in
     { stage =
         Html.div [ A.class "stage-scene" ]
@@ -465,7 +458,6 @@ scene context model =
         , pendingKeys = ""
         , position = String.fromInt model.wordIndex ++ "/" ++ String.fromInt (List.length words)
         }
-    , keyboard = { target = target, helpers = [] }
     }
 
 

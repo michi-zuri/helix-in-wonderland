@@ -525,7 +525,7 @@ fallingKey layout difficulty key model =
                             caught layout difficulty jar model
 
                         Nothing ->
-                            ( mistake 1 model, [ PlaySound ErrorSound, FlashKey (String.fromChar letter) False ] )
+                            ( mistake 1 model, [ PlaySound ErrorSound ] )
 
             _ ->
                 ( model, [] )
@@ -558,7 +558,7 @@ caught layout difficulty jar model =
             }
 
         effects =
-            [ PlaySound CorrectSound, FlashKey (String.fromChar jar.letter) True ]
+            [ PlaySound CorrectSound ]
 
         stageDone =
             not (isBeyondStages layout model)
@@ -884,19 +884,6 @@ scene context model =
 
                 Nothing ->
                     ""
-        }
-    , keyboard =
-        { target = Maybe.map .letter target
-        , helpers =
-            case ( model.difficulty, model.landing ) of
-                ( Nothing, _ ) ->
-                    [ "j", "k" ]
-
-                ( Just _, Nothing ) ->
-                    List.map String.fromChar (currentStage context.layout model).keys ++ [ "Escape" ]
-
-                ( Just _, Just _ ) ->
-                    []
         }
     }
 

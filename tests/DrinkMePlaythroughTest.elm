@@ -162,12 +162,6 @@ suite =
                 \_ -> start "1" |> showsLetters 4
             , test "then it hides" <|
                 \_ -> start "1" |> typeSteadily "a" |> showsLetters 0
-            , test "and the keyboard doesn't give the next letter away" <|
-                \_ ->
-                    start "1"
-                        |> typeSteadily "a"
-                        |> (\run -> (DrinkMe.view context run.model).keyboard.target)
-                        |> Expect.equal Nothing
             , test "a pause longer than the limit in the middle of a word starts it over, shown again" <|
                 \_ ->
                     start "1"

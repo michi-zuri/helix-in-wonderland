@@ -266,14 +266,10 @@ explore key model =
     else
         case Map.directionFor key of
             Just direction ->
-                walk key direction model
+                walk direction model
 
             Nothing ->
-                if String.length key == 1 then
-                    ( model, [ FlashKey key False ] )
-
-                else
-                    ( model, [] )
+                ( model, [] )
 
 
 {-| A digit starts or extends a count, but a count can't start with 0.
@@ -283,8 +279,8 @@ isCountDigit key pendingCount =
     String.length key == 1 && String.all Char.isDigit key && not (key == "0" && pendingCount == "")
 
 
-walk : String -> Direction -> Model -> ( Model, List Effect )
-walk key direction model =
+walk : Direction -> Model -> ( Model, List Effect )
+walk direction model =
     let
         count =
             String.toInt model.pendingCount
@@ -297,7 +293,7 @@ walk key direction model =
         , keystrokes = model.keystrokes + 1
         , usedCount = model.usedCount || count > 1
       }
-    , [ FlashKey key True ]
+    , []
     )
 
 
@@ -519,15 +515,6 @@ scene context model =
         , file = file
         , pendingKeys = model.pendingCount
         , position = String.fromInt (model.alice.y + 1) ++ ":" ++ String.fromInt (model.alice.x + 1)
-        }
-    , keyboard =
-        { target = Nothing
-        , helpers =
-            if model.difficulty == Nothing then
-                [ "j", "k" ]
-
-            else
-                [ "h", "j", "k", "l" ]
         }
     }
 

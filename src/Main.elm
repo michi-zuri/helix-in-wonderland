@@ -25,7 +25,6 @@ import Html.Attributes as A
 import Html.Lazy
 import Json.Decode as Decode exposing (Decoder)
 import Keyboard.Layout as Layout exposing (Layout)
-import Keyboard.View
 import Language exposing (Language(..))
 import Ports
 import Progress exposing (Progress)
@@ -60,7 +59,6 @@ type alias Model =
     , selectedChapter : ChapterId
     , seed : Random.Seed
     , toast : Maybe Toast
-    , flash : Maybe Flash
     , links : Project.Links
     }
 
@@ -87,18 +85,9 @@ type alias Toast =
     { text : Texts -> String, remaining : Float }
 
 
-type alias Flash =
-    { key : String, ok : Bool, remaining : Float }
-
-
 toastMilliseconds : Float
 toastMilliseconds =
     2800
-
-
-flashMilliseconds : Float
-flashMilliseconds =
-    170
 
 
 {-| The most game time one animation frame may move on. When the page was
@@ -134,7 +123,6 @@ init flags =
       , selectedChapter = firstUnfinished progress
       , seed = Random.initialSeed (decodeFlag "seed" Decode.int 1865)
       , toast = Nothing
-      , flash = Nothing
       , links = decodeFlag "links" Project.decoder Project.fallback
       }
     , Cmd.none
@@ -184,10 +172,7 @@ update msg model =
                 milliseconds =
                     min longestFrameMilliseconds elapsed
             in
-            { model
-                | toast = countDown milliseconds model.toast
-                , flash = countDown milliseconds model.flash
-            }
+            { model | toast = countDown milliseconds model.toast }
                 |> stepCurrentChapter (Tick milliseconds)
 
         ChoseLanguage language ->
@@ -352,9 +337,6 @@ applyEffect id effect model =
 
         ShowToast text ->
             ( { model | toast = Just { text = text, remaining = toastMilliseconds } }, Cmd.none )
-
-        FlashKey key ok ->
-            ( { model | flash = Just { key = key, ok = ok, remaining = flashMilliseconds } }, Cmd.none )
 
         Finish score ->
             let
@@ -561,7 +543,7 @@ viewChapter ctx chapter =
 
 
 {-| Animation frames only while something can move: during a chapter, or
-while a toast or key flash is fading. The title and results screens then
+while a toast is fading. The title and results screens then
 cost nothing while the player is reading.
 -}
 subscriptions : Model -> Sub Msg
@@ -583,7 +565,7 @@ needsFrames model =
             True
 
         _ ->
-            model.toast /= Nothing || model.flash /= Nothing
+            model.toast /= Nothing
 
 
 {-| Plain key presses only: browser shortcuts (Ctrl, Alt, Cmd) are left
@@ -640,7 +622,6 @@ view model =
                             }
                         )
                         (Html.p [ A.class "big" ] [ Html.text texts.tagline ])
-                        [ "j", "k" ]
 
                 Results id score ->
                     cardScreen
@@ -654,13 +635,11 @@ view model =
                             }
                         )
                         (Html.p [ A.class "lesson" ] [ Html.text (texts.chapter id).lesson ])
-                        []
 
                 TheEnd ->
                     cardScreen
                         (Ui.TheEnd.view { texts = texts, totalTarts = Progress.total model.progress, onMenu = OpenedMenu })
                         (Html.p [ A.class "big" ] [ Html.text texts.theEnd.teaser ])
-                        []
     in
     Html.div [ A.class "app" ]
         [ Html.Lazy.lazy2 viewHeader texts model.settings
@@ -675,12 +654,6 @@ view model =
             ]
         , Html.section [ A.class "panel", A.attribute "aria-live" "polite" ] [ screen.panel ]
         , Chrome.statusLine screen.status
-        , Keyboard.View.view
-            { texts = texts
-            , layout = model.settings.layout
-            , focus = screen.keyboard
-            , flash = Maybe.map (\f -> { key = f.key, ok = f.ok }) model.flash
-            }
         , Html.Lazy.lazy3 viewFooter model.links texts (screenName model)
         ]
 
@@ -740,8 +713,8 @@ screenName model =
 
 {-| Title, results and the end: a card over the empty hall.
 -}
-cardScreen : Html Msg -> Html Msg -> List String -> Contract.View Msg
-cardScreen card panel helpers =
+cardScreen : Html Msg -> Html Msg -> Contract.View Msg
+cardScreen card panel =
     { stage =
         Html.div [ A.class "stage-scene" ]
             [ Hall.backdrop
@@ -749,5 +722,4 @@ cardScreen card panel helpers =
             ]
     , panel = panel
     , status = { mode = "NOR", file = "wonderland.txt", pendingKeys = "", position = "1:1" }
-    , keyboard = { target = Nothing, helpers = helpers }
     }
