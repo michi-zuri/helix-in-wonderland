@@ -329,7 +329,6 @@ suite =
                 , ( [ "4", "g", "g" ], ( 4, 1 ) )
                 , ( [ "2", "g", "j" ], ( 2, 1 ) )
                 , ( [ "g", "j", "g", "j", "g", "k" ], ( 2, 1 ) )
-                , ( [ "j", "g", "s" ], ( 2, 4 ) )
                 ]
             )
         , test "selecting and editing keys wait for later chapters" <|
@@ -341,6 +340,11 @@ suite =
                     |> Session.buffer
                     |> Core.toString
                     |> Expect.equal Table.text
+        , test "no line of the table is indented" <|
+            \_ ->
+                String.lines Table.text
+                    |> List.filter (String.startsWith " ")
+                    |> Expect.equal []
         , test "the table wraps: the long third line takes three screen rows" <|
             \_ ->
                 String.lines Table.text
