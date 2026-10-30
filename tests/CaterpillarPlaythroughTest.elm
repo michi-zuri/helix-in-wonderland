@@ -1,6 +1,6 @@
 module CaterpillarPlaythroughTest exposing (suite)
 
-{-| Play chapter 5: fill the gaps in Insert mode.
+{-| Play chapter 6: fill the gaps in Insert mode.
 -}
 
 import Chapter.Caterpillar as Caterpillar
@@ -52,7 +52,7 @@ fillTheGaps leave =
 
 suite : Test
 suite =
-    describe "Chapter 5: Advice from a Caterpillar"
+    describe "Chapter 6: Advice from a Caterpillar"
         [ test "filling every gap and pressing Esc earns three tarts" <|
             \_ ->
                 Playthrough.start Caterpillar.init

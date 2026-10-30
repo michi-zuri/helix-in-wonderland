@@ -45,7 +45,13 @@ p{margin:0}
 /* The Helix editor in chapters 4 and 5 */
 .editor{font-family:var(--mono);font-size:22px;line-height:1.3;padding-block:12px;background:var(--revolver);min-height:300px;overflow-x:auto}
 /* gw's jump labels, as Helix draws them */
+/* Chapter 4's currants on the crumbs; they blink just before rolling away */
+.editor .currant{color:#f4ead2;background:#8e2f45;font-weight:bold}
+.editor .currant.hurry{animation:hurry .3s steps(2) infinite}
+@keyframes hurry{50%{background:#efba5d;color:var(--ink)}}
+.currant-letters{letter-spacing:.15em}
 .editor .jump-label{color:var(--ink);background:var(--apricot);font-weight:bold}
+.editor .jump-label.on-mark{color:#f4ead2;background:#8e2f45}
 .editor-line{display:flex;white-space:pre;min-width:max-content;padding-right:16px}
 .editor-gutter{width:4ch;flex:none;text-align:right;padding-right:1.2ch;color:var(--plum)}
 .editor-line.current .editor-gutter{color:var(--lilac)}

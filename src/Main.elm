@@ -14,6 +14,7 @@ import Browser
 import Browser.Events
 import Chapter.Caterpillar as Caterpillar
 import Chapter.Contract as Contract exposing (Context, Effect(..), Score)
+import Chapter.Curiouser as Curiouser
 import Chapter.DrinkMe as DrinkMe
 import Chapter.Hall as Hall
 import Chapter.Id as ChapterId exposing (ChapterId(..))
@@ -77,6 +78,7 @@ type Chapter
     = RabbitHoleChapter RabbitHole.Model
     | HallChapter Hall.Model
     | DrinkMeChapter DrinkMe.Model
+    | CuriouserChapter Curiouser.Model
     | PoolChapter Pool.Model
     | CaterpillarChapter Caterpillar.Model
 
@@ -462,6 +464,9 @@ newChapter seed id =
         DrinkMe ->
             DrinkMeChapter DrinkMe.init
 
+        Curiouser ->
+            CuriouserChapter (Curiouser.init seed)
+
         PoolOfTears ->
             PoolChapter (Pool.init seed)
 
@@ -480,6 +485,9 @@ chapterId chapter =
 
         DrinkMeChapter _ ->
             DrinkMe
+
+        CuriouserChapter _ ->
+            Curiouser
 
         PoolChapter _ ->
             PoolOfTears
@@ -516,6 +524,9 @@ stepChapter ctx input chapter =
         DrinkMeChapter model ->
             run DrinkMe.update DrinkMe.KeyPressed DrinkMe.Frame DrinkMeChapter model
 
+        CuriouserChapter model ->
+            run Curiouser.update Curiouser.KeyPressed Curiouser.Frame CuriouserChapter model
+
         PoolChapter model ->
             run Pool.update Pool.KeyPressed Pool.Frame PoolChapter model
 
@@ -534,6 +545,9 @@ viewChapter ctx chapter =
 
         DrinkMeChapter model ->
             DrinkMe.view ctx model
+
+        CuriouserChapter model ->
+            Curiouser.view ctx model
 
         PoolChapter model ->
             Pool.view ctx model

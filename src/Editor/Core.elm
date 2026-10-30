@@ -555,7 +555,7 @@ saveHistory (Buffer b) =
         }
 
 
-{-| Something from outside puts a word into the text: chapter 4's pool
+{-| Something from outside puts a word into the text: chapter 5's pool
 splashes words in while the player edits. The word goes in front of word
 number `word` (counting from 0) of line `line`, or at the end of the line
 when it has fewer words. The cursor and selection keep pointing at the same

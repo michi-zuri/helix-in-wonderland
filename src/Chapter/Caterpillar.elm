@@ -1,6 +1,6 @@
 module Chapter.Caterpillar exposing (Model, Msg(..), init, update, view)
 
-{-| Chapter 5, "Advice from a Caterpillar": Insert mode. Words are missing
+{-| Chapter 6, "Advice from a Caterpillar": Insert mode. Words are missing
 from the Caterpillar's lines; the player moves to each gap, presses `i` (or
 `a`), types the word and returns to Normal mode with Esc. Typing practice
 and editing finally meet.
@@ -28,7 +28,7 @@ import Ui.Dialog as Dialog
 
 file : String
 file =
-    "05_caterpillar.txt"
+    "06_caterpillar.txt"
 
 
 
