@@ -1,6 +1,7 @@
 module Chapter.Hall.Doors exposing
     ( Doors, init
     , leadsTo, mightLeadTo, walkThrough
+    , toTheCurtain, steerAway
     , pairs, oneWay
     )
 
@@ -26,6 +27,7 @@ The randomness comes from a seed, so the same seed plays the same game.
 
 @docs Doors, init
 @docs leadsTo, mightLeadTo, walkThrough
+@docs toTheCurtain, steerAway
 @docs pairs, oneWay
 
 -}
@@ -44,6 +46,7 @@ type Doors
         , kept : Maybe ( Point, Point )
         , partOf : Dict ( Int, Int ) ( Int, Int )
         , deadEnds : Set ( Int, Int )
+        , curtainPart : Maybe ( Int, Int )
         , seed : Random.Seed
         }
 
@@ -71,9 +74,16 @@ init seed map =
                 |> Set.fromList
 
         empty =
-            { pairs = [], oneWay = Nothing, kept = Nothing, partOf = partOf, deadEnds = deadEnds, seed = seed }
+            { pairs = []
+            , oneWay = Nothing
+            , kept = Nothing
+            , partOf = partOf
+            , deadEnds = deadEnds
+            , curtainPart = Map.find CurtainFront map |> Maybe.map (partFrom map)
+            , seed = seed
+            }
     in
-    Doors (link doors empty)
+    Doors (link anyWayWill doors empty)
 
 
 {-| The door that `door` leads to right now.
@@ -160,12 +170,125 @@ walkThrough door (Doors doors) =
                         |> List.filter (\other -> other /= door && other /= partner)
 
                 relinked =
-                    link others doors
+                    link anyWayWill others doors
             in
             Doors { relinked | pairs = ( door, partner ) :: relinked.pairs, kept = Just ( door, partner ) }
 
         Nothing ->
             Doors doors
+
+
+{-| A door in Alice's part of the hall, other than the way back, that
+leads into the curtain's part right now. Chapter 2 gives such a door a
+hidden few seconds before it steers away (`steerAway`), so only a quick
+player gets through.
+-}
+toTheCurtain : Map -> Point -> Doors -> Maybe Point
+toTheCurtain map alice (Doors doors) =
+    let
+        here =
+            partFrom map alice
+
+        isWayBack door =
+            case doors.kept of
+                Just ( a, b ) ->
+                    door == a || door == b
+
+                Nothing ->
+                    False
+
+        intoCurtainPart door =
+            case leadsTo door (Doors doors) of
+                Just other ->
+                    doors.curtainPart /= Nothing && Dict.get (key other) doors.partOf == doors.curtainPart
+
+                Nothing ->
+                    False
+    in
+    Dict.toList doors.partOf
+        |> List.filter (\( _, doorPart ) -> doorPart == here)
+        |> List.map (\( ( x, y ), _ ) -> { x = x, y = y })
+        |> List.filter (\door -> not (isWayBack door) && intoCurtainPart door)
+        |> List.head
+
+
+{-| Link all doors except the way back again, so that `door` no longer
+leads into the curtain's part. If there is no such way, nothing changes.
+-}
+steerAway : Point -> Doors -> Doors
+steerAway door (Doors doors) =
+    let
+        wayBack =
+            case doors.kept of
+                Just ( a, b ) ->
+                    [ a, b ]
+
+                Nothing ->
+                    []
+
+        others =
+            Dict.keys doors.partOf
+                |> List.map (\( x, y ) -> { x = x, y = y })
+                |> List.filter (\other -> not (List.member other wayBack))
+
+        avoidsCurtain ( newPairs, newOneWay ) =
+            let
+                target =
+                    newPairs
+                        |> List.filterMap
+                            (\( a, b ) ->
+                                if a == door then
+                                    Just b
+
+                                else if b == door then
+                                    Just a
+
+                                else
+                                    Nothing
+                            )
+                        |> List.head
+                        |> (\paired ->
+                                case paired of
+                                    Just _ ->
+                                        paired
+
+                                    Nothing ->
+                                        newOneWay
+                                            |> Maybe.andThen
+                                                (\( from, to ) ->
+                                                    if from == door then
+                                                        Just to
+
+                                                    else
+                                                        Nothing
+                                                )
+                           )
+            in
+            case target of
+                Just other ->
+                    Dict.get (key other) doors.partOf /= doors.curtainPart
+
+                Nothing ->
+                    True
+
+        relinked =
+            link avoidsCurtain others doors
+
+        keptPair =
+            case doors.kept of
+                Just pair ->
+                    [ pair ]
+
+                Nothing ->
+                    []
+    in
+    -- `link` leaves everything as it was (seed too) when no way avoids the
+    -- curtain.
+    if relinked.seed == doors.seed then
+        Doors doors
+
+    else
+        Doors { relinked | pairs = keptPair ++ relinked.pairs }
 
 
 {-| All current pairs, for tests.
@@ -201,8 +324,8 @@ with an odd number one door left over that leads one way. There are few
 doors, so it simply lists every way and picks one. If there is no allowed
 way, the doors keep their links.
 -}
-link : List Point -> Links a -> Links a
-link toLink doors =
+link : (( List ( Point, Point ), Maybe ( Point, Point ) ) -> Bool) -> List Point -> Links a -> Links a
+link acceptable toLink doors =
     let
         everyWay =
             if modBy 2 (List.length toLink) == 0 then
@@ -221,7 +344,7 @@ link toLink doors =
                         )
 
         allowedWays =
-            List.filter (\( pairing, _ ) -> List.all (allowed doors) pairing) everyWay
+            List.filter (\(( pairing, _ ) as way) -> List.all (allowed doors) pairing && acceptable way) everyWay
     in
     case allowedWays of
         first :: others ->
@@ -233,6 +356,11 @@ link toLink doors =
 
         [] ->
             doors
+
+
+anyWayWill : ( List ( Point, Point ), Maybe ( Point, Point ) ) -> Bool
+anyWayWill _ =
+    True
 
 
 {-| Every way to split an even number of doors into pairs.
@@ -281,14 +409,22 @@ part : Map -> Point -> ( Int, Int )
 part map door =
     case Map.inFrontOf door map of
         Just front ->
-            spread map [ front ] (Set.singleton (key front))
-                |> Set.toList
-                |> List.sortBy (\( x, y ) -> ( y, x ))
-                |> List.head
-                |> Maybe.withDefault (key door)
+            partFrom map front
 
         Nothing ->
             key door
+
+
+{-| The part of the hall a floor tile belongs to, named by its top-left
+tile.
+-}
+partFrom : Map -> Point -> ( Int, Int )
+partFrom map point =
+    spread map [ point ] (Set.singleton (key point))
+        |> Set.toList
+        |> List.sortBy (\( x, y ) -> ( y, x ))
+        |> List.head
+        |> Maybe.withDefault (key point)
 
 
 spread : Map -> List Point -> Set ( Int, Int ) -> Set ( Int, Int )

@@ -111,6 +111,24 @@ settleWith send run =
         (List.range 1 400)
 
 
+{-| Like `settleWith`, but only until Alice stands still and nobody is
+talking: a quick player who moves on at once.
+-}
+settleQuickly : (Hall.Msg -> Run Hall.Model -> Run Hall.Model) -> Int -> Run Hall.Model -> Run Hall.Model
+settleQuickly send framesLeft run =
+    if framesLeft <= 0 then
+        run
+
+    else if Story.isTalking run.model.story then
+        settleQuickly send (framesLeft - 1) (send (Hall.KeyPressed "Enter") run)
+
+    else if run.model.step /= Nothing || not (List.isEmpty run.model.queuedSteps) then
+        settleQuickly send (framesLeft - 1) (send (Hall.Frame 16) run)
+
+    else
+        run
+
+
 {-| A player in the mad hall: plan the best route with the luckiest doors
 from wherever Alice is, make its first move, look where she ended up, plan
 again. Gives up after `movesLeft` moves.
@@ -136,7 +154,7 @@ playMad movesLeft run =
         case plan |> Maybe.map (.keys >> firstMove) of
             Just ((_ :: _) as move) ->
                 playMad (movesLeft - 1)
-                    (settleWith send (List.foldl (\key current -> send (Hall.KeyPressed key) current) run move))
+                    (settleQuickly send 400 (List.foldl (\key current -> send (Hall.KeyPressed key) current) run move))
 
             _ ->
                 run
@@ -156,6 +174,13 @@ firstMove keys =
 
         [] ->
             []
+
+
+{-| Game time passing with nothing pressed; story boxes are read at once.
+-}
+wait : Float -> Run Hall.Model -> Run Hall.Model
+wait milliseconds run =
+    List.foldl (\_ current -> Playthrough.send (Hall.update context) (Hall.Frame 50) current) run (List.range 1 (round (milliseconds / 50)))
 
 
 {-| "12" is typed as "1" then "2".
@@ -291,6 +316,61 @@ suite =
                     |> Expect.equal ( False, False )
         , test "mad: even with the luckiest doors, the way needs at least two of them" <|
             \_ -> (routeOf Mad).doors |> Expect.atLeast 2
+        , describe "mad: the hidden clock on a door to the curtain"
+            (let
+                -- A quick player until a door here leads to the curtain.
+                untilClock movesLeft run =
+                    if run.model.doorClock /= Nothing || movesLeft <= 0 then
+                        run
+
+                    else
+                        untilClock (movesLeft - 1) (playMad 1 run)
+
+                withClock =
+                    List.range 1 20
+                        |> List.map (\seed -> untilClock 60 (inHall seed Mad))
+                        |> List.filter (\run -> run.model.doorClock /= Nothing && Playthrough.finishedWith run == Nothing)
+                        |> List.head
+
+                leadsToCurtain run door =
+                    Doors.toTheCurtain run.model.map run.model.alice run.model.doors == Just door
+             in
+             [ test "after 4 seconds of play, the door steers away from the curtain" <|
+                \_ ->
+                    case withClock of
+                        Just run ->
+                            let
+                                door =
+                                    Maybe.map .door run.model.doorClock |> Maybe.withDefault { x = 0, y = 0 }
+                            in
+                            ( leadsToCurtain run door, leadsToCurtain (wait 4100 run) door )
+                                |> Expect.equal ( True, False )
+
+                        Nothing ->
+                            Expect.fail "no door to the curtain came up"
+             , test "just under 4 seconds, it still leads there" <|
+                \_ ->
+                    case withClock of
+                        Just run ->
+                            let
+                                door =
+                                    Maybe.map .door run.model.doorClock |> Maybe.withDefault { x = 0, y = 0 }
+                            in
+                            leadsToCurtain (wait 3900 run) door |> Expect.equal True
+
+                        Nothing ->
+                            Expect.fail "no door to the curtain came up"
+             , test "a slow player, who stops to think for 4.5 seconds before each move, never reaches the curtain" <|
+                \_ ->
+                    List.range 1 5
+                        |> List.map
+                            (\seed ->
+                                List.foldl (\_ run -> run |> wait 4500 |> playMad 1) (inHall seed Mad) (List.range 1 150)
+                                    |> Playthrough.finishedWith
+                            )
+                        |> Expect.equal (List.repeat 5 Nothing)
+             ]
+            )
         , test "stepping into a door comes out in front of the door it leads to, and stops there" <|
             \_ ->
                 let

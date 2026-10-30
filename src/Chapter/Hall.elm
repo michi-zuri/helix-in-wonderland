@@ -52,6 +52,16 @@ stepMilliseconds =
     75
 
 
+{-| Mad hall: how long a door that leads into the curtain's part stays that
+way, in milliseconds of play (story boxes pause it). Then it steers away
+(`Doors.steerAway`), so only a quick player gets through. Nothing on screen
+shows this clock.
+-}
+doorClockMilliseconds : Float
+doorClockMilliseconds =
+    4000
+
+
 bumpMilliseconds : Float
 bumpMilliseconds =
     150
@@ -87,6 +97,7 @@ type alias Model =
     , usedDoor : Bool
     , map : Map
     , doors : Doors
+    , doorClock : Maybe { door : Point, left : Float }
     , seed : Random.Seed
     , alice : Point
     , step : Maybe Step
@@ -134,6 +145,7 @@ init seed =
     , usedDoor = False
     , map = startingMap
     , doors = Doors.init seed startingMap
+    , doorClock = Nothing
     , seed = seed
     , alice = startOf startingMap
     , step = Nothing
@@ -200,6 +212,7 @@ update context msg model =
                 , rabbit = moveRabbit milliseconds model.rabbit
                 , story = Story.tick milliseconds model.story
             }
+                |> runDoorClock milliseconds
                 |> animateWalking milliseconds
 
 
@@ -231,18 +244,75 @@ enterHall difficulty model =
         doors =
             Doors.init model.seed map
     in
-    { model
-        | difficulty = Just difficulty
-        , map = map
-        , doors = doors
-        , alice = startOf map
-        , fewestKeystrokes =
-            Route.fewest { largestCount = largestCount, exits = \door -> Doors.mightLeadTo door doors }
-                { at = startOf map, hasKey = False }
-                map
-                |> Maybe.map .keystrokes
-                |> Maybe.withDefault 0
-    }
+    startDoorClock
+        { model
+            | difficulty = Just difficulty
+            , map = map
+            , doors = doors
+            , alice = startOf map
+            , fewestKeystrokes =
+                Route.fewest { largestCount = largestCount, exits = \door -> Doors.mightLeadTo door doors }
+                    { at = startOf map, hasKey = False }
+                    map
+                    |> Maybe.map .keystrokes
+                    |> Maybe.withDefault 0
+        }
+
+
+{-| Start the hidden clock if a door here (other than the way back) leads
+into the curtain's part; keep it running if it is still the same door.
+-}
+startDoorClock : Model -> Model
+startDoorClock model =
+    if model.difficulty == Just Mad then
+        case Doors.toTheCurtain model.map model.alice model.doors of
+            Just door ->
+                case model.doorClock of
+                    Just running ->
+                        if running.door == door then
+                            model
+
+                        else
+                            { model | doorClock = Just { door = door, left = doorClockMilliseconds } }
+
+                    Nothing ->
+                        { model | doorClock = Just { door = door, left = doorClockMilliseconds } }
+
+            Nothing ->
+                { model | doorClock = Nothing }
+
+    else
+        model
+
+
+{-| Time passing for the hidden clock, only while the player is playing.
+When it runs out, the door steers away from the curtain's part; if another
+door here leads there now, it gets its own clock.
+-}
+runDoorClock : Float -> Model -> Model
+runDoorClock milliseconds model =
+    case model.doorClock of
+        Just running ->
+            if not (Story.isPlaying model.story) then
+                model
+
+            else if running.left - milliseconds > 0 then
+                { model | doorClock = Just { running | left = running.left - milliseconds } }
+
+            else
+                let
+                    steered =
+                        startDoorClock { model | doors = Doors.steerAway running.door model.doors, doorClock = Nothing }
+                in
+                if Maybe.map .door steered.doorClock == Just running.door then
+                    -- No way to steer this door away: let it be.
+                    { steered | doorClock = Nothing }
+
+                else
+                    steered
+
+        Nothing ->
+            model
 
 
 startOf : Map -> Point
@@ -390,20 +460,21 @@ goThroughDoor : Model -> ( Model, List Effect )
 goThroughDoor model =
     case Doors.leadsTo model.alice model.doors |> Maybe.andThen (\other -> Map.inFrontOf other model.map) of
         Just exit ->
-            ( { model
-                | alice = exit
-                , doors = Doors.walkThrough model.alice model.doors
-                , queuedSteps = []
-                , usedDoor = True
-                , story =
-                    if model.usedDoor then
-                        model.story
-
-                    else
-                        Story.tell (Dialog.say Narrator (.hall >> .doorFound))
-                            [ Dialog.say Narrator (.hall >> .doorRule) ]
+            ( startDoorClock
+                { model
+                    | alice = exit
+                    , doors = Doors.walkThrough model.alice model.doors
+                    , queuedSteps = []
+                    , usedDoor = True
+                    , story =
+                        if model.usedDoor then
                             model.story
-              }
+
+                        else
+                            Story.tell (Dialog.say Narrator (.hall >> .doorFound))
+                                [ Dialog.say Narrator (.hall >> .doorRule) ]
+                                model.story
+                }
             , [ PlaySound PortalSound ]
             )
 
