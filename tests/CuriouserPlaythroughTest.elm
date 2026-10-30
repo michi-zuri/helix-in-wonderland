@@ -309,6 +309,29 @@ suite =
                         |> List.filter (String.contains "gw")
                         |> Expect.equal []
             ]
+        , describe "every jump the chapter teaches works inside the chapter"
+            (List.map
+                (\( keys, expected ) ->
+                    test (String.concat keys) <|
+                        \_ ->
+                            start "1"
+                                |> press keys
+                                |> .model
+                                |> .session
+                                |> Session.buffer
+                                |> Core.cursorLineColumn
+                                |> Expect.equal expected
+                )
+                [ ( [ "g", "l" ], ( 1, 28 ) )
+                , ( [ "g", "l", "g", "h" ], ( 1, 1 ) )
+                , ( [ "g", "e" ], ( 7, 1 ) )
+                , ( [ "g", "e", "g", "g" ], ( 1, 1 ) )
+                , ( [ "4", "g", "g" ], ( 4, 1 ) )
+                , ( [ "2", "g", "j" ], ( 2, 1 ) )
+                , ( [ "g", "j", "g", "j", "g", "k" ], ( 2, 1 ) )
+                , ( [ "j", "g", "s" ], ( 2, 4 ) )
+                ]
+            )
         , test "selecting and editing keys wait for later chapters" <|
             \_ ->
                 start "1"

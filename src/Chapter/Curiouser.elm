@@ -268,9 +268,26 @@ isUnlocked command =
         SelectRange _ ->
             True
 
+        GotoLineNumber _ ->
+            True
+
         _ ->
             List.member command
-                [ MoveLeft, MoveRight, MoveDown, MoveUp, MoveLineDown, MoveLineUp, GotoLineStart, GotoLineEnd, GotoFirstNonWhitespace, GotoLastModification, GotoWord, CollapseSelection ]
+                [ MoveLeft
+                , MoveRight
+                , MoveDown
+                , MoveUp
+                , MoveLineDown
+                , MoveLineUp
+                , GotoLineStart
+                , GotoLineEnd
+                , GotoFirstNonWhitespace
+                , GotoFileStart
+                , GotoLastLine
+                , GotoLastModification
+                , GotoWord
+                , CollapseSelection
+                ]
 
 
 jump : String -> Model -> ( Model, List Effect )
