@@ -1,6 +1,6 @@
 module Editor.Core exposing
     ( Buffer, Mode(..), Command(..)
-    , fromString, apply
+    , fromString, apply, applyTimes
     , toString, mode, head, selectionRange, selectedText, wordUnderCursor, cursorLineColumn
     )
 
@@ -23,7 +23,7 @@ In Insert mode, `head` is the insertion point: typed text goes in front of
 the character at `head`.
 
 @docs Buffer, Mode, Command
-@docs fromString, apply
+@docs fromString, apply, applyTimes
 @docs toString, mode, head, selectionRange, selectedText, wordUnderCursor, cursorLineColumn
 
 -}
@@ -186,6 +186,31 @@ cursorLineColumn (Buffer b) =
 
 
 -- APPLY A COMMAND
+
+
+{-| A command with a count, as in `3x` or `5w`. Like Helix, moving,
+selecting and undoing repeat; deleting, changing and inserting happen once
+whatever the count. Counts above `largestCount` are treated as
+`largestCount`.
+-}
+applyTimes : Int -> Command -> Buffer -> Buffer
+applyTimes count command buffer =
+    if isRepeatable command then
+        List.foldl (\_ current -> apply command current) buffer (List.range 1 (clamp 1 largestCount count))
+
+    else
+        apply command buffer
+
+
+largestCount : Int
+largestCount =
+    100
+
+
+isRepeatable : Command -> Bool
+isRepeatable command =
+    List.member command
+        [ MoveLeft, MoveRight, MoveDown, MoveUp, SelectNextWordStart, SelectNextWordEnd, SelectPreviousWordStart, SelectLine, Undo ]
 
 
 {-| Run one command. Commands that make no sense in the current mode (typing
