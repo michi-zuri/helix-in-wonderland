@@ -92,6 +92,12 @@ gotoCommand key =
         "." ->
             Just GotoLastModification
 
+        "g" ->
+            Just GotoFileStart
+
+        "e" ->
+            Just GotoLastLine
+
         "j" ->
             Just MoveLineDown
 

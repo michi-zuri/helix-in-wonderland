@@ -12,7 +12,7 @@ the wrap width), so `gj` and `gk` always land on a crumb.
 
 `place` decides where a currant appears so that one of Helix's `g` jumps is
 the quick way there: at the end of the cursor's line (`gl`, `gh`), on the
-first crumb of an indented line (`gs`), or on the real line after a long
+start of the first or last line (`gg`, `ge`), or on the real line after a long
 wrapped one (`gj`, `gk`). Cheeky currants (`g.`) start far away and out of
 sight, and run back to where the last one was squashed once the cursor gets
 onto their line or column (`isInSight`).
@@ -111,11 +111,6 @@ allSpots =
         |> List.concatMap (\line -> List.map (\column -> { line = line, column = column }) (crumbColumns line))
 
 
-isIndented : Int -> Bool
-isIndented line =
-    String.startsWith " " (rowText line)
-
-
 isWrapped : Int -> Bool
 isWrapped line =
     String.length (rowText line) > wrapWidth
@@ -172,7 +167,7 @@ cheeky currant, caught with `g.`.
 -}
 type Trick
     = LineEnds
-    | FirstNonBlank
+    | FileEnds
     | RealLines
     | LastChange
 
@@ -185,8 +180,8 @@ place trick cursor =
         LineEnds ->
             Random.constant (lineEnd cursor)
 
-        FirstNonBlank ->
-            Random.constant (firstNonBlank cursor)
+        FileEnds ->
+            Random.constant (fileEnd cursor)
 
         RealLines ->
             Random.constant (realLine cursor)
@@ -217,28 +212,20 @@ lineEnd cursor =
         { cursor | column = first }
 
 
-{-| The first crumb of the cursor's line if it is indented and the cursor
-is further along, otherwise of the nearest other indented line.
+{-| The start of the first or the last line, whichever is further from
+the cursor: where `gg` and `ge` land.
 -}
-firstNonBlank : Spot -> Spot
-firstNonBlank cursor =
+fileEnd : Spot -> Spot
+fileEnd cursor =
     let
-        firstCrumb line =
-            { line = line, column = crumbColumns line |> List.head |> Maybe.withDefault 0 }
-
-        here =
-            firstCrumb cursor.line
-
-        others =
-            List.range 0 (List.length rows - 1)
-                |> List.filter (\line -> isIndented line && line /= cursor.line)
-                |> List.sortBy (\line -> abs (line - cursor.line))
+        lastLine =
+            List.length rows - 1
     in
-    if isIndented cursor.line && cursor.column > here.column + 2 then
-        here
+    if cursor.line * 2 < lastLine then
+        { line = lastLine, column = 0 }
 
     else
-        others |> List.head |> Maybe.map firstCrumb |> Maybe.withDefault here
+        { line = 0, column = 0 }
 
 
 {-| From a long wrapped line, the next real line (or the one before, from

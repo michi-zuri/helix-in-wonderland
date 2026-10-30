@@ -198,7 +198,7 @@ type alias CuriouserTexts =
     , challengeInfo : String
     , madInfo : String
     , lineEnds : String
-    , firstNonBlank : String
+    , fileEnds : String
     , realLines : String
     , lastChange : String
     , allCheeky : String
@@ -380,7 +380,7 @@ english =
                     { name = "Drink Me", skill = "Typing words, new keys e and i", lesson = "Words with e and i, thumb on the space bar." }
 
                 Curiouser ->
-                    { name = "Curiouser and Curiouser", skill = "Helix jumps: gh gl gs gj gk g.", lesson = "Squash the currants with Helix's g jumps." }
+                    { name = "Curiouser and Curiouser", skill = "Helix jumps: gh gl gg ge gj gk g.", lesson = "Squash the currants with Helix's g jumps." }
 
                 PoolOfTears ->
                     { name = "The Pool of Tears", skill = "Helix: w x select, d deletes, u undo, counts", lesson = "Select first, then act: w or x, then d. u undoes." }
@@ -497,7 +497,7 @@ english =
         , challengeInfo = "Quick currants."
         , madInfo = "Very quick currants, two at once at the end."
         , lineEnds = "A currant at the end of your line! g then l jumps to the end of the line, g then h to its start."
-        , firstNonBlank = "This line starts with spaces. g then s jumps to its first crumb."
+        , fileEnds = "A currant on the first or the last line! g then g jumps to the very first line, g then e to the last."
         , realLines = "Long lines go on over more rows (↪). j moves one row; g then j jumps to the next real line, g then k to the one before."
         , lastChange = "Cheeky currants are shy: once you get onto their line or column, they run back to where you squashed the last one. g then . jumps to your last change."
         , allCheeky = "Every currant is cheeky now! Get onto its line or column, then catch it with g then ."
@@ -696,7 +696,7 @@ german =
                     { name = "Trink mich", skill = "Wörter tippen, neue Tasten e und i", lesson = "Wörter mit e und i, Daumen auf der Leertaste." }
 
                 Curiouser ->
-                    { name = "Immer merkwürdiger", skill = "Helix-Sprünge: gh gl gs gj gk g.", lesson = "Zerdrück die Korinthen mit den g-Sprüngen von Helix." }
+                    { name = "Immer merkwürdiger", skill = "Helix-Sprünge: gh gl gg ge gj gk g.", lesson = "Zerdrück die Korinthen mit den g-Sprüngen von Helix." }
 
                 PoolOfTears ->
                     { name = "Der Tränenteich", skill = "Helix: w x wählen, d löscht, u zurück, Zahlen", lesson = "Erst auswählen, dann handeln: w oder x, dann d. u macht rückgängig." }
@@ -813,7 +813,7 @@ german =
         , challengeInfo = "Schnelle Korinthen."
         , madInfo = "Sehr schnelle Korinthen, am Schluss zwei auf einmal."
         , lineEnds = "Eine Korinthe am Ende deiner Zeile! g und dann l springt ans Zeilenende, g und dann h an den Anfang."
-        , firstNonBlank = "Diese Zeile beginnt mit Leerzeichen. g und dann s springt zum ersten Krümel."
+        , fileEnds = "Eine Korinthe auf der ersten oder letzten Zeile! g und dann g springt zur allerersten Zeile, g und dann e zur letzten."
         , realLines = "Lange Zeilen gehen auf weiteren Reihen weiter (↪). j geht eine Reihe weiter; g und dann j springt zur nächsten echten Zeile, g und dann k zur vorherigen."
         , lastChange = "Freche Korinthen sind scheu: Sobald du auf ihre Zeile oder Spalte kommst, rennen sie dorthin zurück, wo du die letzte zerdrückt hast. g und dann . springt zu deiner letzten Änderung."
         , allCheeky = "Jetzt sind alle Korinthen frech! Komm auf ihre Zeile oder Spalte, dann fang sie mit g und dann ."

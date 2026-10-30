@@ -68,6 +68,18 @@ suite =
             \_ -> press [ "j", "g", "h", "g", "s" ] lines |> cursor |> Expect.equal ( 2, 5 )
         , test "on a line without spaces in front, gs is like gh" <|
             \_ -> press [ "2", "j", "l", "l", "g", "s" ] lines |> cursor |> Expect.equal ( 3, 1 )
+        , describe "gg and ge: first and last line"
+            [ test "ge goes to the start of the last line" <|
+                \_ -> press [ "l", "l", "g", "e" ] lines |> cursor |> Expect.equal ( 3, 1 )
+            , test "gg goes back to the start of the first line" <|
+                \_ -> press [ "g", "e", "l", "g", "g" ] lines |> cursor |> Expect.equal ( 1, 1 )
+            , test "with a number, gg goes to that line: 2gg" <|
+                \_ -> press [ "2", "g", "g" ] lines |> cursor |> Expect.equal ( 2, 1 )
+            , test "a number past the end goes to the last line" <|
+                \_ -> press [ "9", "g", "g" ] lines |> cursor |> Expect.equal ( 3, 1 )
+            , test "other goto keys ignore a number" <|
+                \_ -> press [ "2", "g", "l" ] lines |> cursor |> Expect.equal ( 1, 19 )
+            ]
         , describe "g. goes back to the last change"
             [ test "after deleting, then walking away" <|
                 \_ -> press [ "j", "x", "d", "k", "l", "l", "g", "." ] lines |> cursor |> Expect.equal ( 2, 1 )

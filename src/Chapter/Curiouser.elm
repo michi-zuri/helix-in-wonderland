@@ -6,7 +6,7 @@ onto the crumbs on the table; the cursor reaching one squashes it.
 
 Stages bring in one jump at a time, each with currants placed so that jump
 is the quick way there (`Chapter.Curiouser.Table`): `gl` and `gh`, then
-`gs`, then `gj` and `gk` on long wrapped lines, then `g.`: cheeky currants
+`gg` and `ge`, then `gj` and `gk` on long wrapped lines, then `g.`: cheeky currants
 that run back to where the last one was squashed as soon as the cursor gets
 onto their line or column. In the last stage every currant is cheeky.
 
@@ -85,7 +85,7 @@ final stage, where every currant is cheeky.
 -}
 stages : List ( Float, Trick )
 stages =
-    [ ( 0.2, LineEnds ), ( 0.4, FirstNonBlank ), ( 0.6, RealLines ), ( 0.8, LastChange ) ]
+    [ ( 0.2, LineEnds ), ( 0.4, FileEnds ), ( 0.6, RealLines ), ( 0.8, LastChange ) ]
 
 
 
@@ -581,8 +581,8 @@ keysOf stage =
         Just LineEnds ->
             "gl gh"
 
-        Just FirstNonBlank ->
-            "gs"
+        Just FileEnds ->
+            "gg ge"
 
         Just RealLines ->
             "gj gk"
@@ -688,8 +688,8 @@ secondKeys stage =
         Just LineEnds ->
             [ "h", "l" ]
 
-        Just FirstNonBlank ->
-            [ "s" ]
+        Just FileEnds ->
+            [ "e" ]
 
         Just RealLines ->
             [ "j", "k" ]
@@ -725,8 +725,8 @@ hintFor texts stage =
         Just LineEnds ->
             texts.curiouser.lineEnds
 
-        Just FirstNonBlank ->
-            texts.curiouser.firstNonBlank
+        Just FileEnds ->
+            texts.curiouser.fileEnds
 
         Just RealLines ->
             texts.curiouser.realLines
