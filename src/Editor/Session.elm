@@ -1,6 +1,6 @@
 module Editor.Session exposing
     ( Session, start, fromBuffer, buffer, keystrokes, recentKeys, pendingCount, isWaiting, jumpLabels
-    , Outcome(..), press, pressWith, splash, replaceChar, matches, matchingLines
+    , Outcome(..), press, pressWith, escapeTimeout, splash, replaceChar, matches, matchingLines
     )
 
 {-| One player working on one text: the buffer plus what the status line
@@ -22,7 +22,7 @@ key after `g` cancels it.
 selects that word, as in Helix. Esc or a key that matches no label cancels.
 
 @docs Session, start, fromBuffer, buffer, keystrokes, recentKeys, pendingCount, isWaiting, jumpLabels
-@docs Outcome, press, pressWith, splash, replaceChar, matches, matchingLines
+@docs Outcome, press, pressWith, escapeTimeout, splash, replaceChar, matches, matchingLines
 
 -}
 
@@ -142,19 +142,44 @@ press =
     pressWith Nothing
 
 
+{-| The longest pause between the two escape keys, in milliseconds. Slower,
+and both are just typed, as when Helix's key sequences time out.
+-}
+escapeTimeout : Float
+escapeTimeout =
+    300
+
+
 {-| `press`, with the player's own escape keys: two keys that leave Insert
 mode like Esc, as a Helix config can set up (`;;`, say). In fullscreen the
 browser takes Esc for itself, so the game asks for these. They only work
-in Insert mode: the first key is typed as text, and the second takes it
-back and leaves Insert mode.
+in Insert mode, and only quickly one after the other (`escapeTimeout`):
+the first key is typed as text, and the second takes it back and leaves
+Insert mode.
+
+`sinceLastKey` is the game time since the key before, which the chapter
+knows from its clock (the session has none, so it stays the same between
+keys and the editor isn't drawn again every frame).
+
 -}
-pressWith : Maybe ( Char, Char ) -> (Command -> Bool) -> String -> Session -> Outcome
+pressWith : Maybe { keys : ( Char, Char ), sinceLastKey : Float } -> (Command -> Bool) -> String -> Session -> Outcome
 pressWith escapeKeys isUnlocked key ((Session s) as session) =
     let
         completesEscape =
             case escapeKeys of
-                Just ( first, second ) ->
-                    Core.mode s.buffer == Insert && key == String.fromChar second && s.lastKey == String.fromChar first
+                Just { keys, sinceLastKey } ->
+                    let
+                        ( first, second ) =
+                            keys
+                    in
+                    Core.mode s.buffer
+                        == Insert
+                        && key
+                        == String.fromChar second
+                        && s.lastKey
+                        == String.fromChar first
+                        && sinceLastKey
+                        <= escapeTimeout
 
                 Nothing ->
                     False

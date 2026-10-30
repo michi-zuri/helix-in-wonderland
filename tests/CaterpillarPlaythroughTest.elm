@@ -5,6 +5,8 @@ module CaterpillarPlaythroughTest exposing (suite)
 
 import Chapter.Caterpillar as Caterpillar
 import Chapter.Contract exposing (Context)
+import Editor.Core as Core exposing (Mode(..))
+import Editor.Session as Session
 import Expect
 import Keyboard.Layout exposing (Layout(..))
 import Language exposing (Language(..))
@@ -85,6 +87,25 @@ suite =
                     |> Playthrough.sendAll (Caterpillar.update withEscapeKeys) (List.repeat 12 (Caterpillar.KeyPressed "Enter"))
                     |> Playthrough.finishedWith
                     |> Expect.equal (Just 3)
+        , test "too slow between the two escape keys, and they are just typed" <|
+            \_ ->
+                let
+                    withEscapeKeys =
+                        { context | escapeKeys = Just ( ';', ';' ) }
+
+                    send =
+                        Playthrough.send (Caterpillar.update withEscapeKeys)
+                in
+                Playthrough.start Caterpillar.init
+                    |> Playthrough.sendAll (Caterpillar.update withEscapeKeys) (List.repeat 12 (Caterpillar.KeyPressed "Enter"))
+                    |> send (Caterpillar.KeyPressed "i")
+                    |> send (Caterpillar.KeyPressed ";")
+                    |> send (Caterpillar.Frame 400)
+                    |> send (Caterpillar.KeyPressed ";")
+                    |> .model
+                    |> .work
+                    |> Maybe.map (.session >> Session.buffer >> Core.mode)
+                    |> Expect.equal (Just Insert)
         , test "the chapter waits until the player is back in Normal mode" <|
             \_ ->
                 Playthrough.start Caterpillar.init
