@@ -60,6 +60,7 @@ type alias Model =
     , seed : Random.Seed
     , toast : Maybe Toast
     , links : Project.Links
+    , fullscreen : Bool
     }
 
 
@@ -123,6 +124,7 @@ init flags =
       , selectedChapter = firstUnfinished progress
       , seed = Random.initialSeed (decodeFlag "seed" Decode.int 1865)
       , toast = Nothing
+      , fullscreen = False
       , links = decodeFlag "links" Project.decoder Project.fallback
       }
     , Cmd.none
@@ -154,6 +156,8 @@ type Msg
     | ChoseChapter ChapterId
     | StartedChapter ChapterId
     | FinishedGame
+    | ToggledFullscreen
+    | FullscreenChanged Bool
 
 
 type alias KeyPress =
@@ -183,6 +187,19 @@ update msg model =
 
         ToggledSound ->
             saveSettings (\s -> { s | soundOn = not s.soundOn }) model
+
+        ToggledFullscreen ->
+            ( { model | fullscreen = not model.fullscreen }, Ports.setFullscreen (not model.fullscreen) )
+
+        FullscreenChanged inBrowserFullscreen ->
+            -- Leaving the browser's fullscreen (holding Esc, F11) leaves the
+            -- fullscreen layout too. Entering it changes nothing: the layout
+            -- was switched on already.
+            if inBrowserFullscreen then
+                ( model, Cmd.none )
+
+            else
+                ( { model | fullscreen = False }, Cmd.none )
 
         ToggledUnlockAll ->
             saveSettings (\s -> { s | unlockAll = not s.unlockAll }) model
@@ -550,6 +567,7 @@ subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
         [ Browser.Events.onKeyDown keyDecoder
+        , Ports.fullscreenChanged FullscreenChanged
         , if needsFrames model then
             Browser.Events.onAnimationFrameDelta Frame
 
@@ -641,7 +659,7 @@ view model =
                         (Ui.TheEnd.view { texts = texts, totalTarts = Progress.total model.progress, onMenu = OpenedMenu })
                         (Html.p [ A.class "big" ] [ Html.text texts.theEnd.teaser ])
     in
-    Html.div [ A.class "app" ]
+    Html.div [ A.classList [ ( "app", True ), ( "fullscreen", model.fullscreen ) ] ]
         [ Html.Lazy.lazy2 viewHeader texts model.settings
         , Html.main_ [ A.class "stage" ]
             [ screen.stage
@@ -653,7 +671,14 @@ view model =
                     Html.text ""
             ]
         , Html.section [ A.class "panel", A.attribute "aria-live" "polite" ] [ screen.panel ]
-        , Chrome.statusLine screen.status
+        , Chrome.statusLine
+            (if model.fullscreen then
+                Just { onExit = ToggledFullscreen, label = texts.exitFullscreen }
+
+             else
+                Nothing
+            )
+            screen.status
         , Html.Lazy.lazy3 viewFooter model.links texts (screenName model)
         ]
 
@@ -671,6 +696,7 @@ viewHeader texts settings =
         , onLayout = ChoseLayout
         , onToggleSound = ToggledSound
         , onMenu = OpenedMenu
+        , onFullscreen = ToggledFullscreen
         }
 
 

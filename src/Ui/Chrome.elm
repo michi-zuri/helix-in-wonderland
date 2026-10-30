@@ -21,9 +21,10 @@ header :
     , onLayout : Layout -> msg
     , onToggleSound : msg
     , onMenu : msg
+    , onFullscreen : msg
     }
     -> Html msg
-header { texts, settings, onLanguage, onLayout, onToggleSound, onMenu } =
+header { texts, settings, onLanguage, onLayout, onToggleSound, onMenu, onFullscreen } =
     let
         choice : (a -> msg) -> (a -> String) -> a -> a -> Html msg
         choice toMsg label current option =
@@ -59,20 +60,32 @@ header { texts, settings, onLanguage, onLayout, onToggleSound, onMenu } =
                     )
                 ]
             , Html.button [ A.class "plain", E.onClick onMenu ] [ Html.text texts.menu ]
+            , Html.button [ A.class "plain", E.onClick onFullscreen ] [ Html.text ("⛶ " ++ texts.fullscreen) ]
             ]
         ]
 
 
-statusLine : Status -> Html msg
-statusLine status =
+{-| In fullscreen, `exit` adds a small button at the end to leave it,
+since the settings bar is hidden then.
+-}
+statusLine : Maybe { onExit : msg, label : String } -> Status -> Html msg
+statusLine exit status =
     Html.div [ A.class "status-line" ]
-        [ Html.span
+        ([ Html.span
             [ A.class "status-mode"
             , A.classList [ ( "insert", status.mode == "INS" ) ]
             ]
             [ Html.text status.mode ]
-        , Html.span [ A.class "status-file" ] [ Html.text status.file ]
-        , Html.span [ A.class "status-gap" ] []
-        , Html.span [ A.class "status-keys" ] [ Html.text status.pendingKeys ]
-        , Html.span [ A.class "status-position" ] [ Html.text status.position ]
-        ]
+         , Html.span [ A.class "status-file" ] [ Html.text status.file ]
+         , Html.span [ A.class "status-gap" ] []
+         , Html.span [ A.class "status-keys" ] [ Html.text status.pendingKeys ]
+         , Html.span [ A.class "status-position" ] [ Html.text status.position ]
+         ]
+            ++ (case exit of
+                    Just { onExit, label } ->
+                        [ Html.button [ A.class "status-exit", E.onClick onExit, A.title label, A.attribute "aria-label" label ] [ Html.text "✕" ] ]
+
+                    Nothing ->
+                        []
+               )
+        )
