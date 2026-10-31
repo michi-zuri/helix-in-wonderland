@@ -12,7 +12,7 @@ Keyboards: German and Swiss QWERTZ, US QWERTY, French AZERTY.
 | 3 | Drink Me | typing whole words from memory, the keys `e` and `i`, the space bar |
 | 4 | Curiouser and Curiouser | Helix's jumps: `gh gl gg ge gj gk g.` (squash the currants) |
 | 5 | The Pool of Tears | select first, then act: `w x`, then `d`; `u` undoes; counts like `3w`, `2x`; `gh` to the line start |
-| 6 | Advice from a Caterpillar | Insert mode: `i`, `a`, `c`, and Esc back to Normal |
+| 6 | Advice from a Caterpillar | Insert mode: `i`, `a`, `c`, and Esc back to Normal; challenge adds wrong words and line endings (`gl a`), mad a whole garbled poem with a line to delete (`x d`) |
 
 Each chapter earns up to three tarts. A chapter opens once the one before it
 has at least one; a button on the title screen opens everything for grown-ups.

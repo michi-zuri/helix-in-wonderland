@@ -113,7 +113,9 @@ h2{margin:0;font-family:var(--display);font-weight:400;font-size:22px}
 .checklist li.done{color:var(--muted)}
 .checklist li.done::before{content:"[x]";color:var(--mint)}
 .checklist li.now{color:var(--honey)}
-.goal-text{margin:0;font-family:var(--mono);font-size:16.5px;line-height:1.2;color:var(--lavender);background:var(--midnight);padding:8px 10px;overflow-x:auto;white-space:pre}
+.goal-text{margin:0;font-family:var(--mono);font-size:16.5px;line-height:1.2;color:var(--lavender);background:var(--midnight);padding:8px 10px}
+.goal-text.long{font-size:13.5px}
+.goal-line{white-space:pre-wrap;overflow-wrap:anywhere;padding-left:1.5em;text-indent:-1.5em}
 .meter{height:8px;background:var(--midnight)}
 .meter i{display:block;height:100%;background:var(--mint);transition:width .2s}
 .words{font-family:var(--mono);font-size:33px;display:flex;flex-wrap:wrap;gap:.2em .6em;line-height:1.1}

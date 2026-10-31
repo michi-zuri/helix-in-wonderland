@@ -31,9 +31,25 @@ view steps =
         )
 
 
+{-| The text to aim for, one line per row. Long lines get a smaller font; a
+line still too long for the panel wraps, and its continuation is indented,
+so it still reads as one line.
+-}
 goal : String -> String -> Html msg
 goal label text =
     Html.div [ A.class "goal" ]
         [ Html.span [ A.class "eyebrow" ] [ Html.text label ]
-        , Html.pre [ A.class "goal-text" ] [ Html.text text ]
+        , Html.div
+            [ A.class "goal-text"
+            , A.classList [ ( "long", longestLine text > 44 ) ]
+            ]
+            (String.lines text
+                |> List.filter (not << String.isEmpty)
+                |> List.map (\line -> Html.div [ A.class "goal-line" ] [ Html.text line ])
+            )
         ]
+
+
+longestLine : String -> Int
+longestLine text =
+    String.lines text |> List.map String.length |> List.maximum |> Maybe.withDefault 0

@@ -1,13 +1,21 @@
 module Chapter.Caterpillar exposing (Model, Msg(..), init, update, view)
 
-{-| Chapter 6, "Advice from a Caterpillar": Insert mode. Words are missing
-from the Caterpillar's lines; the player moves to each gap, presses `i` (or
-`a`), types the word and returns to Normal mode with Esc. Typing practice
+{-| Chapter 6, "Advice from a Caterpillar": Insert mode. Typing practice
 and editing finally meet.
+
+  - Easy: words are missing from the Caterpillar's lines; move to each gap,
+    press `i`, type the word, go back to Normal mode with Esc.
+  - Challenge: gaps, a word missing at the end of a line (`a`), and wrong
+    words to change (`w` then `c`).
+  - Mad: Alice recites "You are old, Father William" to the Caterpillar and
+    gets it wrong, as in the book: all of the above, plus a line that
+    doesn't belong (`x` then `d`).
+
 -}
 
 import Chapter.Contract as Contract exposing (Context, Effect(..), Sound(..))
 import Chapter.Story as Story exposing (Story)
+import Difficulty exposing (Difficulty(..))
 import Editor.Core as Core exposing (Command(..), Mode(..))
 import Editor.Session as Session exposing (Session)
 import Editor.View
@@ -24,6 +32,7 @@ import Svg.Lazy
 import Texts exposing (Texts)
 import Ui.Checklist as Checklist
 import Ui.Dialog as Dialog
+import Ui.DifficultyChoice as DifficultyChoice exposing (Choice)
 
 
 file : String
@@ -37,6 +46,8 @@ file =
 
 type alias Model =
     { story : Story
+    , choice : Choice
+    , difficulty : Maybe Difficulty
     , work : Maybe Work
     , enteredInsert : Bool
     , typedInInsert : Bool
@@ -60,6 +71,7 @@ type alias Work =
 type alias Puzzle =
     { gaps : String
     , answer : String
+    , ourBest : Maybe Int
     }
 
 
@@ -71,6 +83,8 @@ init =
             , Dialog.say Narrator (.caterpillar >> .intro3)
             , Dialog.say Narrator (.caterpillar >> .intro4)
             ]
+    , choice = DifficultyChoice.start 0
+    , difficulty = Nothing
     , work = Nothing
     , enteredInsert = False
     , typedInInsert = False
@@ -83,6 +97,21 @@ init =
     }
 
 
+puzzleFor : Texts -> Difficulty -> Puzzle
+puzzleFor texts difficulty =
+    case difficulty of
+        Easy ->
+            { gaps = texts.caterpillar.gaps, answer = texts.caterpillar.answer, ourBest = Nothing }
+
+        Challenge ->
+            { gaps = texts.caterpillar.challengeStart, answer = texts.caterpillar.challengeAnswer, ourBest = Nothing }
+
+        Mad ->
+            { gaps = texts.caterpillar.madStart, answer = texts.caterpillar.madAnswer, ourBest = Just texts.caterpillar.madBest }
+
+
+{-| The text follows the language setting until a difficulty is picked.
+-}
 currentWork : Texts -> Model -> Work
 currentWork texts model =
     case model.work of
@@ -90,9 +119,11 @@ currentWork texts model =
             work
 
         Nothing ->
-            { puzzle = { gaps = texts.caterpillar.gaps, answer = texts.caterpillar.answer }
-            , session = Session.start texts.caterpillar.gaps
-            }
+            let
+                puzzle =
+                    puzzleFor texts (Maybe.withDefault Easy model.difficulty)
+            in
+            { puzzle = puzzle, session = Session.start puzzle.gaps }
 
 
 
@@ -111,9 +142,14 @@ update context msg model =
             case Story.hear context.texts key model.story of
                 Story.NotTalking ->
                     if Story.isPlaying model.story then
-                        -- Remember when, for the escape keys' timeout.
-                        edit context key model
-                            |> Tuple.mapFirst (\edited -> { edited | lastKeyAt = edited.clock })
+                        case model.difficulty of
+                            Just _ ->
+                                -- Remember when, for the escape keys' timeout.
+                                edit context key model
+                                    |> Tuple.mapFirst (\edited -> { edited | lastKeyAt = edited.clock })
+
+                            Nothing ->
+                                choose context.texts key model
 
                     else
                         ( model, [] )
@@ -125,13 +161,39 @@ update context msg model =
                     ( { model | story = story }, [ PlaySound TickSound ] )
 
                 Story.IntroOver story ->
-                    ( { model | story = story }, [] )
+                    ( { model | story = story, choice = DifficultyChoice.start model.clock }, [] )
 
                 Story.OutroOver story ->
                     ( { model | story = story }, [ Finish (score context.texts model) ] )
 
         Frame milliseconds ->
             ( { model | clock = model.clock + milliseconds, story = Story.tick milliseconds model.story }, [] )
+
+
+choose : Texts -> String -> Model -> ( Model, List Effect )
+choose texts key model =
+    case DifficultyChoice.press model.clock key model.choice of
+        DifficultyChoice.Moved choice ->
+            ( { model | choice = choice }, [ PlaySound TickSound ] )
+
+        DifficultyChoice.Picked difficulty ->
+            let
+                puzzle =
+                    puzzleFor texts difficulty
+            in
+            ( { model | difficulty = Just difficulty, work = Just { puzzle = puzzle, session = Session.start puzzle.gaps } }
+            , [ PlaySound PickupSound ]
+            )
+
+        DifficultyChoice.Unchanged ->
+            ( model, [] )
+
+
+{-| `e` and `b` wait for a later chapter, as in chapter 5.
+-}
+isUnlocked : Command -> Bool
+isUnlocked command =
+    not (List.member command [ SelectNextWordEnd, SelectPreviousWordStart ])
 
 
 edit : Context -> String -> Model -> ( Model, List Effect )
@@ -143,7 +205,7 @@ edit context key model =
     case
         Session.pressWith
             (Maybe.map (\keys -> { keys = keys, sinceLastKey = model.clock - model.lastKeyAt }) context.escapeKeys)
-            (always True)
+            isUnlocked
             key
             work.session
     of
@@ -213,21 +275,42 @@ finishIfAnswered puzzle session ( model, effects ) =
         ( model, effects )
 
 
+{-| The difficulty sets the most tarts there are (easy 1, challenge 2,
+mad 3); many Backspaces can cost some of them.
+-}
 score : Texts -> Model -> Contract.Score
 score texts model =
-    { tarts =
-        if model.backspaces <= 3 then
-            3
+    let
+        difficulty =
+            Maybe.withDefault Easy model.difficulty
 
-        else if model.backspaces <= 8 then
-            2
+        work =
+            currentWork texts model
 
-        else
-            1
+        forBackspaces =
+            if model.backspaces <= 3 then
+                3
+
+            else if model.backspaces <= 8 then
+                2
+
+            else
+                1
+    in
+    { tarts = min (Difficulty.tarts difficulty) forBackspaces
     , stats =
-        [ { label = .results >> .keystrokes, value = \_ -> String.fromInt (Session.keystrokes (currentWork texts model).session) }
-        , { label = .results >> .backspaces, value = \_ -> String.fromInt model.backspaces }
-        ]
+        List.concat
+            [ [ { label = .results >> .difficulty, value = \t -> Difficulty.name t difficulty }
+              , { label = .results >> .keystrokes, value = \_ -> String.fromInt (Session.keystrokes work.session) }
+              ]
+            , case work.puzzle.ourBest of
+                Just best ->
+                    [ { label = .caterpillar >> .ourBest, value = \_ -> String.fromInt best } ]
+
+                Nothing ->
+                    []
+            , [ { label = .results >> .backspaces, value = \_ -> String.fromInt model.backspaces } ]
+            ]
     }
 
 
@@ -256,6 +339,17 @@ scene context model =
         Html.div [ A.class "stage-scene" ]
             [ viewMushroom model.clock
             , Html.Lazy.lazy viewEditor work.session
+            , if model.difficulty == Nothing && Story.isPlaying model.story then
+                DifficultyChoice.view
+                    { texts = context.texts
+                    , title = context.texts.caterpillar.chooseTitle
+                    , hint = context.texts.caterpillar.chooseHint
+                    , info = difficultyInfo context.texts
+                    }
+                    model.choice
+
+              else
+                Html.text ""
             , Story.view context.texts model.story
             ]
     , panel = viewPanel context model work
@@ -266,6 +360,51 @@ scene context model =
         , position = Editor.View.position buffer
         }
     }
+
+
+difficultyInfo : Texts -> Difficulty -> String
+difficultyInfo texts difficulty =
+    case difficulty of
+        Easy ->
+            texts.caterpillar.easyInfo
+
+        Challenge ->
+            texts.caterpillar.challengeInfo
+
+        Mad ->
+            texts.caterpillar.madInfo
+
+
+{-| The hint for challenge and mad, one at a time: what to do with a
+selection, at the end of a line, while typing, or else how to find what
+differs from the goal.
+-}
+hint : Texts -> Session -> String
+hint texts session =
+    let
+        buffer =
+            Session.buffer session
+
+        ( first, last ) =
+            Core.selectionRange buffer
+
+        text =
+            Core.toString buffer
+
+        atLineEnd =
+            String.slice (Core.head buffer + 1) (Core.head buffer + 2) text == "\n"
+    in
+    if Core.mode buffer == Insert then
+        texts.caterpillar.hintTyping
+
+    else if first /= last then
+        texts.caterpillar.hintChange
+
+    else if atLineEnd then
+        texts.caterpillar.hintAppend
+
+    else
+        texts.caterpillar.hintFind
 
 
 viewPanel : Context -> Model -> Work -> Html msg
@@ -279,18 +418,44 @@ viewPanel context model work =
 
         backInNormal =
             Core.mode (Session.buffer work.session) == Normal
+
+        instructions =
+            case model.difficulty of
+                Just Easy ->
+                    [ Checklist.view
+                        [ ( model.enteredInsert, texts.caterpillar.pressI )
+                        , ( model.typedInInsert, texts.caterpillar.typeWord )
+                        , ( model.leftInsert, texts.caterpillar.pressEsc )
+                        , ( filled == 3 && backInNormal, texts.caterpillar.fillAll filled )
+                        ]
+                    , Html.p [ A.class "eyebrow" ] [ Html.text texts.caterpillar.tip ]
+                    ]
+
+                _ ->
+                    [ Html.p [ A.class "big" ] [ Html.text (hint texts work.session) ] ]
+    in
+    case model.difficulty of
+        Nothing ->
+            Html.div [ A.class "panel-content" ]
+                [ Html.p [ A.class "big" ] [ Html.text texts.caterpillar.chooseTitle ]
+                , Html.p [] [ Html.text texts.caterpillar.chooseHint ]
+                ]
+
+        Just difficulty ->
+            viewWorkPanel context difficulty instructions work
+
+
+viewWorkPanel : Context -> Difficulty -> List (Html msg) -> Work -> Html msg
+viewWorkPanel context difficulty instructions work =
+    let
+        texts =
+            context.texts
     in
     Html.div [ A.class "panel-content" ]
-        [ Html.div [ A.class "columns" ]
+        [ Html.span [ A.class "eyebrow" ] [ Html.text (Difficulty.name texts difficulty) ]
+        , Html.div [ A.class "columns" ]
             [ Html.div [ A.class "column" ]
-                ([ Checklist.view
-                    [ ( model.enteredInsert, texts.caterpillar.pressI )
-                    , ( model.typedInInsert, texts.caterpillar.typeWord )
-                    , ( model.leftInsert, texts.caterpillar.pressEsc )
-                    , ( filled == 3 && backInNormal, texts.caterpillar.fillAll filled )
-                    ]
-                 , Html.p [ A.class "eyebrow" ] [ Html.text texts.caterpillar.tip ]
-                 ]
+                (instructions
                     ++ (case context.escapeKeys of
                             Just ( first, second ) ->
                                 [ Html.p [ A.class "tip" ] [ Html.text (texts.escapeKeysWork (String.fromList [ first, second ])) ] ]
