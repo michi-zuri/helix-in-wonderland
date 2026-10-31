@@ -256,6 +256,13 @@ type alias PoolTexts =
     }
 
 
+{-| Chapter 6's texts. Easy has gaps to fill (`gaps`, `answer`). Challenge
+mixes missing words (`i`), a word missing at a line's end (`a`) and wrong
+words (`w` then `c`). Mad is the poem Alice recites to the Caterpillar in
+the book, "You are old, Father William", as she gets it wrong: wrong words,
+missing words, line endings and a line that doesn't belong (`x` then `d`).
+`madBest` is our own best keystroke count for it; a test plays that way.
+-}
 type alias CaterpillarTexts =
     { intro1 : String
     , intro2 : String
@@ -265,6 +272,21 @@ type alias CaterpillarTexts =
     , finale2 : String
     , gaps : String
     , answer : String
+    , challengeStart : String
+    , challengeAnswer : String
+    , madStart : String
+    , madAnswer : String
+    , madBest : Int
+    , chooseTitle : String
+    , chooseHint : String
+    , easyInfo : String
+    , challengeInfo : String
+    , madInfo : String
+    , hintFind : String
+    , hintChange : String
+    , hintAppend : String
+    , hintTyping : String
+    , ourBest : String
     , pressI : String
     , typeWord : String
     , pressEsc : String
@@ -576,6 +598,54 @@ english =
         , typeWord = "Type the missing word."
         , pressEsc = "Press Esc to go back to NOR."
         , fillAll = \filled -> "Fill all three gaps (" ++ String.fromInt filled ++ " of 3), then end in NOR."
+        , challengeStart =
+            lines
+                [ "\"What do you mean by this?\" said the Caterpillar sternly."
+                , "\"Explain !\""
+                , "\"I can't explain myself, I'm afraid, sir,\" said"
+                , "\"Keep your hat,\" said the Caterpillar."
+                ]
+        , challengeAnswer =
+            lines
+                [ "\"What do you mean by that?\" said the Caterpillar sternly."
+                , "\"Explain yourself!\""
+                , "\"I can't explain myself, I'm afraid, sir,\" said Alice"
+                , "\"Keep your temper,\" said the Caterpillar."
+                ]
+        , madStart =
+            lines
+                [ "\"You are young, Father William,\" the old man said,"
+                , "\"And your hair has become white;"
+                , "And yet you incessantly sit on your hat -"
+                , "Do you think, at your age, it is right?\""
+                , "And the Caterpillar smoked his long pipe."
+                , "\"In my youth,\" Father William replied to his"
+                , "\"I feared it might tickle the brain;"
+                , "But, now that I'm sure I have none,"
+                , "Why, I do it again and"
+                ]
+        , madAnswer =
+            lines
+                [ "\"You are old, Father William,\" the young man said,"
+                , "\"And your hair has become very white;"
+                , "And yet you incessantly stand on your head -"
+                , "Do you think, at your age, it is right?\""
+                , "\"In my youth,\" Father William replied to his son,"
+                , "\"I feared it might injure the brain;"
+                , "But, now that I'm perfectly sure I have none,"
+                , "Why, I do it again and again.\""
+                ]
+        , madBest = 101
+        , chooseTitle = "How grumpy is the Caterpillar?"
+        , chooseHint = "j / k to choose · Enter to start"
+        , easyInfo = "Fill the gaps."
+        , challengeInfo = "Gaps, wrong words and line endings."
+        , madInfo = "Alice recites a whole poem, all wrong."
+        , hintFind = "Compare with the goal. A word missing: i inserts before the cursor. A wrong word: select it with w, then c. A line that doesn't belong: x, then d."
+        , hintChange = "Selected! c deletes the selection and starts inserting: type the right word."
+        , hintAppend = "At the end of a line, a inserts after the cursor (gl gets you there)."
+        , hintTyping = "Type, then go back to NOR with Esc."
+        , ourBest = "Our best"
         , goal = "What the Caterpillar really said:"
         , tip = "a inserts after the cursor. c deletes a selection and starts inserting."
         , escTip = "If Esc does nothing in your browser, Ctrl+[ works too."
@@ -869,6 +939,54 @@ german =
         , typeWord = "Tippe das fehlende Wort."
         , pressEsc = "Drücke Esc, um zurück zu NOR zu kommen."
         , fillAll = \filled -> "Füll alle drei Lücken (" ++ String.fromInt filled ++ " von 3) und ende in NOR."
+        , challengeStart =
+            lines
+                [ "\"Was meinst du dazu?\", fragte die Raupe streng."
+                , "\"Erkläre !\""
+                , "\"Ich kann mich nicht erklären, fürchte ich\", sagte"
+                , "\"Bewahre die Mütze\", sagte die Raupe."
+                ]
+        , challengeAnswer =
+            lines
+                [ "\"Was meinst du damit?\", fragte die Raupe streng."
+                , "\"Erkläre dich!\""
+                , "\"Ich kann mich nicht erklären, fürchte ich\", sagte Alice"
+                , "\"Bewahre die Fassung\", sagte die Raupe."
+                ]
+        , madStart =
+            lines
+                [ "\"Du bist jung, Vater William\", sprach der alte Mann,"
+                , "\"und dein Haar ist weiss und dünn;"
+                , "doch du sitzt auf dem Hut, so oft man nur kann."
+                , "Hat das in deinem Alter noch Sinn?\""
+                , "Und die Raupe rauchte die lange Pfeife."
+                , "\"In der Jugend\", sprach Vater William zum"
+                , "\"da hatte ich Angst um mein Ohr;"
+                , "doch jetzt weiss ich, ich habe keins schon,"
+                , "drum steh ich und steh auf der"
+                ]
+        , madAnswer =
+            lines
+                [ "\"Du bist alt, Vater William\", sprach der junge Mann,"
+                , "\"und dein Haar ist schon weiss und dünn;"
+                , "doch du stehst auf dem Kopf, so oft man nur kann."
+                , "Hat das in deinem Alter noch Sinn?\""
+                , "\"In der Jugend\", sprach Vater William zum Sohn,"
+                , "\"da hatte ich Angst um mein Hirn;"
+                , "doch jetzt weiss ich sicher, ich habe keins schon,"
+                , "drum steh ich und steh auf der Stirn.\""
+                ]
+        , madBest = 100
+        , chooseTitle = "Wie mürrisch ist die Raupe?"
+        , chooseHint = "j / k zum Wählen · Enter zum Starten"
+        , easyInfo = "Füll die Lücken."
+        , challengeInfo = "Lücken, falsche Wörter und Zeilenenden."
+        , madInfo = "Alice sagt ein ganzes Gedicht auf, alles falsch."
+        , hintFind = "Vergleiche mit dem Ziel. Fehlt ein Wort: i fügt vor dem Cursor ein. Ein falsches Wort: Wähle es mit w aus, dann c. Eine Zeile, die nicht hineingehört: x, dann d."
+        , hintChange = "Ausgewählt! c löscht die Auswahl und beginnt mit dem Einfügen: Tippe das richtige Wort."
+        , hintAppend = "Am Ende einer Zeile fügt a hinter dem Cursor ein (mit gl kommst du hin)."
+        , hintTyping = "Tippe, dann mit Esc zurück zu NOR."
+        , ourBest = "Unser Rekord"
         , goal = "Was die Raupe wirklich sagt:"
         , tip = "a fügt hinter dem Cursor ein. c löscht eine Auswahl und beginnt mit dem Einfügen."
         , escTip = "Wenn Esc im Browser nicht geht, funktioniert auch Strg+[."
