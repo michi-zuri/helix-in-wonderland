@@ -57,14 +57,14 @@ p{margin:0}
 .editor-code .selected{background:#540099}
 .editor-code .cursor{background:var(--lilac);color:var(--revolver)}
 .editor-code .insertion-point{box-shadow:inset 3px 0 0 var(--honey)}
-.overlay{position:absolute;inset:0;display:grid;place-items:center;background:rgba(18,10,24,.66);overflow:auto;padding:16px}
+.overlay{position:absolute;inset:0;display:grid;place-items:safe center;background:rgba(18,10,24,.66);overflow:auto;padding:16px}
 .card{background:var(--revolver);border:3px solid var(--plum);box-shadow:6px 6px 0 var(--ink);padding:16px 22px;max-width:600px;width:100%;display:flex;flex-direction:column;gap:10px}
 .logo{margin:0;font-family:var(--display);font-weight:400;font-size:44px;line-height:1.1;text-shadow:3px 3px 0 #540099;text-wrap:balance}
 .logo-accent{color:var(--honey)}
 .logo small{font-size:.55em;color:var(--lavender)}
 .tagline{color:var(--muted);max-width:60ch;font-size:16.5px;line-height:1.35}
-.chapters{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
-.chapters li{display:grid;grid-template-columns:2.2em 1fr auto;gap:10px;align-items:center;padding:3px 10px;line-height:1.3;border:2px solid transparent;cursor:pointer}
+.chapters{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.chapters li{display:grid;grid-template-columns:2.2em 1fr auto;gap:10px;align-items:center;padding:1px 10px;line-height:1.3;border:2px solid transparent;cursor:pointer}
 .chapters li.selected{border-color:var(--honey);background:var(--midnight)}
 .chapters li.locked{opacity:.45;cursor:not-allowed}
 .chapter-number{font-family:var(--display);color:var(--honey);font-size:22px}

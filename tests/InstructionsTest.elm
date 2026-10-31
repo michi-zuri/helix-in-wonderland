@@ -26,7 +26,7 @@ context =
 
 rabbitHoleAfterStory : RabbitHole.Model
 rabbitHoleAfterStory =
-    Playthrough.start (RabbitHole.init (Random.initialSeed 1))
+    Playthrough.start (RabbitHole.init RabbitHole.RightHand (Random.initialSeed 1))
         |> Playthrough.sendAll (RabbitHole.update context) (List.repeat 12 (RabbitHole.KeyPressed "Enter"))
         |> .model
 
@@ -43,7 +43,7 @@ suite =
     describe "Instructions wait until they are relevant"
         [ test "chapter 1: no difficulty question while the story plays" <|
             \_ ->
-                (RabbitHole.view context (RabbitHole.init (Random.initialSeed 1))).panel
+                (RabbitHole.view context (RabbitHole.init RabbitHole.RightHand (Random.initialSeed 1))).panel
                     |> Query.fromHtml
                     |> Query.hasNot [ text context.texts.rabbitHole.chooseHint ]
         , test "chapter 1: the difficulty question once the story is over" <|

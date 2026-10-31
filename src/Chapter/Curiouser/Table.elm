@@ -4,7 +4,7 @@ module Chapter.Curiouser.Table exposing
     , Trick(..), place, placeAway, isInSight
     )
 
-{-| The table chapter 4 plays on: lines of cake crumbs (`.`) of different
+{-| The table chapter 5 plays on: lines of cake crumbs (`.`) of different
 lengths, two so long that they wrap onto more screen rows. Every crumb is a
 word of its own, so `gw` gives each one a label; two spaces between crumbs
 keep the two-letter labels apart. Crumbs sit on every third column (the

@@ -99,14 +99,19 @@ The local folder may be called `helix-wonderland`, but the repository is
 
 **Keys, by chapter** (what's taught where; don't use untaught keys in hints or
 "Our best" routes)
-1. Home row typing. 2. `h j k l`, counts like `5j`. 3. Typing words, `e`, `i`,
-space. 4. `gh gl gg ge gj gk g.` (`gw` works but is deliberately not taught;
-finishing chapter 4 with only `gw` jumps and no mistake brings out the
+1. Home row typing, right hand only (`j k l` + the little finger's key, then
+`h`). 2. `h j k l`, counts like `5j`. 3. Home row typing, both hands (the same
+Rabbit Hole module with `Hands = BothHands`, #69). 4. Typing words, `e`, `i`,
+space. 5. `gh gl gg ge gj gk g.` (`gw` works but is deliberately not taught;
+finishing chapter 5 with only `gw` jumps and no mistake brings out the
 Cheshire Cat, an easter egg nothing announces).
-5. `w`, `x`, `d`, `u`, counts like `3w`, `2x`, `gh`. 6. Insert mode `i`, `a`,
+6. `w`, `x`, `d`, `u`, counts like `3w`, `2x`, `gh`. 7. Insert mode `i`, `a`,
 `c`, Esc; Challenge adds `gl a`, Mad adds `x d` for a line that doesn't belong.
 
-- `e` and `b` are **locked** in chapters 5 and 6: the owner wants to teach them
+Issues and PRs before #69 use the old numbering (Rabbit Hole 1, Hall 2,
+Drink Me 3, Curiouser 4, Pool 5, Caterpillar 6).
+
+- `e` and `b` are **locked** in chapters 6 and 7: the owner wants to teach them
   later, with more thought about why they're needed.
 
 **Chapter specifics worth knowing**
@@ -115,11 +120,15 @@ Cheshire Cat, an easter egg nothing announces).
   A door that would lead into the curtain's part of the hall steers away after a
   hidden 4-second clock, so a slow player can't reach the curtain that way; the
   countdown is deliberately not shown (#63).
-- Chapter 3: typing from memory; a word hides after its first key and starts
+- Chapters 1 and 3 share `Chapter.RabbitHole`; `Hands` picks the stages, the
+  last story line and the status-line file. A chapter opens if the one before
+  has a tart, or if it or any later chapter has one, so reordering never locks
+  away what a player reached (`Progress.isOpen`).
+- Chapter 4: typing from memory; a word hides after its first key and starts
   over after a pause over 300 ms between correct keys (#35).
-- Chapter 4: lines without indents (#55); cheeky currants (`g.`) are shy and run
+- Chapter 5: lines without indents (#55); cheeky currants (`g.`) are shy and run
   off once the cursor shares their line, screen row or column (#47).
-- Chapter 6: Mad is Alice's garbled "You are old, Father William" (#65). A
+- Chapter 7: Mad is Alice's garbled "You are old, Father William" (#65). A
   smoke-ring twist was discussed and postponed.
 
 ## Conventions (in addition to README.md)
