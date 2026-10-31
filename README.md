@@ -7,12 +7,13 @@ Keyboards: German and Swiss QWERTZ, US QWERTY, French AZERTY.
 
 | # | Chapter | Teaches |
 |---|---------|---------|
-| 1 | Down the Rabbit Hole | the home row, finger by finger (catch jars by their letter) |
+| 1 | Down the Rabbit Hole | the home row with the right hand only, finger by finger, then `h` (catch jars by their letter) |
 | 2 | The Hall of Doors | Helix movement with `h j k l`, and counts like `5j` |
-| 3 | Drink Me | typing whole words from memory, the keys `e` and `i`, the space bar |
-| 4 | Curiouser and Curiouser | Helix's jumps: `gh gl gg ge gj gk g.` (squash the currants) |
-| 5 | The Pool of Tears | select first, then act: `w x`, then `d`; `u` undoes; counts like `3w`, `2x`; `gh` to the line start |
-| 6 | Advice from a Caterpillar | Insert mode: `i`, `a`, `c`, and Esc back to Normal; challenge adds wrong words and line endings (`gl a`), mad a whole garbled poem with a line to delete (`x d`) |
+| 3 | Down the Rabbit Hole | the whole home row with both hands, finger pair by finger pair |
+| 4 | Drink Me | typing whole words from memory, the keys `e` and `i`, the space bar |
+| 5 | Curiouser and Curiouser | Helix's jumps: `gh gl gg ge gj gk g.` (squash the currants) |
+| 6 | The Pool of Tears | select first, then act: `w x`, then `d`; `u` undoes; counts like `3w`, `2x`; `gh` to the line start |
+| 7 | Advice from a Caterpillar | Insert mode: `i`, `a`, `c`, and Esc back to Normal; challenge adds wrong words and line endings (`gl a`), mad a whole garbled poem with a line to delete (`x d`) |
 
 Each chapter earns up to three tarts. A chapter opens once the one before it
 has at least one; a button on the title screen opens everything for grown-ups.
@@ -66,12 +67,12 @@ src/
   Chapter/Contract.elm      what every chapter receives and may ask for   ← start here
   Chapter/Story.elm         the story → play → story rhythm all chapters share
   Chapter/Id.elm            the list of chapters, in order
-  Chapter/RabbitHole.elm    chapter 1   (art in Chapter/RabbitHole/Well.elm)
+  Chapter/RabbitHole.elm    chapters 1 and 3, right hand and both hands (art in Chapter/RabbitHole/Well.elm)
   Chapter/Hall.elm          chapter 2   (tiles in Chapter/Hall/Tiles.elm)
-  Chapter/DrinkMe.elm       chapter 3
-  Chapter/Curiouser.elm     chapter 4   (the crumb table in Chapter/Curiouser/Table.elm)
-  Chapter/Pool.elm          chapter 5
-  Chapter/Caterpillar.elm   chapter 6
+  Chapter/DrinkMe.elm       chapter 4
+  Chapter/Curiouser.elm     chapter 5   (the crumb table in Chapter/Curiouser/Table.elm)
+  Chapter/Pool.elm          chapter 6
+  Chapter/Caterpillar.elm   chapter 7
   Editor/Core.elm           a pure model of Helix: text, selection, modes, commands
   Editor/Keymap.elm         which key means which editor command
   Editor/Session.elm        one player working on one text: buffer, keystrokes, locks
@@ -142,7 +143,7 @@ tools/                      build script, plus offline helpers (see below)
 - German texts use Swiss spelling: `ss`, never `ß`.
 - Keys are handled by the character they type (`KeyboardEvent.key`), so
   Helix commands work on every layout. Layouts only affect teaching:
-  chapter 1's home-row stages and a digits hint on AZERTY.
+  the Rabbit Hole's home-row stages and a digits hint on AZERTY.
 - Instructions wait until they are relevant. While a story plays nothing
   can be typed, so a chapter shows no instructions then: its `view` goes
   through `Chapter.Story.instructions`, which empties the panel during the

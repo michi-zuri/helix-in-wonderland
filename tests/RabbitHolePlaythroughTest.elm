@@ -1,6 +1,7 @@
 module RabbitHolePlaythroughTest exposing (suite)
 
-{-| Play chapter 1 with a fixed random seed, so every run sees the same jars.
+{-| Play the Rabbit Hole with a fixed random seed, so every run sees the same
+jars: chapter 3 with both hands, and chapter 1 with the right hand only.
 
 The player in these tests reads the story, picks a difficulty with its
 number key, and presses the letter of every jar the moment it appears. That
@@ -29,7 +30,12 @@ contextFor layout =
 
 start : Run RabbitHole.Model
 start =
-    Playthrough.start (RabbitHole.init (Random.initialSeed 42))
+    startWith RabbitHole.BothHands
+
+
+startWith : RabbitHole.Hands -> Run RabbitHole.Model
+startWith hands =
+    Playthrough.start (RabbitHole.init hands (Random.initialSeed 42))
 
 
 type alias Player =
@@ -119,6 +125,11 @@ playToTheEnd who =
     playUntil finished who 20000 start
 
 
+playToTheEndWith : RabbitHole.Hands -> Player -> Run RabbitHole.Model
+playToTheEndWith hands who =
+    playUntil finished who 20000 (startWith hands)
+
+
 {-| Game seconds between the last basic jar (the 40th) and touching down.
 -}
 secondsBeyondBasicJars : Difficulty -> Float
@@ -134,16 +145,24 @@ secondsBeyondBasicJars difficulty =
 
 
 lettersSeenInStages : Layout -> List Char
-lettersSeenInStages layout =
+lettersSeenInStages =
+    lettersSeenWith RabbitHole.BothHands
+
+
+{-| Every letter on a jar during the six stages and well beyond (mad goes on
+after the stages, with all the chapter's keys).
+-}
+lettersSeenWith : RabbitHole.Hands -> Layout -> List Char
+lettersSeenWith hands layout =
     let
         collect fuel run seen =
-            if fuel <= 0 || run.model.hits >= 40 then
+            if fuel <= 0 || run.model.hits >= 60 then
                 seen
 
             else
                 collect (fuel - 1) (step { layout = layout, difficulty = Mad, mistakeEvery = 0, letGoAtDepth = Nothing } fuel run) (List.map .letter run.model.jars ++ seen)
     in
-    collect 20000 start []
+    collect 20000 (startWith hands) []
 
 
 chosen : Difficulty -> Run RabbitHole.Model
@@ -151,9 +170,75 @@ chosen difficulty =
     playUntil (\run -> run.model.difficulty /= Nothing) (player difficulty) 100 start
 
 
+distinct : List Char -> List Char
+distinct letters =
+    List.foldl
+        (\letter found ->
+            if List.member letter found then
+                found
+
+            else
+                found ++ [ letter ]
+        )
+        []
+        letters
+        |> List.sort
+
+
+rightHandTests : Test
+rightHandTests =
+    describe "Chapter 1: Down the Rabbit Hole, right hand only"
+        [ describe "the same difficulties and tarts as with both hands"
+            (List.map
+                (\( difficulty, tarts ) ->
+                    test (numberKey difficulty) <|
+                        \_ ->
+                            playToTheEndWith RabbitHole.RightHand (player difficulty)
+                                |> Playthrough.finishedWith
+                                |> Expect.equal (Just tarts)
+                )
+                [ ( Easy, 1 ), ( Challenge, 2 ), ( Mad, 3 ) ]
+            )
+        , describe "only the right hand's keys: its home row and h"
+            (List.map
+                (\( layout, keys ) ->
+                    test (Keyboard.Layout.toKey layout) <|
+                        \_ ->
+                            lettersSeenWith RabbitHole.RightHand layout
+                                |> distinct
+                                |> Expect.equal (List.sort keys)
+                )
+                [ ( UsQwerty, [ 'h', 'j', 'k', 'l', ';' ] )
+                , ( SwissQwertz, [ 'h', 'j', 'k', 'l', 'ö' ] )
+                , ( GermanQwertz, [ 'h', 'j', 'k', 'l', 'ö' ] )
+                , ( FrenchAzerty, [ 'h', 'j', 'k', 'l', 'm' ] )
+                ]
+            )
+        , test "the first jars are all J, for the index finger" <|
+            \_ ->
+                startWith RabbitHole.RightHand
+                    |> playUntil (\run -> run.model.hits >= 6) (player Easy) 2000
+                    |> (\run -> ( run.model.hits, run.model.stage ))
+                    |> Expect.equal ( 6, 1 )
+        , test "all its keys on a Swiss keyboard: J K L Ö, and H" <|
+            \_ ->
+                RabbitHole.keysOf RabbitHole.RightHand SwissQwertz
+                    |> List.sort
+                    |> Expect.equal (List.sort [ 'h', 'j', 'k', 'l', 'ö' ])
+        ]
+
+
 suite : Test
 suite =
-    describe "Chapter 1: Down the Rabbit Hole"
+    describe "The Rabbit Hole"
+        [ rightHandTests
+        , bothHandsTests
+        ]
+
+
+bothHandsTests : Test
+bothHandsTests =
+    describe "Chapter 3: Down the Rabbit Hole, both hands"
         [ describe "difficulties"
             [ test "easy: the 40 basic jars reach the ground, worth one tart" <|
                 \_ ->

@@ -1,6 +1,6 @@
 module CaterpillarPlaythroughTest exposing (suite)
 
-{-| Play chapter 6 in all three difficulties: fill gaps, change wrong words,
+{-| Play chapter 7 in all three difficulties: fill gaps, change wrong words,
 add line endings and delete a line that doesn't belong.
 -}
 
@@ -186,7 +186,7 @@ onlyHint wanted =
 
 suite : Test
 suite =
-    describe "Chapter 6: Advice from a Caterpillar"
+    describe "Chapter 7: Advice from a Caterpillar"
         [ describe "the difficulty sets the most tarts there are"
             [ test "easy: filling every gap and pressing Esc earns one tart" <|
                 \_ ->

@@ -1,8 +1,12 @@
-module Chapter.RabbitHole exposing (Model, Msg(..), groundDepth, init, jarSpeed, update, view)
+module Chapter.RabbitHole exposing (Hands(..), Model, Msg(..), groundDepth, init, jarSpeed, keysOf, update, view)
 
-{-| Chapter 1, "Down the Rabbit Hole": the home row. Alice falls down the
-well; jars float up with a letter on their label, and pressing that letter
-catches the jar. Six stages introduce the fingers pair by pair.
+{-| Chapters 1 and 3, "Down the Rabbit Hole": the home row. Alice falls down
+the well; jars float up with a letter on their label, and pressing that
+letter catches the jar. Six stages introduce the fingers one by one.
+
+The chapter comes in two versions (`Hands`): chapter 1 is for the right hand
+only, the hand that moves in Helix with `h j k l` in chapter 2; chapter 3 is
+the same fall with both hands, finger pair by finger pair.
 
 The fall: every jar caught brings Alice one step closer to the ground.
 Every mistake, a wrong key or a jar that floats away, lifts her back up a
@@ -42,9 +46,21 @@ import Ui.Dialog as Dialog
 import Ui.DifficultyChoice as DifficultyChoice exposing (Choice)
 
 
-file : String
-file =
-    "01_rabbit_hole.txt"
+{-| Which hands the chapter trains.
+-}
+type Hands
+    = RightHand
+    | BothHands
+
+
+file : Hands -> String
+file hands =
+    case hands of
+        RightHand ->
+            "01_right_hand.txt"
+
+        BothHands ->
+            "03_rabbit_hole.txt"
 
 
 
@@ -58,11 +74,57 @@ type alias Stage =
     }
 
 
-{-| Index fingers, middle, ring, little fingers, all eight, then the index
-fingers stretching inwards for g and h.
+{-| Index fingers, middle, ring, little fingers, all of them, then the index
+fingers stretching inwards for g and h. With the right hand only: j, k, l,
+the little finger's key, all four, then h.
 -}
-stages : Layout -> List Stage
-stages layout =
+stages : Hands -> Layout -> List Stage
+stages hands layout =
+    case hands of
+        BothHands ->
+            bothHandsStages layout
+
+        RightHand ->
+            rightHandStages layout
+
+
+rightHandStages : Layout -> List Stage
+rightHandStages layout =
+    let
+        home =
+            Layout.homeKeys layout
+
+        finger index describe =
+            let
+                key =
+                    home.right |> List.drop index |> List.head |> Maybe.withDefault ' '
+            in
+            { keys = [ key ]
+            , catches = 6
+            , describe = \texts -> describe texts (upper key)
+            }
+    in
+    [ finger 0 (.rabbitHole >> .rightIndex)
+    , finger 1 (.rabbitHole >> .rightMiddle)
+    , finger 2 (.rabbitHole >> .rightRing)
+    , finger 3 (.rabbitHole >> .rightLittle)
+    , { keys = home.right, catches = 10, describe = .rabbitHole >> .allFour }
+    , { keys = [ rightStretch layout ]
+      , catches = 6
+      , describe = \texts -> texts.rabbitHole.rightStretch (upper (rightStretch layout))
+      }
+    ]
+
+
+{-| The key the right index finger stretches to: h on every layout.
+-}
+rightStretch : Layout -> Char
+rightStretch layout =
+    Layout.stretchKeys layout |> List.drop 1 |> List.head |> Maybe.withDefault 'h'
+
+
+bothHandsStages : Layout -> List Stage
+bothHandsStages layout =
     let
         home =
             Layout.homeKeys layout
@@ -109,30 +171,46 @@ upper char =
     String.toUpper (String.fromChar char)
 
 
-stageAt : Layout -> Int -> Maybe Stage
-stageAt layout index =
-    stages layout |> List.drop index |> List.head
+stageAt : Hands -> Layout -> Int -> Maybe Stage
+stageAt hands layout index =
+    stages hands layout |> List.drop index |> List.head
 
 
-{-| The jars of all six stages together.
+{-| The jars of all six stages together: the same for both versions, so
+they share the depths of the well.
 -}
 basicJars : Int
 basicJars =
-    stages Layout.UsQwerty |> List.map .catches |> List.sum
+    stages BothHands Layout.UsQwerty |> List.map .catches |> List.sum
 
 
-{-| After the six stages, jars come with all the home-row keys.
+{-| Every key the chapter's jars can carry.
 -}
-allKeysStage : Layout -> Stage
-allKeysStage layout =
+keysOf : Hands -> Layout -> List Char
+keysOf hands layout =
+    (allKeysStage hands layout).keys
+
+
+{-| After the six stages, jars come with all the chapter's keys.
+-}
+allKeysStage : Hands -> Layout -> Stage
+allKeysStage hands layout =
     let
         home =
             Layout.homeKeys layout
     in
-    { keys = home.left ++ Layout.stretchKeys layout ++ home.right
-    , catches = 0
-    , describe = .rabbitHole >> .allKeys
-    }
+    case hands of
+        BothHands ->
+            { keys = home.left ++ Layout.stretchKeys layout ++ home.right
+            , catches = 0
+            , describe = .rabbitHole >> .allKeys
+            }
+
+        RightHand ->
+            { keys = rightStretch layout :: home.right
+            , catches = 0
+            , describe = .rabbitHole >> .allKeys
+            }
 
 
 
@@ -317,7 +395,8 @@ heapHeight =
 
 
 type alias Model =
-    { story : Story
+    { hands : Hands
+    , story : Story
     , choice : Choice
     , difficulty : Maybe Difficulty
     , stage : Int
@@ -372,13 +451,21 @@ type alias Landing =
     }
 
 
-init : Random.Seed -> Model
-init seed =
-    { story =
+init : Hands -> Random.Seed -> Model
+init hands seed =
+    { hands = hands
+    , story =
         Story.begin (Dialog.say Narrator (.rabbitHole >> .intro1))
             [ Dialog.say WhiteRabbit (.rabbitHole >> .intro2)
             , Dialog.say Narrator (.rabbitHole >> .intro3)
-            , Dialog.say Narrator (.rabbitHole >> .intro4)
+            , Dialog.say Narrator
+                (case hands of
+                    RightHand ->
+                        .rabbitHole >> .intro4RightHand
+
+                    BothHands ->
+                        .rabbitHole >> .intro4
+                )
             ]
     , choice = DifficultyChoice.start 0
     , difficulty = Nothing
@@ -407,12 +494,12 @@ init seed =
 -}
 currentStage : Layout -> Model -> Stage
 currentStage layout model =
-    stageAt layout model.stage |> Maybe.withDefault (allKeysStage layout)
+    stageAt model.hands layout model.stage |> Maybe.withDefault (allKeysStage model.hands layout)
 
 
 isBeyondStages : Layout -> Model -> Bool
 isBeyondStages layout model =
-    model.stage >= List.length (stages layout)
+    model.stage >= List.length (stages model.hands layout)
 
 
 {-| The jar to catch next: the one that has floated highest.
@@ -500,7 +587,7 @@ startFalling : Layout -> Difficulty -> Model -> ( Model, List Effect )
 startFalling layout difficulty model =
     ( { model | difficulty = Just difficulty, spawnIn = 400 }
     , PlaySound PickupSound
-        :: (stageAt layout 0 |> Maybe.map (\stage -> [ ShowToast stage.describe ]) |> Maybe.withDefault [])
+        :: (stageAt model.hands layout 0 |> Maybe.map (\stage -> [ ShowToast stage.describe ]) |> Maybe.withDefault [])
     )
 
 
@@ -770,7 +857,15 @@ animateLanding milliseconds landing model =
         ( { landed
             | story =
                 Story.conclude (Dialog.say Narrator (.rabbitHole >> .landing1))
-                    [ Dialog.say Narrator (.rabbitHole >> .landing2) ]
+                    [ Dialog.say Narrator
+                        (case model.hands of
+                            RightHand ->
+                                .rabbitHole >> .landing2RightHand
+
+                            BothHands ->
+                                .rabbitHole >> .landing2
+                        )
+                    ]
           }
         , thump
         )
@@ -875,7 +970,7 @@ scene context model =
     , panel = viewPanel context model
     , status =
         { mode = "INS"
-        , file = file
+        , file = file model.hands
         , pendingKeys = ""
         , position =
             case model.difficulty of
@@ -996,7 +1091,7 @@ viewPanel context model =
                     currentStage context.layout model
 
                 allStages =
-                    stages context.layout
+                    stages model.hands context.layout
 
                 stageLabel =
                     if isBeyondStages context.layout model then

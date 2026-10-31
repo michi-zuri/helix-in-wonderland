@@ -25,14 +25,21 @@ tartsFor id (Progress best) =
 
 {-| A chapter opens once the chapter before it has earned at least one tart.
 The first chapter is always open, and grown-ups can open everything. A
-chapter that already has tarts stays open, so a chapter added in between
-never locks away what a player has done.
+chapter that already has tarts stays open, and so does every chapter before
+a chapter with tarts: when chapters are added or moved, nothing a player has
+reached gets locked away.
 -}
 isOpen : { unlockAll : Bool } -> ChapterId -> Progress -> Bool
 isOpen { unlockAll } id progress =
+    let
+        reachedLater =
+            ChapterId.all
+                |> List.filter (\other -> ChapterId.number other >= ChapterId.number id)
+                |> List.any (\other -> tartsFor other progress > 0)
+    in
     case ChapterId.previous id of
         Just earlier ->
-            unlockAll || tartsFor earlier progress > 0 || tartsFor id progress > 0
+            unlockAll || tartsFor earlier progress > 0 || reachedLater
 
         Nothing ->
             True

@@ -1,6 +1,6 @@
 module DrinkMePlaythroughTest exposing (suite)
 
-{-| Play chapter 3: type the words from memory, sip by sip.
+{-| Play chapter 4: type the words from memory, sip by sip.
 -}
 
 import Chapter.Contract exposing (Context)
@@ -101,7 +101,7 @@ averageLength words =
 
 suite : Test
 suite =
-    describe "Chapter 3: Drink Me"
+    describe "Chapter 4: Drink Me"
         [ describe "the difficulty sets the most tarts there are"
             [ test "easy: one tart" <|
                 \_ ->

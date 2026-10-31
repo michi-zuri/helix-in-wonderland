@@ -1,6 +1,6 @@
 module Chapter.DrinkMe exposing (Model, Msg(..), init, pauseLimit, update, view, wordsPerMinute)
 
-{-| Chapter 3, "Drink Me": typing whole words. Each word is one sip from the
+{-| Chapter 4, "Drink Me": typing whole words. Each word is one sip from the
 bottle and Alice shrinks a little, until she is small enough for the little
 door. Adds two new keys, `e` and `i`, and the thumb on the space bar.
 
@@ -32,7 +32,7 @@ import Ui.DifficultyChoice as DifficultyChoice exposing (Choice)
 
 file : String
 file =
-    "03_drink_me.txt"
+    "04_drink_me.txt"
 
 
 
