@@ -95,7 +95,7 @@ tools/                      build script, plus offline helpers (see below)
 1. **Chapters are pure and isolated.** A chapter exposes `init`, `update` and
    `view`. It can't touch ports, storage or another chapter. To make
    something happen outside itself, `update` returns
-   `Chapter.Contract.Effect`s (play a sound, show a toast, flash a key,
+   `Chapter.Contract.Effect`s (play a sound, show a toast,
    finish with a score) and `Main.applyEffect` carries them out. That one
    function is all the glue there is.
 
