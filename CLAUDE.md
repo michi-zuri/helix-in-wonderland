@@ -65,15 +65,26 @@ The local folder may be called `helix-wonderland`, but the repository is
   wasn't updated, #51: the editor tests passed, the chapter didn't.) Chapters
   decide which commands are unlocked (`isUnlocked`), so test through the
   chapter's `update`.
-- **Browser check of the built site** for anything visible: Playwright and
+- **Program tests for anything the shell does** (`tests/ProgramFlowTest.elm`,
+  elm-program-test, #75): menus, starting chapters, results, the end card,
+  saved progress and settings, fullscreen. They run the whole `App` with
+  simulated keys ("keydown"), frames ("frame") and ports, so they replace
+  clicking through the game in a browser. Press exactly the keys a player
+  would: an extra Enter after a chapter goes on to the results, the next
+  chapter or the menu. `App.update` returns `App.Command`s as data;
+  `Main` only turns them into ports and subscriptions.
+- **A Playwright screenshot only for visual changes** (layout, CSS, long
+  lines, fullscreen), which program tests can't see: clipped goal lines (#65)
+  and the cut-off title button (#69) were found that way. Playwright and
   Chromium are usually pre-installed (`require('playwright')`,
-  `chromium.launch()`). Open `dist/site/index.html`, click
-  "Unlock all chapters", choose a chapter from the menu (`j` × n, Enter), press
-  Enter until `.overlay .card` (the difficulty card) appears, wait 600 ms (the
-  card ignores Enter for 500 ms), press `1`/`2`/`3`, then type the keys. Look at
-  screenshots for layout (long lines, panel height, fullscreen). Clicking a
-  header button (like DE) leaves focus on it, so blur it before typing.
-  Screenshots stay in the scratchpad; never commit them (`/*.png` is ignored).
+  `chromium.launch()`). Open `dist/site/index.html`, click "Unlock all
+  chapters", choose a chapter (`j` × n, Enter), press Enter until
+  `.overlay .card` appears, wait 600 ms, press `1`/`2`/`3`. Keys like `ö` need
+  `document.dispatchEvent(new KeyboardEvent('keydown', { key }))`, not
+  `keyboard.type`. Screenshots stay in the scratchpad; never commit them.
+- **Elm packages without package.elm-lang.org**: if the sandbox can't reach
+  it, `python3 tools/fetch_elm_packages.py <author/name>` and
+  `python3 tools/make_elm_registry.py` fetch packages from GitHub (README).
 
 ## Design decisions to keep
 
