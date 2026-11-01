@@ -63,7 +63,8 @@ the fork (see `src/Project.elm` and `tools/build.mjs`).
 
 ```
 src/
-  Main.elm                  the shell: settings, screens, routing between chapters
+  Main.elm                  the page: turns App's commands into ports and subscriptions
+  App.elm                   the shell: settings, screens, routing between chapters
   Chapter/Contract.elm      what every chapter receives and may ask for   ← start here
   Chapter/Story.elm         the story → play → story rhythm all chapters share
   Chapter/Id.elm            the list of chapters, in order
@@ -97,7 +98,7 @@ tools/                      build script, plus offline helpers (see below)
    `view`. It can't touch ports, storage or another chapter. To make
    something happen outside itself, `update` returns
    `Chapter.Contract.Effect`s (play a sound, show a toast,
-   finish with a score) and `Main.applyEffect` carries them out. That one
+   finish with a score) and `App.applyEffect` carries them out. That one
    function is all the glue there is.
 
 2. **Every chapter tells its story the same way.** `Chapter.Story` owns the
@@ -122,7 +123,7 @@ tools/                      build script, plus offline helpers (see below)
    editor puzzle) are good templates.
 2. Add its texts as a new record in `Texts.elm`, for both languages.
 3. Add it to `Chapter.Id` (type, `all`, `number`, `toKey`).
-4. In `Main.elm`, add a case to `Chapter` and to the four functions under
+4. In `App.elm`, add a case to `Chapter` and to the four functions under
    `-- CHAPTERS`. The compiler will remind you.
 5. Add a playthrough test like the ones in `tests/`.
 
@@ -137,6 +138,12 @@ tools/                      build script, plus offline helpers (see below)
 - **Playthroughs** play each chapter through messages, the way a child
   would: a perfect run earns three tarts, mistakes cost tarts, locked keys
   stay locked. If these pass after a refactor, the chapters still work.
+- **Program tests** (`tests/ProgramFlowTest.elm`, with
+  [elm-program-test](https://package.elm-lang.org/packages/avh4/elm-program-test/latest/))
+  run the whole game: the title menu, locked chapters, results, the end
+  card, saved progress and settings, fullscreen and the escape keys. Keys,
+  frames and ports are simulated, so no browser is needed. `App.update`
+  returns its effects as data (`App.Command`) for this.
 
 ## Conventions
 
