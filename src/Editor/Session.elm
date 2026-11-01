@@ -1,6 +1,6 @@
 module Editor.Session exposing
     ( Session, start, fromBuffer, buffer, keystrokes, recentKeys, pendingCount, isWaiting, jumpLabels
-    , Outcome(..), press, pressWith, escapeTimeout, splash, replaceChar, matches, matchingLines
+    , Outcome(..), press, pressWith, escapeTimeout, splash, replaceChar, apply, matches, matchingLines
     )
 
 {-| One player working on one text: the buffer plus what the status line
@@ -22,7 +22,7 @@ key after `g` cancels it.
 selects that word, as in Helix. Esc or a key that matches no label cancels.
 
 @docs Session, start, fromBuffer, buffer, keystrokes, recentKeys, pendingCount, isWaiting, jumpLabels
-@docs Outcome, press, pressWith, escapeTimeout, splash, replaceChar, matches, matchingLines
+@docs Outcome, press, pressWith, escapeTimeout, splash, replaceChar, apply, matches, matchingLines
 
 -}
 
@@ -403,6 +403,15 @@ lines and empty lines don't count, so a child who deletes a word with `e`
 matches : String -> Session -> Bool
 matches target session =
     normalize (Core.toString (buffer session)) == normalize target
+
+
+{-| Something from outside runs a command, not the player: it isn't a
+keystroke and doesn't show among the recent keys. Chapter 3's key slipping
+out of the lock is `apply ExitInsert`.
+-}
+apply : Command -> Session -> Session
+apply command (Session s) =
+    Session { s | buffer = Core.apply command s.buffer, count = "", afterG = False, jump = Nothing }
 
 
 {-| How many lines of the target already read right, line by line.

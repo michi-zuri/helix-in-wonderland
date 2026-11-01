@@ -1,10 +1,10 @@
 module Chapter.Pool exposing (Model, Msg(..), init, update, view)
 
-{-| Chapter 5, "The Pool of Tears": the big Helix idea, select first and
+{-| Chapter 6, "The Pool of Tears": the big Helix idea, select first and
 then act. The player cleans a poem with `w` (select the next word), `x`
 (select the line), `d` (delete) and `u` (undo), with counts like `3w` and
 `2x`, and `gh` to jump to the start of the line (see `Editor.Session`). `e` and `b` wait for a later chapter, and
-Insert-mode keys for chapter 6.
+Insert-mode keys for chapter 7.
 
 Three difficulties (see `Texts.PoolTexts` for the poems):
 
@@ -45,7 +45,7 @@ import Ui.DifficultyChoice as DifficultyChoice exposing (Choice)
 
 file : String
 file =
-    "05_pool_of_tears.txt"
+    "06_pool_of_tears.txt"
 
 
 
@@ -241,7 +241,7 @@ choose texts key model =
 
 
 {-| Moving, `w`, `x`, `d`, `u` and counts. `e` and `b` come in a later
-chapter, inserting text in chapter 6.
+chapter, inserting text in chapter 7.
 -}
 isUnlocked : Command -> Bool
 isUnlocked command =

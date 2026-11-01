@@ -1,6 +1,6 @@
 module Chapter.Caterpillar exposing (Model, Msg(..), init, update, view)
 
-{-| Chapter 6, "Advice from a Caterpillar": Insert mode. Typing practice
+{-| Chapter 7, "Advice from a Caterpillar": Insert mode. Typing practice
 and editing finally meet.
 
   - Easy: words are missing from the Caterpillar's lines; move to each gap,
@@ -37,7 +37,7 @@ import Ui.DifficultyChoice as DifficultyChoice exposing (Choice)
 
 file : String
 file =
-    "06_caterpillar.txt"
+    "07_caterpillar.txt"
 
 
 
@@ -189,7 +189,7 @@ choose texts key model =
             ( model, [] )
 
 
-{-| `e` and `b` wait for a later chapter, as in chapter 5.
+{-| `e` and `b` wait for a later chapter, as in chapter 6.
 -}
 isUnlocked : Command -> Bool
 isUnlocked command =

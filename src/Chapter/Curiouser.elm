@@ -1,6 +1,6 @@
 module Chapter.Curiouser exposing (Currant, Model, Msg(..), init, lifetime, update, view)
 
-{-| Chapter 4, "Curiouser and Curiouser": Helix's jumps that start with
+{-| Chapter 5, "Curiouser and Curiouser": Helix's jumps that start with
 `g`, played like whack-a-mole. The currant letters of the EAT ME cake hop
 onto the crumbs on the table; the cursor reaching one squashes it.
 
@@ -43,7 +43,7 @@ import Ui.DifficultyChoice as DifficultyChoice exposing (Choice)
 
 file : String
 file =
-    "04_eat_me.txt"
+    "05_eat_me.txt"
 
 
 

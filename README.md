@@ -9,10 +9,11 @@ Keyboards: German and Swiss QWERTZ, US QWERTY, French AZERTY.
 |---|---------|---------|
 | 1 | Down the Rabbit Hole | the home row in one long fall: the left hand finger by finger, then the right hand, then `g` and `h`, then both hands (catch jars by their letter) |
 | 2 | The Hall of Doors | Helix movement with `h j k l`, and counts like `5j` |
-| 3 | Drink Me | typing whole words from memory, the keys `e` and `i`, the space bar |
-| 4 | Curiouser and Curiouser | Helix's jumps: `gh gl gg ge gj gk g.` (squash the currants) |
-| 5 | The Pool of Tears | select first, then act: `w x`, then `d`; `u` undoes; counts like `3w`, `2x`; `gh` to the line start |
-| 6 | Advice from a Caterpillar | Insert mode: `i`, `a`, `c`, and Esc back to Normal; challenge adds wrong words and line endings (`gl a`), mad a whole garbled poem with a line to delete (`x d`) |
+| 3 | The Little Door | Insert mode with the golden key: `i` puts the key into a lock, Esc pulls it out, `c` changes a wrong letter |
+| 4 | Drink Me | typing whole words from memory, the keys `e` and `i`, the space bar |
+| 5 | Curiouser and Curiouser | Helix's jumps: `gh gl gg ge gj gk g.` (squash the currants) |
+| 6 | The Pool of Tears | select first, then act: `w x`, then `d`; `u` undoes; counts like `3w`, `2x`; `gh` to the line start |
+| 7 | Advice from a Caterpillar | more Insert mode: `a` after the cursor; challenge adds wrong words and line endings (`gl a`), mad a whole garbled poem with a line to delete (`x d`) |
 
 Each chapter earns up to three tarts. A chapter opens once the one before it
 has at least one; a button on the title screen opens everything for grown-ups.
@@ -69,10 +70,11 @@ src/
   Chapter/Id.elm            the list of chapters, in order
   Chapter/RabbitHole.elm    chapter 1   (art in Chapter/RabbitHole/Well.elm)
   Chapter/Hall.elm          chapter 2   (tiles in Chapter/Hall/Tiles.elm)
-  Chapter/DrinkMe.elm       chapter 3
-  Chapter/Curiouser.elm     chapter 4   (the crumb table in Chapter/Curiouser/Table.elm)
-  Chapter/Pool.elm          chapter 5
-  Chapter/Caterpillar.elm   chapter 6
+  Chapter/LittleDoor.elm    chapter 3
+  Chapter/DrinkMe.elm       chapter 4
+  Chapter/Curiouser.elm     chapter 5   (the crumb table in Chapter/Curiouser/Table.elm)
+  Chapter/Pool.elm          chapter 6
+  Chapter/Caterpillar.elm   chapter 7
   Editor/Core.elm           a pure model of Helix: text, selection, modes, commands
   Editor/Keymap.elm         which key means which editor command
   Editor/Session.elm        one player working on one text: buffer, keystrokes, locks

@@ -27,6 +27,7 @@ import Chapter.Curiouser as Curiouser
 import Chapter.DrinkMe as DrinkMe
 import Chapter.Hall as Hall
 import Chapter.Id as ChapterId exposing (ChapterId(..))
+import Chapter.LittleDoor as LittleDoor
 import Chapter.Pool as Pool
 import Chapter.RabbitHole as RabbitHole
 import Html exposing (Html)
@@ -85,6 +86,7 @@ type Screen
 type Chapter
     = RabbitHoleChapter RabbitHole.Model
     | HallChapter Hall.Model
+    | LittleDoorChapter LittleDoor.Model
     | DrinkMeChapter DrinkMe.Model
     | CuriouserChapter Curiouser.Model
     | PoolChapter Pool.Model
@@ -518,6 +520,9 @@ newChapter seed id =
         HallOfDoors ->
             HallChapter (Hall.init seed)
 
+        LittleDoor ->
+            LittleDoorChapter LittleDoor.init
+
         DrinkMe ->
             DrinkMeChapter DrinkMe.init
 
@@ -539,6 +544,9 @@ chapterId chapter =
 
         HallChapter _ ->
             HallOfDoors
+
+        LittleDoorChapter _ ->
+            LittleDoor
 
         DrinkMeChapter _ ->
             DrinkMe
@@ -578,6 +586,9 @@ stepChapter ctx input chapter =
         HallChapter model ->
             run Hall.update Hall.KeyPressed Hall.Frame HallChapter model
 
+        LittleDoorChapter model ->
+            run LittleDoor.update LittleDoor.KeyPressed LittleDoor.Frame LittleDoorChapter model
+
         DrinkMeChapter model ->
             run DrinkMe.update DrinkMe.KeyPressed DrinkMe.Frame DrinkMeChapter model
 
@@ -599,6 +610,9 @@ viewChapter ctx chapter =
 
         HallChapter model ->
             Hall.view ctx model
+
+        LittleDoorChapter model ->
+            LittleDoor.view ctx model
 
         DrinkMeChapter model ->
             DrinkMe.view ctx model
