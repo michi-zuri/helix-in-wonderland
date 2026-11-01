@@ -45,9 +45,12 @@ isOpen { unlockAll } id progress =
             True
 
 
+{-| Tarts of the chapters there are; tarts saved under a retired chapter
+name don't count.
+-}
 total : Progress -> Int
-total (Progress best) =
-    List.sum (Dict.values best)
+total progress =
+    List.sum (List.map (\id -> tartsFor id progress) ChapterId.all)
 
 
 record : ChapterId -> Int -> Progress -> Progress

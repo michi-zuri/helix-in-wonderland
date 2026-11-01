@@ -80,8 +80,7 @@ type Screen
     | TheEnd
 
 
-{-| One case per chapter module. Chapters 1 and 3 are the same module, the
-Rabbit Hole, for the right hand and for both hands.
+{-| One case per chapter.
 -}
 type Chapter
     = RabbitHoleChapter RabbitHole.Model
@@ -149,7 +148,7 @@ firstUnfinished progress =
     ChapterId.all
         |> List.filter (\id -> Progress.tartsFor id progress == 0)
         |> List.head
-        |> Maybe.withDefault RabbitHoleRightHand
+        |> Maybe.withDefault RabbitHole
 
 
 
@@ -513,11 +512,8 @@ type ChapterInput
 newChapter : Random.Seed -> ChapterId -> Chapter
 newChapter seed id =
     case id of
-        RabbitHoleRightHand ->
-            RabbitHoleChapter (RabbitHole.init RabbitHole.RightHand seed)
-
         RabbitHole ->
-            RabbitHoleChapter (RabbitHole.init RabbitHole.BothHands seed)
+            RabbitHoleChapter (RabbitHole.init seed)
 
         HallOfDoors ->
             HallChapter (Hall.init seed)
@@ -538,13 +534,8 @@ newChapter seed id =
 chapterId : Chapter -> ChapterId
 chapterId chapter =
     case chapter of
-        RabbitHoleChapter model ->
-            case model.hands of
-                RabbitHole.RightHand ->
-                    RabbitHoleRightHand
-
-                RabbitHole.BothHands ->
-                    RabbitHole
+        RabbitHoleChapter _ ->
+            RabbitHole
 
         HallChapter _ ->
             HallOfDoors

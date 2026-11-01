@@ -110,19 +110,22 @@ The local folder may be called `helix-wonderland`, but the repository is
 
 **Keys, by chapter** (what's taught where; don't use untaught keys in hints or
 "Our best" routes)
-1. Home row typing, right hand only (`j k l` + the little finger's key, then
-`h`). 2. `h j k l`, counts like `5j`. 3. Home row typing, both hands (the same
-Rabbit Hole module with `Hands = BothHands`, #69). 4. Typing words, `e`, `i`,
-space. 5. `gh gl gg ge gj gk g.` (`gw` works but is deliberately not taught;
-finishing chapter 5 with only `gw` jumps and no mistake brings out the
-Cheshire Cat, an easter egg nothing announces).
-6. `w`, `x`, `d`, `u`, counts like `3w`, `2x`, `gh`. 7. Insert mode `i`, `a`,
+1. Home row typing in one long fall: left hand finger by finger, then the
+right hand, then `g h`, then both hands (#72). 2. `h j k l`, counts like `5j`.
+3. Typing words, `e`, `i`, space. 4. `gh gl gg ge gj gk g.` (`gw` works but is
+deliberately not taught; finishing chapter 4 with only `gw` jumps and no
+mistake brings out the Cheshire Cat, an easter egg nothing announces).
+5. `w`, `x`, `d`, `u`, counts like `3w`, `2x`, `gh`. 6. Insert mode `i`, `a`,
 `c`, Esc; Challenge adds `gl a`, Mad adds `x d` for a line that doesn't belong.
 
-Issues and PRs before #69 use the old numbering (Rabbit Hole 1, Hall 2,
-Drink Me 3, Curiouser 4, Pool 5, Caterpillar 6).
+The roadmap (#71) plans a new chapter 3 (#73, the little door: `i`, Esc, `c`),
+which will move Drink Me and the rest one number up. Issues #69–#70 used a
+short-lived order with a right-hand chapter first; #72 folded it back into
+chapter 1.
 
-- `e` and `b` are **locked** in chapters 6 and 7: the owner wants to teach them
+- **New typing letters come in batches of at most 5** on top of those learned
+  before (#71).
+- `e` and `b` are **locked** in chapters 5 and 6: the owner wants to teach them
   later, with more thought about why they're needed.
 
 **Chapter specifics worth knowing**
@@ -131,15 +134,18 @@ Drink Me 3, Curiouser 4, Pool 5, Caterpillar 6).
   A door that would lead into the curtain's part of the hall steers away after a
   hidden 4-second clock, so a slow player can't reach the curtain that way; the
   countdown is deliberately not shown (#63).
-- Chapters 1 and 3 share `Chapter.RabbitHole`; `Hands` picks the stages, the
-  last story line and the status-line file. A chapter opens if the one before
-  has a tart, or if it or any later chapter has one, so reordering never locks
-  away what a player reached (`Progress.isOpen`).
-- Chapter 4: typing from memory; a word hides after its first key and starts
+- Chapter 1: twelve stages in one fall; a player who stays in the last stage
+  (both hands) for a minute without reaching the ground goes round the whole
+  left hand, the whole right hand and both hands again (#72).
+- A chapter opens if the one before has a tart, or if it or any later chapter
+  has one, so reordering never locks away what a player reached
+  (`Progress.isOpen`). Retired save names (`rabbit-hole-right-hand`) count for
+  nothing.
+- Chapter 3: typing from memory; a word hides after its first key and starts
   over after a pause over 300 ms between correct keys (#35).
-- Chapter 5: lines without indents (#55); cheeky currants (`g.`) are shy and run
+- Chapter 4: lines without indents (#55); cheeky currants (`g.`) are shy and run
   off once the cursor shares their line, screen row or column (#47).
-- Chapter 7: Mad is Alice's garbled "You are old, Father William" (#65). A
+- Chapter 6: Mad is Alice's garbled "You are old, Father William" (#65). A
   smoke-ring twist was discussed and postponed.
 
 ## Conventions (in addition to README.md)
