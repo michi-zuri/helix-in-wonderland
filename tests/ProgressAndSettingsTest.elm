@@ -26,7 +26,7 @@ suite =
                 \_ ->
                     Decode.decodeString Progress.decoder """{ "rabbit-hole-right-hand": 3, "hall-of-doors": 2 }"""
                         |> Result.map (\progress -> ( Progress.total progress, List.map (\id -> Progress.isOpen { unlockAll = False } id progress) ChapterId.all ))
-                        |> Expect.equal (Ok ( 2, [ True, True, True, False, False, False ] ))
+                        |> Expect.equal (Ok ( 2, [ True, True, True, False, False, False, False ] ))
             , test "a chapter added in between doesn't lock away a chapter already played" <|
                 \_ ->
                     Progress.empty
@@ -35,7 +35,7 @@ suite =
                         |> (\progress -> ( Progress.isOpen { unlockAll = False } Curiouser progress, Progress.isOpen { unlockAll = False } PoolOfTears progress ))
                         |> Expect.equal ( True, True )
             , test "the new chapter's saved name is its own" <|
-                \_ -> List.map ChapterId.toKey ChapterId.all |> Expect.equal [ "rabbit-hole", "hall-of-doors", "drink-me", "curiouser", "pool-of-tears", "caterpillar" ]
+                \_ -> List.map ChapterId.toKey ChapterId.all |> Expect.equal [ "rabbit-hole", "hall-of-doors", "little-door", "drink-me", "curiouser", "pool-of-tears", "caterpillar" ]
             , test "grown-ups can open everything" <|
                 \_ -> Progress.isOpen { unlockAll = True } CaterpillarsAdvice Progress.empty |> Expect.equal True
             , test "only the best result for a chapter is kept" <|

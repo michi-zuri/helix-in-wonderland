@@ -1,0 +1,390 @@
+module LittleDoorPlaythroughTest exposing (suite)
+
+{-| Play chapter 3: open the little door's locks with the golden key, in all
+three difficulties and both languages.
+-}
+
+import Chapter.Contract exposing (Context)
+import Chapter.LittleDoor as LittleDoor
+import Dict
+import Editor.Core as Core exposing (Mode(..))
+import Editor.Session as Session
+import Expect
+import Keyboard.Layout exposing (Layout(..))
+import Language exposing (Language(..))
+import Playthrough exposing (Run)
+import Test exposing (Test, describe, test)
+import Test.Html.Query as Query
+import Test.Html.Selector exposing (text)
+import Texts exposing (Texts)
+
+
+contextIn : Language -> Context
+contextIn language =
+    { texts = Texts.forLanguage language, layout = SwissQwertz, escapeKeys = Nothing }
+
+
+english : Context
+english =
+    contextIn English
+
+
+pressIn : Context -> List String -> Run LittleDoor.Model -> Run LittleDoor.Model
+pressIn context pressed =
+    Playthrough.sendAll (LittleDoor.update context) (List.map LittleDoor.KeyPressed pressed)
+
+
+{-| Read the story, then pick a difficulty: "1" easy, "2" challenge, "3" mad.
+-}
+startIn : Context -> String -> Run LittleDoor.Model
+startIn context difficulty =
+    Playthrough.start LittleDoor.init
+        |> pressIn context (List.repeat 12 "Enter")
+        |> pressIn context [ difficulty ]
+
+
+start : String -> Run LittleDoor.Model
+start =
+    startIn english
+
+
+{-| The closing story has two lines: Enter shows each in full, Enter goes on.
+-}
+readOutro : Context -> Run LittleDoor.Model -> Run LittleDoor.Model
+readOutro context =
+    pressIn context (List.repeat 4 "Enter")
+
+
+wait : Float -> Run LittleDoor.Model -> Run LittleDoor.Model
+wait milliseconds =
+    Playthrough.sendAll (LittleDoor.update english) (List.repeat (round (milliseconds / 50)) (LittleDoor.Frame 50))
+
+
+{-| A route as one string per step: every character is a key, `⎋` is Esc and
+`⌫` is Backspace. "6l" is "6" then "l"; "ihad⎋" puts the key in, types
+"had" and pulls the key out.
+-}
+keys : List String -> List String
+keys steps =
+    String.concat steps
+        |> String.toList
+        |> List.map
+            (\char ->
+                case char of
+                    '⎋' ->
+                        "Escape"
+
+                    '⌫' ->
+                        "Backspace"
+
+                    _ ->
+                        String.fromChar char
+            )
+
+
+{-| Our ways through every puzzle, with the keys taught by chapter 3 only:
+`h j k l`, counts, `i`, `c` and Esc. Mad's are the "Our best" routes.
+-}
+route : Language -> String -> List String
+route language difficulty =
+    case ( language, difficulty ) of
+        ( English, "1" ) ->
+            [ "6l", "ihad⎋", "j", "iglad⎋", "j", "2l", "ihalf⎋", "j", "11l", "cl⎋" ]
+
+        ( English, "2" ) ->
+            [ "6l", "ihad⎋", "23l", "iglad⎋", "j", "20h", "ihalf⎋", "18l", "ca⎋", "j", "27h", "ishall⎋", "j", "3h", "ca⎋", "33l", "cd⎋" ]
+
+        ( English, _ ) ->
+            [ "6l", "ihad⎋", "35l", "iglad⎋", "j", "38h", "ca⎋", "j", "h", "ishall⎋", "j", "16l", "ihalf⎋", "j", "21h", "ialas⎋", "j", "32l", "ca⎋", "j", "3h", "ca⎋", "j", "3l", "cg⎋" ]
+
+        ( German, "1" ) ->
+            [ "6l", "isah⎋", "j", "5h", "ilag⎋", "j", "15l", "ials⎋", "j", "h", "ca⎋" ]
+
+        ( German, "2" ) ->
+            [ "6l", "isah⎋", "23l", "cd⎋", "j", "19h", "ca⎋", "21l", "ials⎋", "j", "30h", "ilass⎋", "j", "3h", "ca⎋", "9l", "idass⎋" ]
+
+        ( German, _ ) ->
+            [ "6l", "isah⎋", "j", "6l", "ca⎋", "11h", "ilag⎋", "j", "l", "ca⎋", "j", "24l", "ials⎋", "j", "27h", "ilass⎋", "j", "35l", "ca⎋", "j", "16h", "ida⎋", "j", "20l", "ca⎋" ]
+
+
+nameOf : Language -> String
+nameOf language =
+    case language of
+        English ->
+            "English"
+
+        German ->
+            "German"
+
+
+textOf : Run LittleDoor.Model -> String
+textOf run =
+    run.model.work |> Maybe.map (.session >> Session.buffer >> Core.toString) |> Maybe.withDefault ""
+
+
+modeOf : Run LittleDoor.Model -> Maybe Mode
+modeOf run =
+    run.model.work |> Maybe.map (.session >> Session.buffer >> Core.mode)
+
+
+keystrokesOf : Run LittleDoor.Model -> Int
+keystrokesOf run =
+    run.model.work |> Maybe.map (.session >> Session.keystrokes) |> Maybe.withDefault 0
+
+
+panelHas : String -> Run LittleDoor.Model -> Expect.Expectation
+panelHas wanted run =
+    (LittleDoor.view english run.model).panel |> Query.fromHtml |> Query.has [ text wanted ]
+
+
+hints : Texts -> List String
+hints texts =
+    [ texts.littleDoor.hintFind, texts.littleDoor.hintPin, texts.littleDoor.hintTurn, texts.littleDoor.hintBound ]
+
+
+{-| Exactly one of the hints is in the panel, and it is `wanted`.
+-}
+onlyHint : String -> Run LittleDoor.Model -> Expect.Expectation
+onlyHint wanted run =
+    hints english.texts
+        |> List.filter (\hint -> (LittleDoor.view english run.model).panel |> Query.fromHtml |> Query.has [ text hint ] |> (==) Expect.pass)
+        |> Expect.equal [ wanted ]
+
+
+{-| How often each character occurs.
+-}
+counts : String -> Dict.Dict Char Int
+counts string =
+    String.foldl (\char -> Dict.update char (\n -> Just (Maybe.withDefault 0 n + 1))) Dict.empty string
+
+
+{-| The characters the answer has more of than the start: what the player
+types.
+-}
+typed : String -> String -> List Char
+typed startText answer =
+    let
+        before =
+            counts startText
+    in
+    counts answer
+        |> Dict.toList
+        |> List.filter (\( char, n ) -> n > Maybe.withDefault 0 (Dict.get char before))
+        |> List.map Tuple.first
+
+
+puzzles : Texts -> List ( String, String, String )
+puzzles texts =
+    [ ( "easy", texts.littleDoor.easyStart, texts.littleDoor.easyAnswer )
+    , ( "challenge", texts.littleDoor.challengeStart, texts.littleDoor.challengeAnswer )
+    , ( "mad", texts.littleDoor.madStart, texts.littleDoor.madAnswer )
+    ]
+
+
+clean : String -> String
+clean =
+    String.words >> String.join " "
+
+
+suite : Test
+suite =
+    describe "Chapter 3: The Little Door"
+        [ describe "the difficulty sets the most tarts there are"
+            (List.concatMap
+                (\language ->
+                    let
+                        context =
+                            contextIn language
+                    in
+                    List.map
+                        (\( difficulty, tarts ) ->
+                            test (nameOf language ++ " " ++ difficulty) <|
+                                \_ ->
+                                    startIn context difficulty
+                                        |> pressIn context (keys (route language difficulty))
+                                        |> readOutro context
+                                        |> Playthrough.finishedWith
+                                        |> Expect.equal (Just tarts)
+                        )
+                        [ ( "1", 1 ), ( "2", 2 ), ( "3", 3 ) ]
+                )
+                [ English, German ]
+            )
+        , describe "mad: our best way opens every lock in the keystrokes shown"
+            (List.map
+                (\language ->
+                    let
+                        context =
+                            contextIn language
+                    in
+                    test (nameOf language) <|
+                        \_ ->
+                            startIn context "3"
+                                |> pressIn context (keys (route language "3"))
+                                |> keystrokesOf
+                                |> Expect.equal context.texts.littleDoor.madBest
+                )
+                [ English, German ]
+            )
+        , describe "the puzzles"
+            (List.concatMap
+                (\language ->
+                    let
+                        texts =
+                            Texts.forLanguage language
+                    in
+                    List.concatMap
+                        (\( name, startText, answer ) ->
+                            [ test (nameOf language ++ " " ++ name ++ ": everything typed is on the home row, in lowercase") <|
+                                \_ ->
+                                    typed startText answer
+                                        |> List.filter (\char -> not (String.contains (String.fromChar char) "asdfghjklö"))
+                                        |> Expect.equal []
+                            , test (nameOf language ++ " " ++ name ++ ": every line has a lock") <|
+                                \_ ->
+                                    List.map2 (\a b -> clean a == clean b) (String.lines startText) (String.lines answer)
+                                        |> List.filter identity
+                                        |> Expect.equal []
+                            ]
+                        )
+                        (puzzles texts)
+                )
+                [ English, German ]
+            )
+        , test "the door stays shut while the key is still in the last lock" <|
+            \_ ->
+                start "1"
+                    |> pressIn english (keys [ "6l", "ihad⎋", "j", "iglad⎋", "j", "2l", "ihalf⎋", "j", "11l", "cl" ])
+                    |> readOutro english
+                    |> Playthrough.finishedWith
+                    |> Expect.equal Nothing
+        , describe "the key is Insert mode"
+            [ test "i puts the key in: INS" <|
+                \_ -> start "1" |> pressIn english [ "i" ] |> modeOf |> Expect.equal (Just Insert)
+            , test "with the key in, h j k l type letters" <|
+                \_ ->
+                    start "1"
+                        |> pressIn english [ "i", "j", "k" ]
+                        |> textOf
+                        |> String.startsWith "jkAlice"
+                        |> Expect.equal True
+            , test "Esc pulls it out: NOR" <|
+                \_ -> start "1" |> pressIn english [ "i", "Escape" ] |> modeOf |> Expect.equal (Just Normal)
+            , test "c pulls the wrong pin and puts the key in" <|
+                \_ ->
+                    start "1"
+                        |> pressIn english (keys [ "3j", "27l", "c" ])
+                        |> (\run -> ( modeOf run, String.contains "the hal." (textOf run) ))
+                        |> Expect.equal ( Just Insert, True )
+            , test "the player's own escape keys pull the key out too" <|
+                \_ ->
+                    let
+                        withEscapeKeys =
+                            { english | escapeKeys = Just ( ';', ';' ) }
+                    in
+                    startIn withEscapeKeys "1"
+                        |> pressIn withEscapeKeys
+                            (List.concatMap
+                                (\key ->
+                                    if key == "Escape" then
+                                        [ ";", ";" ]
+
+                                    else
+                                        [ key ]
+                                )
+                                (keys (route English "1"))
+                            )
+                        |> readOutro withEscapeKeys
+                        |> Playthrough.finishedWith
+                        |> Expect.equal (Just 1)
+            ]
+        , describe "keys that come later stay locked"
+            (List.map
+                (\key ->
+                    test key <|
+                        \_ ->
+                            start "1"
+                                |> pressIn english (String.split " " key)
+                                |> (\run -> ( textOf run, modeOf run ))
+                                |> Expect.equal ( english.texts.littleDoor.easyStart ++ "\n", Just Normal )
+                )
+                [ "w d", "x d", "a", "g l", "u", "e", "b" ]
+            )
+        , describe "mad: the key slips out if you wait"
+            [ test "after more than two seconds with the key in, back to NOR, with a word about it" <|
+                \_ ->
+                    start "3"
+                        |> pressIn english [ "6", "l", "i", "h" ]
+                        |> (\run -> ( run, Playthrough.toastCount run ))
+                        |> (\( run, before ) ->
+                                wait (LittleDoor.slipMilliseconds + 200) run
+                                    |> (\later -> ( modeOf later, later.model.slips, Playthrough.toastCount later - before ))
+                           )
+                        |> Expect.equal ( Just Normal, 1, 1 )
+            , test "a little under two seconds is fine" <|
+                \_ ->
+                    start "3"
+                        |> pressIn english [ "6", "l", "i", "h" ]
+                        |> wait (LittleDoor.slipMilliseconds - 200)
+                        |> modeOf
+                        |> Expect.equal (Just Insert)
+            , test "every key typed starts the two seconds again" <|
+                \_ ->
+                    start "3"
+                        |> pressIn english [ "6", "l", "i", "h" ]
+                        |> wait 1500
+                        |> pressIn english [ "a" ]
+                        |> wait 1500
+                        |> modeOf
+                        |> Expect.equal (Just Insert)
+            , test "on challenge the key never slips" <|
+                \_ ->
+                    start "2"
+                        |> pressIn english [ "i" ]
+                        |> wait 10000
+                        |> modeOf
+                        |> Expect.equal (Just Insert)
+            , test "the results show how often it slipped" <|
+                \_ ->
+                    start "3"
+                        |> pressIn english [ "i" ]
+                        |> wait (LittleDoor.slipMilliseconds + 200)
+                        |> pressIn english (keys (route English "3"))
+                        |> (\run -> run.model.slips)
+                        |> Expect.equal 1
+            ]
+        , test "mad: many Backspaces cost tarts" <|
+            \_ ->
+                start "3"
+                    |> pressIn english (keys [ "6l", "ihhhhhhhhhh⌫⌫⌫⌫⌫⌫⌫⌫⌫⌫had⎋" ])
+                    |> pressIn english (keys (List.drop 2 (route English "3")))
+                    |> readOutro english
+                    |> Playthrough.finishedWith
+                    |> Expect.equal (Just 1)
+        , describe "one hint at a time, the one that helps now"
+            [ test "first: find a lock" <|
+                \_ -> start "1" |> onlyHint english.texts.littleDoor.hintFind
+            , test "with the key in: type, then Esc" <|
+                \_ -> start "1" |> pressIn english (keys [ "6l", "iha" ]) |> onlyHint english.texts.littleDoor.hintTurn
+            , test "typing h j k l with the key in, as if to walk: the key binds you" <|
+                \_ -> start "1" |> pressIn english (keys [ "6l", "ijjl" ]) |> onlyHint english.texts.littleDoor.hintBound
+            , test "on a wrong pin: c" <|
+                \_ ->
+                    start "1"
+                        |> pressIn english (keys [ "6l", "ihad⎋", "j", "iglad⎋", "j", "2l", "ihalf⎋", "j", "11l" ])
+                        |> onlyHint english.texts.littleDoor.hintPin
+            , test "the panel counts the lines that read right" <|
+                \_ ->
+                    start "1"
+                        |> pressIn english (keys [ "6l", "ihad⎋" ])
+                        |> panelHas (english.texts.littleDoor.linesRight 1 4)
+            ]
+        , test "the text follows the language until a difficulty is picked" <|
+            \_ ->
+                Playthrough.start LittleDoor.init
+                    |> pressIn english (List.repeat 12 "Enter")
+                    |> pressIn (contextIn German) [ "1" ]
+                    |> pressIn english [ "l" ]
+                    |> textOf
+                    |> Expect.equal ((contextIn German).texts.littleDoor.easyStart ++ "\n")
+        ]

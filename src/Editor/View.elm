@@ -6,7 +6,7 @@ front of the character where typing goes).
 
 With soft wrap (`Core.withWrap`), a long line continues on more rows, marked
 with ↪ in the gutter. `viewWith` can also draw `gw`'s jump labels and marks
-a chapter puts on the text (chapter 4's currants).
+a chapter puts on the text (chapter 5's currants).
 
 -}
 

@@ -1,6 +1,6 @@
 module CuriouserPlaythroughTest exposing (suite)
 
-{-| Play chapter 4: squash the currants with Helix's `g` jumps.
+{-| Play chapter 5: squash the currants with Helix's `g` jumps.
 -}
 
 import Chapter.Contract exposing (Context)
@@ -145,7 +145,7 @@ findRunner steps run =
 
 suite : Test
 suite =
-    describe "Chapter 4: Curiouser and Curiouser"
+    describe "Chapter 5: Curiouser and Curiouser"
         [ describe "each currant is placed where its jump is the quick way"
             [ test "at the far end of the line: gl" <|
                 \_ -> trickReaches LineEnds { line = 0, column = 0 } [ "g", "l" ] |> Expect.equal True

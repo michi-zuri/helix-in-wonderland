@@ -1,6 +1,6 @@
 module Texts exposing
     ( Texts, ChapterInfo, ResultTexts, EndTexts
-    , RabbitHoleTexts, HallTexts, DrinkMeTexts, CuriouserTexts, PoolTexts, CaterpillarTexts
+    , RabbitHoleTexts, HallTexts, LittleDoorTexts, DrinkMeTexts, CuriouserTexts, PoolTexts, CaterpillarTexts
     , forLanguage
     )
 
@@ -14,7 +14,7 @@ Story lines come from Lewis Carroll's 1865 book (public domain) or are newly
 written for the game; the German versions are our own translations.
 
 @docs Texts, ChapterInfo, ResultTexts, EndTexts
-@docs RabbitHoleTexts, HallTexts, DrinkMeTexts, CuriouserTexts, PoolTexts, CaterpillarTexts
+@docs RabbitHoleTexts, HallTexts, LittleDoorTexts, DrinkMeTexts, CuriouserTexts, PoolTexts, CaterpillarTexts
 @docs forLanguage
 
 -}
@@ -53,6 +53,7 @@ type alias Texts =
     , theEnd : EndTexts
     , rabbitHole : RabbitHoleTexts
     , hall : HallTexts
+    , littleDoor : LittleDoorTexts
     , drinkMe : DrinkMeTexts
     , curiouser : CuriouserTexts
     , pool : PoolTexts
@@ -158,6 +159,44 @@ type alias HallTexts =
     }
 
 
+{-| Chapter 3's texts. Each puzzle is a few lines with locks: gaps where a
+word is missing (`…Start` has them, `…Answer` is filled in) and wrong
+letters, the wrong pins. Everything the player types uses only the home row,
+because `e`, `i` and the space bar come in chapter 4; German words to type
+are lowercase, because Shift isn't taught yet. `madBest` is our own fewest
+keystrokes for mad, verified in a test.
+-}
+type alias LittleDoorTexts =
+    { intro1 : String
+    , intro2 : String
+    , intro3 : String
+    , intro4 : String
+    , finale1 : String
+    , finale2 : String
+    , easyStart : String
+    , easyAnswer : String
+    , challengeStart : String
+    , challengeAnswer : String
+    , madStart : String
+    , madAnswer : String
+    , madBest : Int
+    , chooseTitle : String
+    , chooseHint : String
+    , easyInfo : String
+    , challengeInfo : String
+    , madInfo : String
+    , hintFind : String
+    , hintPin : String
+    , hintTurn : String
+    , hintBound : String
+    , linesRight : Int -> Int -> String
+    , keySlipped : String
+    , slips : String
+    , ourBest : String
+    , goal : String
+    }
+
+
 {-| Each word list is one hidden sentence. Mad's made-up words sound like a
 sentence when read aloud. Words may only use the letters learned so far:
 the home row, plus `e` and `i` (a test checks this).
@@ -217,7 +256,7 @@ type alias CuriouserTexts =
     }
 
 
-{-| Chapter 5's poems, one per difficulty, all cleaned into `cleanPoem` by
+{-| Chapter 6's poems, one per difficulty, all cleaned into `cleanPoem` by
 deleting words and lines. The words to delete carry a hidden meaning that
 the game never explains: on easy they spell a sentence, the tide on
 challenge splashes one in word by word (`tideWords`), and on mad they are
@@ -263,7 +302,7 @@ type alias PoolTexts =
     }
 
 
-{-| Chapter 6's texts. Easy has gaps to fill (`gaps`, `answer`). Challenge
+{-| Chapter 7's texts. Easy has gaps to fill (`gaps`, `answer`). Challenge
 mixes missing words (`i`), a word missing at a line's end (`a`) and wrong
 words (`w` then `c`). Mad is the poem Alice recites to the Caterpillar in
 the book, "You are old, Father William", as she gets it wrong: wrong words,
@@ -381,6 +420,9 @@ english =
                 HallOfDoors ->
                     { name = "The Hall of Doors", skill = "Helix: move with h j k l, counts", lesson = "h ← j ↓ k ↑ l →, and 5j walks five steps." }
 
+                LittleDoor ->
+                    { name = "The Little Door", skill = "Helix: i puts the key in, Esc pulls it out, c", lesson = "i inserts, Esc goes back to NOR, c changes." }
+
                 DrinkMe ->
                     { name = "Drink Me", skill = "Typing words, new keys e and i", lesson = "Words with e and i, thumb on the space bar." }
 
@@ -457,7 +499,7 @@ english =
         , keyFound = "A tiny golden key! It must open one of these doors."
         , countLesson = "A faster way to walk: type a number first. 8l walks eight steps right. Helix calls this a count. Try it on your way to the little curtain in the bottom-right corner."
         , locked = "The little door is locked. Where is that key?"
-        , finale = "Behind the curtain was a little door about fifteen inches high. The key fitted! But Alice could not even get her head through the doorway."
+        , finale = "Behind the curtain was a little door about fifteen inches high, and the tiny golden key was just the right size for it."
         , findKey = "Find the tiny golden key."
         , goToCurtain = "Walk to the little curtain, bottom right."
         , countTip = "Type a number first, like 5j, to walk five steps."
@@ -471,6 +513,79 @@ english =
         , doorFound = "Alice opened the door and stepped out of another door, somewhere else in the hall!"
         , doorRule = "The doors in this hall play tricks. The door you just came out of takes you back. Every other door may lead somewhere new each time."
         , doorsTip = "The way back always works. All the other doors change where they lead whenever you go through one."
+        }
+    , littleDoor =
+        { intro1 = "Alice had the tiny golden key, and she had found the little door. But the little door had not one lock: it had lots of them!"
+        , intro2 = "What a lot of locks!"
+        , intro3 = "Press i to put the key into a lock. The status bar changes from NOR to INS: the key is in, and every key you press turns the lock, even h j k l."
+        , intro4 = "Esc pulls the key out: back to NOR, and Alice can walk again. A wrong letter is a wrong pin: stand on it and press c, and the key goes straight in."
+        , finale1 = "Click! The last lock opened. Alice opened the little door and looked into the loveliest garden you ever saw."
+        , finale2 = "But she could not even get her head through the doorway. So she shut the door and went back to the glass table. This time there was a little bottle on it."
+        , easyStart =
+            lines
+                [ "Alice  the tiny golden key."
+                , "She was  to see a garden."
+                , "The door was  as tall as Alice."
+                , "It was at the end of the hakl."
+                ]
+        , easyAnswer =
+            lines
+                [ "Alice had the tiny golden key."
+                , "She was glad to see a garden."
+                , "The door was half as tall as Alice."
+                , "It was at the end of the hall."
+                ]
+        , challengeStart =
+            lines
+                [ "Alice  the key, and she was ."
+                , "The door was  as tall as she wds."
+                , "\"I  try the lock,\" said Alice."
+                , "She ssked the door to open, and it dif."
+                ]
+        , challengeAnswer =
+            lines
+                [ "Alice had the key, and she was glad."
+                , "The door was half as tall as she was."
+                , "\"I shall try the lock,\" said Alice."
+                , "She asked the door to open, and it did."
+                ]
+        , madStart =
+            lines
+                [ "Alice  the tiny golden key, and she was ."
+                , "She ssked herself which lock it would fit."
+                , "\"I  try them all,\" she said, \"one by one.\""
+                , "The first lock was not  as big as the key."
+                , "\"Oh, !\" cried Alice, \"this one is too small.\""
+                , "She turned the key, and the door opened ss she had hoped."
+                , "She looked along the passage to the fsr end."
+                , "It was the loveliest garden, and she lonfed to go in."
+                ]
+        , madAnswer =
+            lines
+                [ "Alice had the tiny golden key, and she was glad."
+                , "She asked herself which lock it would fit."
+                , "\"I shall try them all,\" she said, \"one by one.\""
+                , "The first lock was not half as big as the key."
+                , "\"Oh, alas!\" cried Alice, \"this one is too small.\""
+                , "She turned the key, and the door opened as she had hoped."
+                , "She looked along the passage to the far end."
+                , "It was the loveliest garden, and she longed to go in."
+                ]
+        , madBest = 71
+        , chooseTitle = "How many locks?"
+        , chooseHint = "j / k to choose · Enter to start"
+        , easyInfo = "Three locks and a wrong pin."
+        , challengeInfo = "More locks, all over the lines."
+        , madInfo = "A long story, and the key slips out if you wait."
+        , hintFind = "Find a lock: a gap or a wrong letter. Walk there with h j k l, then press i to put the key in."
+        , hintPin = "A wrong pin! Press c: it pulls the pin out and puts the key in. Type the right letter, then Esc."
+        , hintTurn = "The key is in. Type the missing letters, then Esc pulls the key out."
+        , hintBound = "The key is in the lock: h j k l type letters now. Pull it out with Esc to walk."
+        , linesRight = \right total -> "Lines right: " ++ String.fromInt right ++ " of " ++ String.fromInt total
+        , keySlipped = "The key slipped out! Look first, then type in one go."
+        , slips = "Key slipped"
+        , ourBest = "Our best"
+        , goal = "What the lines should say:"
         }
     , drinkMe =
         { intro1 = "On the table stood a little bottle. Round its neck was a paper label with the words DRINK ME printed in large letters."
@@ -592,8 +707,8 @@ english =
     , caterpillar =
         { intro1 = "On the top of a large mushroom sat a large blue Caterpillar, with its arms folded."
         , intro2 = "Who are YOU?"
-        , intro3 = "Some of the words are missing. Move to a gap and press i to start inserting. The mode in the status bar changes from NOR to INS."
-        , intro4 = "In INS every key types letters, just like the typing chapters. Press Esc to go back to NOR. a inserts after the cursor instead of before it."
+        , intro3 = "Some of the words are missing. You know how from the little door: move to a gap, press i, type, then Esc back to NOR."
+        , intro4 = "Something new: a inserts after the cursor instead of before it. Handy at the end of a line."
         , finale1 = "One side will make you grow taller, and the other side will make you grow shorter."
         , finale2 = "And with that, the Caterpillar got down off the mushroom and crawled away into the grass."
         , gaps =
@@ -729,6 +844,9 @@ german =
                 HallOfDoors ->
                     { name = "Der Saal der Türen", skill = "Helix: bewegen mit h j k l, Counts", lesson = "h ← j ↓ k ↑ l →, und 5j geht fünf Schritte." }
 
+                LittleDoor ->
+                    { name = "Die kleine Tür", skill = "Helix: i steckt den Schlüssel, Esc zieht ihn, c", lesson = "i fügt ein, Esc zurück zu NOR, c ändert." }
+
                 DrinkMe ->
                     { name = "Trink mich", skill = "Wörter tippen, neue Tasten e und i", lesson = "Wörter mit e und i, Daumen auf der Leertaste." }
 
@@ -805,7 +923,7 @@ german =
         , keyFound = "Ein winziger goldener Schlüssel! Er passt bestimmt in eine dieser Türen."
         , countLesson = "Schneller laufen: tippe zuerst eine Zahl. 8l geht acht Schritte nach rechts. Helix nennt das einen Count. Probier es auf dem Weg zum kleinen Vorhang unten rechts."
         , locked = "Die kleine Tür ist verschlossen. Wo ist der Schlüssel?"
-        , finale = "Hinter dem Vorhang war eine kleine Tür, kaum vierzig Zentimeter hoch. Der Schlüssel passte! Aber Alice bekam nicht einmal den Kopf durch die Öffnung."
+        , finale = "Hinter dem Vorhang war eine kleine Tür, kaum vierzig Zentimeter hoch, und der winzige goldene Schlüssel hatte genau die richtige Grösse dafür."
         , findKey = "Finde den winzigen goldenen Schlüssel."
         , goToCurtain = "Geh zum kleinen Vorhang unten rechts."
         , countTip = "Tippe zuerst eine Zahl, zum Beispiel 5j, für fünf Schritte."
@@ -819,6 +937,79 @@ german =
         , doorFound = "Alice öffnete die Tür und trat aus einer anderen Tür heraus, ganz woanders im Saal!"
         , doorRule = "Die Türen in diesem Saal spielen Streiche. Die Tür, aus der du gerade kommst, bringt dich zurück. Jede andere Tür kann jedes Mal woandershin führen."
         , doorsTip = "Der Weg zurück klappt immer. Alle anderen Türen ändern, wohin sie führen, sobald du durch eine gehst."
+        }
+    , littleDoor =
+        { intro1 = "Alice hatte den winzigen goldenen Schlüssel, und sie hatte die kleine Tür gefunden. Aber die kleine Tür hatte nicht ein Schloss, sondern ganz viele!"
+        , intro2 = "So viele Schlösser!"
+        , intro3 = "Mit i steckst du den Schlüssel in ein Schloss. In der Statusleiste wird aus NOR dann INS: Der Schlüssel steckt, und jede Taste dreht am Schloss, auch h j k l."
+        , intro4 = "Esc zieht den Schlüssel heraus: zurück zu NOR, und Alice kann wieder gehen. Ein falscher Buchstabe ist ein falscher Stift: Stell dich darauf und drücke c, dann steckt der Schlüssel sofort."
+        , finale1 = "Klick! Das letzte Schloss ging auf. Alice öffnete die kleine Tür und blickte in den schönsten Garten, den man sich denken kann."
+        , finale2 = "Aber sie konnte nicht einmal den Kopf durch die Tür stecken. Also schloss sie die Tür und ging zurück zum Glastisch. Diesmal stand ein Fläschchen darauf."
+        , easyStart =
+            lines
+                [ "Alice  den goldenen Schlüssel."
+                , "Er  auf dem Glastisch."
+                , "Die Tür war kleiner  Alice."
+                , "Sie war am Ende des Ssals."
+                ]
+        , easyAnswer =
+            lines
+                [ "Alice sah den goldenen Schlüssel."
+                , "Er lag auf dem Glastisch."
+                , "Die Tür war kleiner als Alice."
+                , "Sie war am Ende des Saals."
+                ]
+        , challengeStart =
+            lines
+                [ "Alice  den Schlüssel und fanf die Tür."
+                , "Die Tür im Ssal war viel kleiner  sie."
+                , "\"Ja,  es mich versuchen\", sagte Alice."
+                , "Sie wsr froh,  er passte."
+                ]
+        , challengeAnswer =
+            lines
+                [ "Alice sah den Schlüssel und fand die Tür."
+                , "Die Tür im Saal war viel kleiner als sie."
+                , "\"Ja, lass es mich versuchen\", sagte Alice."
+                , "Sie war froh, dass er passte."
+                ]
+        , madStart =
+            lines
+                [ "Alice  den winzigen goldenen Schlüssel."
+                , "Er  auf dem Glsstisch, und sie war froh."
+                , "Sie frsgte sich, in welches Schloss er passte."
+                , "Das erste Schloss war kleiner  der Schlüssel."
+                , "\"Ja,  es mich versuchen\", sagte Alice."
+                , "Sie drehte den Schlüssel, und die Tür ging suf."
+                , "Dahinter war ein Gang, und  hinten ein Garten."
+                , "Es war der schönste Garten, den sie je gesehen hstte."
+                ]
+        , madAnswer =
+            lines
+                [ "Alice sah den winzigen goldenen Schlüssel."
+                , "Er lag auf dem Glastisch, und sie war froh."
+                , "Sie fragte sich, in welches Schloss er passte."
+                , "Das erste Schloss war kleiner als der Schlüssel."
+                , "\"Ja, lass es mich versuchen\", sagte Alice."
+                , "Sie drehte den Schlüssel, und die Tür ging auf."
+                , "Dahinter war ein Gang, und da hinten ein Garten."
+                , "Es war der schönste Garten, den sie je gesehen hatte."
+                ]
+        , madBest = 67
+        , chooseTitle = "Wie viele Schlösser?"
+        , chooseHint = "j / k zum Wählen · Enter zum Starten"
+        , easyInfo = "Drei Schlösser und ein falscher Stift."
+        , challengeInfo = "Mehr Schlösser, über alle Zeilen verteilt."
+        , madInfo = "Eine lange Geschichte, und der Schlüssel rutscht heraus, wenn du wartest."
+        , hintFind = "Such ein Schloss: eine Lücke oder einen falschen Buchstaben. Geh mit h j k l hin, dann steckt i den Schlüssel hinein."
+        , hintPin = "Ein falscher Stift! Drücke c: Das zieht den Stift heraus und steckt den Schlüssel hinein. Tippe den richtigen Buchstaben, dann Esc."
+        , hintTurn = "Der Schlüssel steckt. Tippe die fehlenden Buchstaben, dann zieht Esc den Schlüssel heraus."
+        , hintBound = "Der Schlüssel steckt im Schloss: h j k l tippen jetzt Buchstaben. Zieh ihn mit Esc heraus, um zu gehen."
+        , linesRight = \right total -> "Richtige Zeilen: " ++ String.fromInt right ++ " von " ++ String.fromInt total
+        , keySlipped = "Der Schlüssel ist herausgerutscht! Zuerst schauen, dann in einem Zug tippen."
+        , slips = "Herausgerutscht"
+        , ourBest = "Unser Rekord"
+        , goal = "So sollen die Zeilen lauten:"
         }
     , drinkMe =
         { intro1 = "Auf dem Tisch stand ein Fläschchen. Um seinen Hals hing ein Zettel mit grossen Buchstaben: TRINK MICH."
@@ -940,8 +1131,8 @@ german =
     , caterpillar =
         { intro1 = "Oben auf einem grossen Pilz sass eine grosse blaue Raupe mit verschränkten Armen."
         , intro2 = "Wer bist DU?"
-        , intro3 = "Ein paar Wörter fehlen. Geh zu einer Lücke und drücke i, um einzufügen. In der Statusleiste wird aus NOR dann INS."
-        , intro4 = "In INS schreibt jede Taste Buchstaben, wie in den Tipp-Kapiteln. Mit Esc geht es zurück zu NOR. Mit a fügst du hinter dem Cursor ein statt davor."
+        , intro3 = "Ein paar Wörter fehlen. Wie das geht, weisst du von der kleinen Tür: zur Lücke gehen, i drücken, tippen, dann mit Esc zurück zu NOR."
+        , intro4 = "Neu: a fügt hinter dem Cursor ein statt davor. Praktisch am Ende einer Zeile."
         , finale1 = "Die eine Seite lässt dich wachsen, die andere Seite lässt dich schrumpfen."
         , finale2 = "Und damit kletterte die Raupe vom Pilz und kroch davon ins Gras."
         , gaps =

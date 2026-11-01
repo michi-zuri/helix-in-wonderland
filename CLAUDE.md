@@ -61,7 +61,7 @@ The local folder may be called `helix-wonderland`, but the repository is
   `npx elm-review --fix-all-without-prompt` clears unused code after removals;
   `npm run format` fixes formatting.
 - **Every new or changed key is pressed inside the real chapter**, not only in
-  `Editor.Core`. (Chapter 4 once blocked `gg`/`ge` because its lock list
+  `Editor.Core`. (The Curiouser chapter once blocked `gg`/`ge` because its lock list
   wasn't updated, #51: the editor tests passed, the chapter didn't.) Chapters
   decide which commands are unlocked (`isUnlocked`), so test through the
   chapter's `update`.
@@ -101,7 +101,7 @@ The local folder may be called `helix-wonderland`, but the repository is
   that plays it through the real chapter, using **only keys the game has taught
   by then**. Exact shortest-path solvers were tried and were far too slow (over
   8 minutes); a hand-tuned route plus a test is the approach.
-- Hidden sentences: chapter 3's word sequences and chapter 5's odd words form
+- Hidden sentences: chapter 4's word sequences and chapter 6's odd words form
   hidden sentences. The game never points them out; keep them secret in the UI.
 - No on-screen keyboard (removed in #53). Fullscreen mode (#57) shows only stage,
   panel and status line; Esc leaves browser fullscreen, so on entering it the
@@ -112,20 +112,22 @@ The local folder may be called `helix-wonderland`, but the repository is
 "Our best" routes)
 1. Home row typing in one long fall: left hand finger by finger, then the
 right hand, then `g h`, then both hands (#72). 2. `h j k l`, counts like `5j`.
-3. Typing words, `e`, `i`, space. 4. `gh gl gg ge gj gk g.` (`gw` works but is
-deliberately not taught; finishing chapter 4 with only `gw` jumps and no
-mistake brings out the Cheshire Cat, an easter egg nothing announces).
-5. `w`, `x`, `d`, `u`, counts like `3w`, `2x`, `gh`. 6. Insert mode `i`, `a`,
-`c`, Esc; Challenge adds `gl a`, Mad adds `x d` for a line that doesn't belong.
+3. Insert mode with the golden key: `i`, Esc, `c` (#73); typed letters are
+home row only. 4. Typing words, `e`, `i`, space (#74 will add `o` and `.`).
+5. `gh gl gg ge gj gk g.` (`gw` works but is deliberately not taught;
+finishing chapter 5 with only `gw` jumps and no mistake brings out the
+Cheshire Cat, an easter egg nothing announces).
+6. `w`, `x`, `d`, `u`, counts like `3w`, `2x`, `gh`. 7. `a`, plus the Insert
+mode from chapter 3; Challenge adds `w c` and `gl a`, Mad adds `x d` for a
+line that doesn't belong.
 
-The roadmap (#71) plans a new chapter 3 (#73, the little door: `i`, Esc, `c`),
-which will move Drink Me and the rest one number up. Issues #69–#70 used a
-short-lived order with a right-hand chapter first; #72 folded it back into
-chapter 1.
+Chapter numbers changed over time: up to #68 Drink Me was 3 and the
+Caterpillar 6; #69–#70 briefly had a right-hand chapter first; since #73 the
+order above holds. Read old issues with that in mind.
 
 - **New typing letters come in batches of at most 5** on top of those learned
   before (#71).
-- `e` and `b` are **locked** in chapters 5 and 6: the owner wants to teach them
+- `e` and `b` are **locked** in chapters 6 and 7: the owner wants to teach them
   later, with more thought about why they're needed.
 
 **Chapter specifics worth knowing**
@@ -141,11 +143,16 @@ chapter 1.
   has one, so reordering never locks away what a player reached
   (`Progress.isOpen`). Retired save names (`rabbit-hole-right-hand`) count for
   nothing.
-- Chapter 3: typing from memory; a word hides after its first key and starts
+- Chapter 3: the key is Insert mode. `i` puts it into a lock (INS, the key
+  sticks out of the keyhole of the cursor's line), every key then works the
+  lock, `h j k l` too; Esc pulls it out. Each gap or wrong letter is a lock;
+  gaps between words are two spaces, a gap before punctuation one space. On
+  mad the key slips out after 2 s without a key (#73).
+- Chapter 4: typing from memory; a word hides after its first key and starts
   over after a pause over 300 ms between correct keys (#35).
-- Chapter 4: lines without indents (#55); cheeky currants (`g.`) are shy and run
+- Chapter 5: lines without indents (#55); cheeky currants (`g.`) are shy and run
   off once the cursor shares their line, screen row or column (#47).
-- Chapter 6: Mad is Alice's garbled "You are old, Father William" (#65). A
+- Chapter 7: Mad is Alice's garbled "You are old, Father William" (#65). A
   smoke-ring twist was discussed and postponed.
 
 ## Conventions (in addition to README.md)

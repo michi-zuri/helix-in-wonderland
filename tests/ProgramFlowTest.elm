@@ -158,11 +158,11 @@ suite =
                             [ ProgramTest.expectViewHas [ text "02_hall_of_doors.txt" ]
                             , portValues "saveSettings" (Decode.field "unlockAll" Decode.bool) (Expect.equal [ True ])
                             ]
-            , test "a saved game with tarts in the hall opens chapter 3" <|
+            , test "a saved game with tarts in the hall opens chapter 3, the little door" <|
                 \_ ->
                     startWith [ ( "progress", Encode.object [ ( "hall-of-doors", Encode.int 2 ) ] ) ]
                         |> press [ "j", "j", "Enter" ]
-                        |> ProgramTest.expectViewHas [ text "03_drink_me.txt" ]
+                        |> ProgramTest.expectViewHas [ text "03_little_door.txt" ]
             , test "... but chapter 4 stays locked" <|
                 \_ ->
                     startWith [ ( "progress", Encode.object [ ( "hall-of-doors", Encode.int 2 ) ] ) ]
@@ -189,6 +189,24 @@ suite =
                         , portValues "saveProgress" (Decode.field "caterpillar" Decode.int) (Expect.equal [ 1 ])
                         , press [ "Enter" ] >> ProgramTest.expectViewHas [ text "The end, for now" ]
                         ]
+        , test "chapter 3: open the little door's locks, then Next leads into Drink Me" <|
+            \_ ->
+                startWith [ ( "progress", Encode.object [ ( "hall-of-doors", Encode.int 1 ) ] ) ]
+                    |> press [ "j", "j", "Enter" ]
+                    |> readStory
+                    |> press [ "1" ]
+                    |> typeIn "6lihad"
+                    |> press [ "Escape" ]
+                    |> typeIn "jiglad"
+                    |> press [ "Escape" ]
+                    |> typeIn "j2lihalf"
+                    |> press [ "Escape" ]
+                    |> typeIn "j11lcl"
+                    |> press [ "Escape" ]
+                    |> press (List.repeat 4 "Enter")
+                    |> ProgramTest.ensureViewHas [ text "Chapter complete!" ]
+                    |> press [ "Enter" ]
+                    |> ProgramTest.expectViewHas [ text "04_drink_me.txt" ]
         , describe "fullscreen"
             [ test "entering fullscreen asks the browser, then asks for the escape keys and saves them" <|
                 \_ ->
