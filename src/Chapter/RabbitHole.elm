@@ -1,12 +1,12 @@
-module Chapter.RabbitHole exposing (Hands(..), Model, Msg(..), groundDepth, init, jarSpeed, keysOf, update, view)
+module Chapter.RabbitHole exposing (Model, Msg(..), basicJars, groundDepth, init, jarSpeed, stuckMilliseconds, update, view)
 
-{-| Chapters 1 and 3, "Down the Rabbit Hole": the home row. Alice falls down
-the well; jars float up with a letter on their label, and pressing that
-letter catches the jar. Six stages introduce the fingers one by one.
-
-The chapter comes in two versions (`Hands`): chapter 1 is for the right hand
-only, the hand that moves in Helix with `h j k l` in chapter 2; chapter 3 is
-the same fall with both hands, finger pair by finger pair.
+{-| Chapter 1, "Down the Rabbit Hole": the home row. Alice falls down the
+well, a very long way; jars float up with a letter on their label, and
+pressing that letter catches the jar. Twelve stages introduce the left hand
+finger by finger, then the right hand, then g and h, then both hands
+together (`stages`). A player who stays in the last stage for a minute
+without reaching the ground goes round the left hand, the right hand and
+both hands again.
 
 The fall: every jar caught brings Alice one step closer to the ground.
 Every mistake, a wrong key or a jar that floats away, lifts her back up a
@@ -46,21 +46,9 @@ import Ui.Dialog as Dialog
 import Ui.DifficultyChoice as DifficultyChoice exposing (Choice)
 
 
-{-| Which hands the chapter trains.
--}
-type Hands
-    = RightHand
-    | BothHands
-
-
-file : Hands -> String
-file hands =
-    case hands of
-        RightHand ->
-            "01_right_hand.txt"
-
-        BothHands ->
-            "03_rabbit_hole.txt"
+file : String
+file =
+    "01_rabbit_hole.txt"
 
 
 
@@ -74,57 +62,13 @@ type alias Stage =
     }
 
 
-{-| Index fingers, middle, ring, little fingers, all of them, then the index
-fingers stretching inwards for g and h. With the right hand only: j, k, l,
-the little finger's key, all four, then h.
+{-| The long fall, one hand at a time: the left hand finger by finger, then
+all four; the right hand the same way; the index fingers stretching inward
+for g and h; then both hands with g and h, the whole home row. Each step
+brings at most five new keys.
 -}
-stages : Hands -> Layout -> List Stage
-stages hands layout =
-    case hands of
-        BothHands ->
-            bothHandsStages layout
-
-        RightHand ->
-            rightHandStages layout
-
-
-rightHandStages : Layout -> List Stage
-rightHandStages layout =
-    let
-        home =
-            Layout.homeKeys layout
-
-        finger index describe =
-            let
-                key =
-                    home.right |> List.drop index |> List.head |> Maybe.withDefault ' '
-            in
-            { keys = [ key ]
-            , catches = 6
-            , describe = \texts -> describe texts (upper key)
-            }
-    in
-    [ finger 0 (.rabbitHole >> .rightIndex)
-    , finger 1 (.rabbitHole >> .rightMiddle)
-    , finger 2 (.rabbitHole >> .rightRing)
-    , finger 3 (.rabbitHole >> .rightLittle)
-    , { keys = home.right, catches = 10, describe = .rabbitHole >> .allFour }
-    , { keys = [ rightStretch layout ]
-      , catches = 6
-      , describe = \texts -> texts.rabbitHole.rightStretch (upper (rightStretch layout))
-      }
-    ]
-
-
-{-| The key the right index finger stretches to: h on every layout.
--}
-rightStretch : Layout -> Char
-rightStretch layout =
-    Layout.stretchKeys layout |> List.drop 1 |> List.head |> Maybe.withDefault 'h'
-
-
-bothHandsStages : Layout -> List Stage
-bothHandsStages layout =
+stages : Layout -> List Stage
+stages layout =
     let
         home =
             Layout.homeKeys layout
@@ -132,19 +76,18 @@ bothHandsStages layout =
         nth index list =
             list |> List.drop index |> List.head |> Maybe.withDefault ' '
 
-        -- Pair 0 is the index fingers (f, j), pair 3 the little fingers.
-        pair index =
-            ( nth (3 - index) home.left, nth index home.right )
-
-        fingerStage index describe =
-            let
-                ( left, right ) =
-                    pair index
-            in
-            { keys = [ left, right ]
+        -- Finger 0 is the index finger, 3 the little finger.
+        finger key describe =
+            { keys = [ key ]
             , catches = 6
-            , describe = \texts -> describe texts (upper left) (upper right)
+            , describe = \texts -> describe texts (upper key)
             }
+
+        left index =
+            nth (3 - index) home.left
+
+        right index =
+            nth index home.right
 
         ( stretchLeft, stretchRight ) =
             case Layout.stretchKeys layout of
@@ -154,16 +97,48 @@ bothHandsStages layout =
                 _ ->
                     ( 'g', 'h' )
     in
-    [ fingerStage 0 (.rabbitHole >> .indexFingers)
-    , fingerStage 1 (.rabbitHole >> .middleFingers)
-    , fingerStage 2 (.rabbitHole >> .ringFingers)
-    , fingerStage 3 (.rabbitHole >> .littleFingers)
-    , { keys = home.left ++ home.right, catches = 10, describe = .rabbitHole >> .allEight }
+    [ finger (left 0) (.rabbitHole >> .leftIndex)
+    , finger (left 1) (.rabbitHole >> .leftMiddle)
+    , finger (left 2) (.rabbitHole >> .leftRing)
+    , finger (left 3) (.rabbitHole >> .leftLittle)
+    , { keys = home.left, catches = 10, describe = .rabbitHole >> .allFourLeft }
+    , finger (right 0) (.rabbitHole >> .rightIndex)
+    , finger (right 1) (.rabbitHole >> .rightMiddle)
+    , finger (right 2) (.rabbitHole >> .rightRing)
+    , finger (right 3) (.rabbitHole >> .rightLittle)
+    , { keys = home.right, catches = 10, describe = .rabbitHole >> .allFourRight }
     , { keys = [ stretchLeft, stretchRight ]
       , catches = 6
       , describe = \texts -> texts.rabbitHole.stretch (upper stretchLeft) (upper stretchRight)
       }
+    , { keys = allKeys layout, catches = 10, describe = .rabbitHole >> .bothHands }
     ]
+
+
+{-| Where the stages for the whole left hand, the whole right hand and both
+hands together are: a player stuck too long goes round these again.
+-}
+leftHandStage : Int
+leftHandStage =
+    4
+
+
+rightHandStage : Int
+rightHandStage =
+    9
+
+
+lastStage : Int
+lastStage =
+    11
+
+
+{-| How long a player may stay in the last stage without reaching the ground
+before going round left hand, right hand and both again, in ms.
+-}
+stuckMilliseconds : Float
+stuckMilliseconds =
+    60000
 
 
 upper : Char -> String
@@ -171,46 +146,37 @@ upper char =
     String.toUpper (String.fromChar char)
 
 
-stageAt : Hands -> Layout -> Int -> Maybe Stage
-stageAt hands layout index =
-    stages hands layout |> List.drop index |> List.head
+stageAt : Layout -> Int -> Maybe Stage
+stageAt layout index =
+    stages layout |> List.drop index |> List.head
 
 
-{-| The jars of all six stages together: the same for both versions, so
-they share the depths of the well.
+{-| The jars of all the stages together.
 -}
 basicJars : Int
 basicJars =
-    stages BothHands Layout.UsQwerty |> List.map .catches |> List.sum
+    stages Layout.UsQwerty |> List.map .catches |> List.sum
 
 
-{-| Every key the chapter's jars can carry.
+{-| Every key of the home row, g and h included.
 -}
-keysOf : Hands -> Layout -> List Char
-keysOf hands layout =
-    (allKeysStage hands layout).keys
-
-
-{-| After the six stages, jars come with all the chapter's keys.
--}
-allKeysStage : Hands -> Layout -> Stage
-allKeysStage hands layout =
+allKeys : Layout -> List Char
+allKeys layout =
     let
         home =
             Layout.homeKeys layout
     in
-    case hands of
-        BothHands ->
-            { keys = home.left ++ Layout.stretchKeys layout ++ home.right
-            , catches = 0
-            , describe = .rabbitHole >> .allKeys
-            }
+    home.left ++ Layout.stretchKeys layout ++ home.right
 
-        RightHand ->
-            { keys = rightStretch layout :: home.right
-            , catches = 0
-            , describe = .rabbitHole >> .allKeys
-            }
+
+{-| After the stages, jars come with all the home-row keys.
+-}
+allKeysStage : Layout -> Stage
+allKeysStage layout =
+    { keys = allKeys layout
+    , catches = 0
+    , describe = .rabbitHole >> .allKeys
+    }
 
 
 
@@ -246,7 +212,7 @@ pace difficulty =
             { ground = basicJars + 8, topSpeed = 60, shortestGap = 650, mostJars = 5 }
 
         Mad ->
-            { ground = basicJars + 40, topSpeed = 95, shortestGap = 400, mostJars = 6 }
+            { ground = basicJars + 42, topSpeed = 95, shortestGap = 400, mostJars = 6 }
 
 
 groundDepth : Difficulty -> Int
@@ -395,8 +361,7 @@ heapHeight =
 
 
 type alias Model =
-    { hands : Hands
-    , story : Story
+    { story : Story
     , choice : Choice
     , difficulty : Maybe Difficulty
     , stage : Int
@@ -415,6 +380,8 @@ type alias Model =
     , wobble : Float
     , aliceY : Float
     , landing : Maybe Landing
+    , goingRound : Bool
+    , inLastStage : Float
     , scroll : Float
     , clock : Float
     }
@@ -451,21 +418,13 @@ type alias Landing =
     }
 
 
-init : Hands -> Random.Seed -> Model
-init hands seed =
-    { hands = hands
-    , story =
+init : Random.Seed -> Model
+init seed =
+    { story =
         Story.begin (Dialog.say Narrator (.rabbitHole >> .intro1))
             [ Dialog.say WhiteRabbit (.rabbitHole >> .intro2)
             , Dialog.say Narrator (.rabbitHole >> .intro3)
-            , Dialog.say Narrator
-                (case hands of
-                    RightHand ->
-                        .rabbitHole >> .intro4RightHand
-
-                    BothHands ->
-                        .rabbitHole >> .intro4
-                )
+            , Dialog.say Narrator (.rabbitHole >> .intro4)
             ]
     , choice = DifficultyChoice.start 0
     , difficulty = Nothing
@@ -485,21 +444,23 @@ init hands seed =
     , wobble = 0
     , aliceY = topAliceY
     , landing = Nothing
+    , goingRound = False
+    , inLastStage = 0
     , scroll = 0
     , clock = 0
     }
 
 
-{-| The stage being played; after the six stages, all keys.
+{-| The stage being played; after the stages, all keys.
 -}
 currentStage : Layout -> Model -> Stage
 currentStage layout model =
-    stageAt model.hands layout model.stage |> Maybe.withDefault (allKeysStage model.hands layout)
+    stageAt layout model.stage |> Maybe.withDefault (allKeysStage layout)
 
 
 isBeyondStages : Layout -> Model -> Bool
 isBeyondStages layout model =
-    model.stage >= List.length (stages model.hands layout)
+    model.stage >= List.length (stages layout)
 
 
 {-| The jar to catch next: the one that has floated highest.
@@ -587,7 +548,7 @@ startFalling : Layout -> Difficulty -> Model -> ( Model, List Effect )
 startFalling layout difficulty model =
     ( { model | difficulty = Just difficulty, spawnIn = 400 }
     , PlaySound PickupSound
-        :: (stageAt model.hands layout 0 |> Maybe.map (\stage -> [ ShowToast stage.describe ]) |> Maybe.withDefault [])
+        :: (stageAt layout 0 |> Maybe.map (\stage -> [ ShowToast stage.describe ]) |> Maybe.withDefault [])
     )
 
 
@@ -661,11 +622,31 @@ caught layout difficulty jar model =
         ( catcher, effects )
 
 
+{-| On to the next stage. Going round again after being stuck, the whole
+left hand leads to the whole right hand, and that to both hands.
+-}
 nextStage : Layout -> Model -> List Effect -> ( Model, List Effect )
 nextStage layout model effects =
     let
+        following =
+            if model.goingRound && model.stage == leftHandStage then
+                rightHandStage
+
+            else if model.goingRound && model.stage == rightHandStage then
+                lastStage
+
+            else
+                model.stage + 1
+
         advanced =
-            { model | stage = model.stage + 1, caughtThisStage = 0, jars = [], spawnIn = 800 }
+            { model
+                | stage = following
+                , caughtThisStage = 0
+                , jars = []
+                , spawnIn = 800
+                , goingRound = model.goingRound && following /= lastStage
+                , inLastStage = 0
+            }
     in
     ( advanced
     , effects ++ [ PlaySound PickupSound, ShowToast (currentStage layout advanced).describe ]
@@ -704,12 +685,45 @@ frame layout milliseconds model =
                 advanced
                     |> spawnJar layout difficulty milliseconds
                     |> floatJars milliseconds
+                    |> watchForStuck layout milliseconds
 
             else
                 ( advanced, [] )
 
         ( Nothing, Nothing ) ->
             ( advanced, [] )
+
+
+{-| Time in the last stage (and the all-keys fall after it) adds up; after
+`stuckMilliseconds` without reaching the ground, the player goes round the
+whole left hand, the whole right hand and both hands again.
+-}
+watchForStuck : Layout -> Float -> ( Model, List Effect ) -> ( Model, List Effect )
+watchForStuck layout milliseconds ( model, effects ) =
+    if model.stage < lastStage then
+        ( model, effects )
+
+    else if model.inLastStage + milliseconds < stuckMilliseconds then
+        ( { model | inLastStage = model.inLastStage + milliseconds }, effects )
+
+    else
+        let
+            again =
+                { model
+                    | stage = leftHandStage
+                    , caughtThisStage = 0
+                    , jars = []
+                    , spawnIn = 800
+                    , goingRound = True
+                    , inLastStage = 0
+                }
+        in
+        ( again
+        , effects
+            ++ [ PlaySound PickupSound
+               , ShowToast (\texts -> texts.rabbitHole.goRound ++ " " ++ (currentStage layout again).describe texts)
+               ]
+        )
 
 
 {-| How fast the walls slide past, in pixels per millisecond: faster the
@@ -857,15 +871,7 @@ animateLanding milliseconds landing model =
         ( { landed
             | story =
                 Story.conclude (Dialog.say Narrator (.rabbitHole >> .landing1))
-                    [ Dialog.say Narrator
-                        (case model.hands of
-                            RightHand ->
-                                .rabbitHole >> .landing2RightHand
-
-                            BothHands ->
-                                .rabbitHole >> .landing2
-                        )
-                    ]
+                    [ Dialog.say Narrator (.rabbitHole >> .landing2) ]
           }
         , thump
         )
@@ -970,7 +976,7 @@ scene context model =
     , panel = viewPanel context model
     , status =
         { mode = "INS"
-        , file = file model.hands
+        , file = file
         , pendingKeys = ""
         , position =
             case model.difficulty of
@@ -1091,7 +1097,7 @@ viewPanel context model =
                     currentStage context.layout model
 
                 allStages =
-                    stages model.hands context.layout
+                    stages context.layout
 
                 stageLabel =
                     if isBeyondStages context.layout model then

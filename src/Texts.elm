@@ -97,28 +97,26 @@ type alias EndTexts =
 
 
 {-| Stage descriptions take the keys as arguments, because the home row
-differs between layouts (`;` on QWERTY, `ö` on QWERTZ, `m` on AZERTY). The
-`right…` stages, `intro4RightHand` and `landing2RightHand` belong to the
-right-hand version (chapter 1); the others to both hands (chapter 3).
+differs between layouts (`;` on QWERTY, `ö` on QWERTZ, `m` on AZERTY).
 -}
 type alias RabbitHoleTexts =
     { intro1 : String
     , intro2 : String
     , intro3 : String
     , intro4 : String
-    , intro4RightHand : String
+    , leftIndex : String -> String
+    , leftMiddle : String -> String
+    , leftRing : String -> String
+    , leftLittle : String -> String
+    , allFourLeft : String
     , rightIndex : String -> String
     , rightMiddle : String -> String
     , rightRing : String -> String
     , rightLittle : String -> String
-    , allFour : String
-    , rightStretch : String -> String
-    , indexFingers : String -> String -> String
-    , middleFingers : String -> String -> String
-    , ringFingers : String -> String -> String
-    , littleFingers : String -> String -> String
-    , allEight : String
+    , allFourRight : String
     , stretch : String -> String -> String
+    , bothHands : String
+    , goRound : String
     , stage : Int -> Int -> String
     , chooseTitle : String
     , chooseHint : String
@@ -132,7 +130,6 @@ type alias RabbitHoleTexts =
     , speed : String
     , landing1 : String
     , landing2 : String
-    , landing2RightHand : String
     }
 
 
@@ -220,7 +217,7 @@ type alias CuriouserTexts =
     }
 
 
-{-| Chapter 6's poems, one per difficulty, all cleaned into `cleanPoem` by
+{-| Chapter 5's poems, one per difficulty, all cleaned into `cleanPoem` by
 deleting words and lines. The words to delete carry a hidden meaning that
 the game never explains: on easy they spell a sentence, the tide on
 challenge splashes one in word by word (`tideWords`), and on mad they are
@@ -266,7 +263,7 @@ type alias PoolTexts =
     }
 
 
-{-| Chapter 7's texts. Easy has gaps to fill (`gaps`, `answer`). Challenge
+{-| Chapter 6's texts. Easy has gaps to fill (`gaps`, `answer`). Challenge
 mixes missing words (`i`), a word missing at a line's end (`a`) and wrong
 words (`w` then `c`). Mad is the poem Alice recites to the Caterpillar in
 the book, "You are old, Father William", as she gets it wrong: wrong words,
@@ -378,11 +375,8 @@ english =
     , chapter =
         \id ->
             case id of
-                RabbitHoleRightHand ->
-                    { name = "Down the Rabbit Hole", skill = "Home row typing: right hand", lesson = "Your right hand lives on the home row." }
-
                 RabbitHole ->
-                    { name = "Down the Rabbit Hole", skill = "Home row typing: both hands", lesson = "Fingers live on the home row." }
+                    { name = "Down the Rabbit Hole", skill = "Home row typing: left hand, right hand, both", lesson = "Fingers live on the home row." }
 
                 HallOfDoors ->
                     { name = "The Hall of Doors", skill = "Helix: move with h j k l, counts", lesson = "h ← j ↓ k ↑ l →, and 5j walks five steps." }
@@ -428,19 +422,19 @@ english =
         , intro2 = "Oh dear! Oh dear! I shall be late!"
         , intro3 = "Down went Alice after it. The rabbit hole dipped suddenly down, like a very deep well. Jars float past the shelves as she falls."
         , intro4 = "Catch a jar by pressing the letter on its label. First, find home: left index finger on F, right index finger on J. Can you feel the little bumps?"
-        , intro4RightHand = "Catch a jar by pressing the letter on its label. This time only your right hand plays: index finger on J. Can you feel the little bump?"
-        , rightIndex = \a -> a ++ ": your right index finger. Don't look down, feel the bump."
-        , rightMiddle = \a -> a ++ ": your middle finger, right next door."
-        , rightRing = \a -> a ++ ": your ring finger."
-        , rightLittle = \a -> a ++ ": your little finger."
-        , allFour = "All four together. This is where your right hand lives."
-        , rightStretch = \a -> a ++ ": your index finger stretches one key to the left, then comes home."
-        , indexFingers = \a b -> a ++ " and " ++ b ++ ": your two index fingers. Don't look down, feel the bumps."
-        , middleFingers = \a b -> a ++ " and " ++ b ++ ": your middle fingers, right next door."
-        , ringFingers = \a b -> a ++ " and " ++ b ++ ": your ring fingers."
-        , littleFingers = \a b -> a ++ " and " ++ b ++ ": your little fingers."
-        , allEight = "All eight together. This is the home row. Your fingers live here."
+        , leftIndex = \a -> a ++ ": your left index finger. Don't look down, feel the bump."
+        , leftMiddle = \a -> a ++ ": your left middle finger, right next door."
+        , leftRing = \a -> a ++ ": your left ring finger."
+        , leftLittle = \a -> a ++ ": your left little finger."
+        , allFourLeft = "All four together. This is where your left hand lives."
+        , rightIndex = \a -> a ++ ": your right index finger. It has a bump too."
+        , rightMiddle = \a -> a ++ ": your right middle finger, right next door."
+        , rightRing = \a -> a ++ ": your right ring finger."
+        , rightLittle = \a -> a ++ ": your right little finger."
+        , allFourRight = "All four together. This is where your right hand lives."
         , stretch = \a b -> a ++ " and " ++ b ++ ": your index fingers stretch one key inward, then come home."
+        , bothHands = "Both hands together, with the stretch: the whole home row."
+        , goRound = "Once more round: left hand, right hand, then both."
         , stage = \current total -> "Stage " ++ String.fromInt current ++ " of " ++ String.fromInt total
         , chooseTitle = "How fast do you want to fall?"
         , chooseHint = "j / k to choose · Enter to jump"
@@ -453,8 +447,7 @@ english =
         , letGo = "Esc lets go: Alice lands where she is. Mistakes lift her up again."
         , speed = "Speed"
         , landing1 = "Thump! Thump! Down Alice came upon a heap of sticks and dry leaves, and the fall was over."
-        , landing2 = "Both hands know the home row now. Next, they type whole words."
-        , landing2RightHand = "Your right hand knows its home now. The keys h j k l live there too, and you will need them in the next chapter."
+        , landing2 = "Your fingers know the home row now. The keys h j k l live there too, and you will need them in the next chapter."
         }
     , hall =
         { intro1 = "Alice found herself in a long, low hall. There were doors all round it, but they were all locked."
@@ -730,11 +723,8 @@ german =
     , chapter =
         \id ->
             case id of
-                RabbitHoleRightHand ->
-                    { name = "Hinunter in den Kaninchenbau", skill = "Grundreihe tippen: rechte Hand", lesson = "Deine rechte Hand wohnt auf der Grundreihe." }
-
                 RabbitHole ->
-                    { name = "Hinunter in den Kaninchenbau", skill = "Grundreihe tippen: beide Hände", lesson = "Die Finger wohnen auf der Grundreihe." }
+                    { name = "Hinunter in den Kaninchenbau", skill = "Grundreihe tippen: links, rechts, beide", lesson = "Die Finger wohnen auf der Grundreihe." }
 
                 HallOfDoors ->
                     { name = "Der Saal der Türen", skill = "Helix: bewegen mit h j k l, Counts", lesson = "h ← j ↓ k ↑ l →, und 5j geht fünf Schritte." }
@@ -780,19 +770,19 @@ german =
         , intro2 = "Oje, oje! Ich komme zu spät!"
         , intro3 = "Alice sprang ihm nach, hinunter in den Kaninchenbau. Der fiel plötzlich steil ab, wie ein tiefer Brunnen. An den Regalen schweben Gläser vorbei."
         , intro4 = "Fang ein Glas, indem du den Buchstaben auf dem Etikett drückst. Zuerst die Grundstellung: linker Zeigefinger auf F, rechter Zeigefinger auf J. Spürst du die kleinen Huckel?"
-        , intro4RightHand = "Fang ein Glas, indem du den Buchstaben auf dem Etikett drückst. Diesmal spielt nur die rechte Hand: Zeigefinger auf J. Spürst du den kleinen Huckel?"
-        , rightIndex = \a -> a ++ ": dein rechter Zeigefinger. Nicht hinschauen, den Huckel fühlen."
-        , rightMiddle = \a -> a ++ ": der Mittelfinger, gleich daneben."
-        , rightRing = \a -> a ++ ": der Ringfinger."
-        , rightLittle = \a -> a ++ ": der kleine Finger."
-        , allFour = "Alle vier zusammen. Hier wohnt deine rechte Hand."
-        , rightStretch = \a -> a ++ ": der Zeigefinger streckt sich eine Taste nach links und kommt zurück."
-        , indexFingers = \a b -> a ++ " und " ++ b ++ ": deine Zeigefinger. Nicht hinschauen, die Huckel fühlen."
-        , middleFingers = \a b -> a ++ " und " ++ b ++ ": die Mittelfinger, gleich daneben."
-        , ringFingers = \a b -> a ++ " und " ++ b ++ ": die Ringfinger."
-        , littleFingers = \a b -> a ++ " und " ++ b ++ ": die kleinen Finger."
-        , allEight = "Alle acht zusammen. Das ist die Grundreihe. Hier wohnen deine Finger."
+        , leftIndex = \a -> a ++ ": dein linker Zeigefinger. Nicht hinschauen, den Huckel fühlen."
+        , leftMiddle = \a -> a ++ ": dein linker Mittelfinger, gleich daneben."
+        , leftRing = \a -> a ++ ": dein linker Ringfinger."
+        , leftLittle = \a -> a ++ ": dein linker kleiner Finger."
+        , allFourLeft = "Alle vier zusammen. Hier wohnt deine linke Hand."
+        , rightIndex = \a -> a ++ ": dein rechter Zeigefinger. Auch er hat einen Huckel."
+        , rightMiddle = \a -> a ++ ": dein rechter Mittelfinger, gleich daneben."
+        , rightRing = \a -> a ++ ": dein rechter Ringfinger."
+        , rightLittle = \a -> a ++ ": dein rechter kleiner Finger."
+        , allFourRight = "Alle vier zusammen. Hier wohnt deine rechte Hand."
         , stretch = \a b -> a ++ " und " ++ b ++ ": die Zeigefinger strecken sich eine Taste nach innen und kommen zurück."
+        , bothHands = "Beide Hände zusammen, mit dem Strecken: die ganze Grundreihe."
+        , goRound = "Noch eine Runde: linke Hand, rechte Hand, dann beide."
         , stage = \current total -> "Stufe " ++ String.fromInt current ++ " von " ++ String.fromInt total
         , chooseTitle = "Wie schnell willst du fallen?"
         , chooseHint = "j / k zum Wählen · Enter zum Springen"
@@ -805,8 +795,7 @@ german =
         , letGo = "Esc lässt los: Alice landet, wo sie gerade ist. Fehler heben sie wieder hoch."
         , speed = "Tempo"
         , landing1 = "Plumps! Plumps! Alice landete auf einem Haufen Zweige und trockener Blätter, und der Fall war vorbei."
-        , landing2 = "Jetzt kennen beide Hände die Grundreihe. Als Nächstes tippen sie ganze Wörter."
-        , landing2RightHand = "Deine rechte Hand kennt jetzt ihr Zuhause. Auch h j k l wohnen dort, und die brauchst du im nächsten Kapitel."
+        , landing2 = "Deine Finger kennen jetzt die Grundreihe. Auch h j k l wohnen dort, und die brauchst du im nächsten Kapitel."
         }
     , hall =
         { intro1 = "Alice stand in einem langen, niedrigen Saal. Ringsum waren Türen, aber alle waren verschlossen."

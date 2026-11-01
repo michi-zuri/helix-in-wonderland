@@ -5,9 +5,8 @@ module Chapter.Id exposing (ChapterId(..), all, next, number, previous, toKey)
 
 
 type ChapterId
-    = RabbitHoleRightHand
+    = RabbitHole
     | HallOfDoors
-    | RabbitHole
     | DrinkMe
     | Curiouser
     | PoolOfTears
@@ -16,7 +15,7 @@ type ChapterId
 
 all : List ChapterId
 all =
-    [ RabbitHoleRightHand, HallOfDoors, RabbitHole, DrinkMe, Curiouser, PoolOfTears, CaterpillarsAdvice ]
+    [ RabbitHole, HallOfDoors, DrinkMe, Curiouser, PoolOfTears, CaterpillarsAdvice ]
 
 
 {-| 1-based, as shown on the title screen.
@@ -24,36 +23,32 @@ all =
 number : ChapterId -> Int
 number id =
     case id of
-        RabbitHoleRightHand ->
+        RabbitHole ->
             1
 
         HallOfDoors ->
             2
 
-        RabbitHole ->
+        DrinkMe ->
             3
 
-        DrinkMe ->
+        Curiouser ->
             4
 
-        Curiouser ->
+        PoolOfTears ->
             5
 
-        PoolOfTears ->
-            6
-
         CaterpillarsAdvice ->
-            7
+            6
 
 
 {-| Stable name for saving progress. Never change these: saved games use them.
+Retired names are never used again: "rabbit-hole-right-hand" (#69, folded
+back into the Rabbit Hole in #72).
 -}
 toKey : ChapterId -> String
 toKey id =
     case id of
-        RabbitHoleRightHand ->
-            "rabbit-hole-right-hand"
-
         RabbitHole ->
             "rabbit-hole"
 

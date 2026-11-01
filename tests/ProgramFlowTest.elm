@@ -9,6 +9,7 @@ together, which only a browser could check before.
 -}
 
 import App
+import Chapter.RabbitHole as RabbitHole
 import Expect
 import Html.Attributes
 import Json.Decode as Decode
@@ -143,11 +144,11 @@ suite =
                             [ ProgramTest.expectViewHas [ text "Finish the chapter before this one first." ]
                             , portValues "playSound" Decode.string (Expect.equal [ "error" ])
                             ]
-            , test "Enter on chapter 1 starts the right-hand fall" <|
+            , test "Enter on chapter 1 starts the fall" <|
                 \_ ->
                     newPlayer
                         |> press [ "Enter" ]
-                        |> ProgramTest.expectViewHas [ text "01_right_hand.txt" ]
+                        |> ProgramTest.expectViewHas [ text "01_rabbit_hole.txt" ]
             , test "the grown-ups button opens every chapter, and is saved" <|
                 \_ ->
                     newPlayer
@@ -157,15 +158,15 @@ suite =
                             [ ProgramTest.expectViewHas [ text "02_hall_of_doors.txt" ]
                             , portValues "saveSettings" (Decode.field "unlockAll" Decode.bool) (Expect.equal [ True ])
                             ]
-            , test "an old saved game that had finished only the old first chapter keeps chapters 1 to 4 open" <|
+            , test "a saved game with tarts in the hall opens chapter 3" <|
                 \_ ->
-                    startWith [ ( "progress", Encode.object [ ( "rabbit-hole", Encode.int 2 ) ] ) ]
-                        |> press [ "k", "k", "k", "k", "Enter" ]
-                        |> ProgramTest.expectViewHas [ text "04_drink_me.txt" ]
-            , test "... but chapter 5 stays locked" <|
+                    startWith [ ( "progress", Encode.object [ ( "hall-of-doors", Encode.int 2 ) ] ) ]
+                        |> press [ "j", "j", "Enter" ]
+                        |> ProgramTest.expectViewHas [ text "03_drink_me.txt" ]
+            , test "... but chapter 4 stays locked" <|
                 \_ ->
-                    startWith [ ( "progress", Encode.object [ ( "rabbit-hole", Encode.int 2 ) ] ) ]
-                        |> press [ "k", "k", "k", "Enter" ]
+                    startWith [ ( "progress", Encode.object [ ( "hall-of-doors", Encode.int 2 ) ] ) ]
+                        |> press [ "j", "j", "j", "Enter" ]
                         |> ProgramTest.expectViewHas [ text "Finish the chapter before this one first." ]
             ]
         , test "finishing the last chapter: the results card, saved progress, then the end card" <|
@@ -253,8 +254,9 @@ suite =
                     |> press [ "Enter" ]
                     |> readStory
                     |> press [ "1" ]
-                    |> ProgramTest.ensureViewHas [ text "0/40" ]
+                    |> ProgramTest.ensureViewHas [ text ("0/" ++ String.fromInt RabbitHole.basicJars) ]
                     |> wait 1000
-                    |> press [ "j" ]
-                    |> ProgramTest.expectViewHas [ text "1/40" ]
+                    -- The first stage is the left index finger: F.
+                    |> press [ "f" ]
+                    |> ProgramTest.expectViewHas [ text ("1/" ++ String.fromInt RabbitHole.basicJars) ]
         ]
