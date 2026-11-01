@@ -620,9 +620,10 @@ viewPanel context model work =
                 ]
 
 
-{-| The hall's wall, the curtain drawn aside and the little door with one
-keyhole per line: gold once that line reads right. With the key in, it
-sticks out of the keyhole of the cursor's line; otherwise Alice holds it.
+{-| The hall's wall, a low curtain drawn aside and the little door, about
+fifteen inches high as in the book: half as tall as Alice, who towers over
+it. One keyhole per line, gold once that line reads right. With the key in,
+it sticks out of the keyhole of the cursor's line; otherwise Alice holds it.
 Once every lock is open, the door opens on the garden.
 -}
 viewDoor : { linesRight : List Bool, keyIn : Maybe Int, open : Bool } -> Svg msg
@@ -632,16 +633,16 @@ viewDoor { linesRight, keyIn, open } =
             List.length linesRight
 
         perColumn =
-            (count + 1) // 2
+            max 1 ((count + 1) // 2)
 
         holeAt index =
             { x =
                 if index < perColumn then
-                    204
+                    111
 
                 else
-                    222
-            , y = 14 + toFloat (modBy (max 1 perColumn) index) * (26 / toFloat (max 1 perColumn))
+                    117
+            , y = 31 + toFloat (modBy perColumn index) * (15 / toFloat perColumn)
             }
 
         keyhole index isRight =
@@ -657,8 +658,8 @@ viewDoor { linesRight, keyIn, open } =
                         "#1b1226"
             in
             Svg.g []
-                [ Svg.rect [ SA.x (String.fromFloat at.x), SA.y (String.fromFloat at.y), SA.width "3", SA.height "2", SA.fill colour ] []
-                , Svg.rect [ SA.x (String.fromFloat (at.x + 1)), SA.y (String.fromFloat (at.y + 2)), SA.width "1", SA.height "2", SA.fill colour ] []
+                [ Svg.rect [ SA.x (String.fromFloat at.x), SA.y (String.fromFloat at.y), SA.width "2", SA.height "2", SA.fill colour ] []
+                , Svg.rect [ SA.x (String.fromFloat (at.x + 0.5)), SA.y (String.fromFloat (at.y + 2)), SA.width "1", SA.height "1", SA.fill colour ] []
                 ]
 
         key =
@@ -668,36 +669,38 @@ viewDoor { linesRight, keyIn, open } =
                         at =
                             holeAt (clamp 0 (count - 1) index)
                     in
-                    Sprite.viewAt { x = at.x - 9, y = at.y, pixelSize = 1 } Sprites.goldenKey
+                    Sprite.viewAt { x = at.x - 5, y = at.y + 0.5, pixelSize = 0.6 } Sprites.goldenKey
 
                 Nothing ->
-                    Sprite.viewAt { x = 156, y = 33, pixelSize = 1 } Sprites.goldenKey
+                    Sprite.viewAt { x = 88, y = 30, pixelSize = 1 } Sprites.goldenKey
     in
     Svg.svg [ SA.viewBox "0 0 320 56", SA.class "banner" ]
         ([ Svg.rect [ SA.width "320", SA.height "56", SA.fill "#2d1f45" ] []
          , Svg.rect [ SA.y "48", SA.width "320", SA.height "8", SA.fill "#3b2a52" ] []
 
-         -- The curtain, drawn aside.
-         , Svg.rect [ SA.x "178", SA.y "2", SA.width "10", SA.height "46", SA.fill "#8c2a3c" ] []
-         , Svg.rect [ SA.x "250", SA.y "2", SA.width "10", SA.height "46", SA.fill "#8c2a3c" ] []
+         -- The low curtain, drawn aside.
+         , Svg.rect [ SA.x "98", SA.y "20", SA.width "7", SA.height "28", SA.fill "#8c2a3c" ] []
+         , Svg.rect [ SA.x "127", SA.y "20", SA.width "7", SA.height "28", SA.fill "#8c2a3c" ] []
 
-         -- The door frame and the doorway.
-         , Svg.rect [ SA.x "196", SA.y "6", SA.width "40", SA.height "42", SA.fill "#4a3420" ] []
+         -- The door frame and the doorway: about half as tall as Alice.
+         , Svg.rect [ SA.x "106", SA.y "26", SA.width "18", SA.height "22", SA.fill "#4a3420" ] []
          ]
             ++ (if open then
-                    [ Svg.rect [ SA.x "199", SA.y "9", SA.width "34", SA.height "39", SA.fill "#5d9a4f" ] []
-                    , Svg.rect [ SA.x "199", SA.y "9", SA.width "34", SA.height "14", SA.fill "#9fd0e8" ] []
-                    , Svg.circle [ SA.cx "206", SA.cy "36", SA.r "2", SA.fill "#e8203f" ] []
-                    , Svg.circle [ SA.cx "216", SA.cy "40", SA.r "2", SA.fill "#f4c15d" ] []
-                    , Svg.circle [ SA.cx "226", SA.cy "35", SA.r "2", SA.fill "#ffffff" ] []
-                    , Svg.rect [ SA.x "236", SA.y "9", SA.width "6", SA.height "39", SA.fill "#7a5634" ] []
+                    [ Svg.rect [ SA.x "108", SA.y "28", SA.width "14", SA.height "20", SA.fill "#5d9a4f" ] []
+                    , Svg.rect [ SA.x "108", SA.y "28", SA.width "14", SA.height "7", SA.fill "#9fd0e8" ] []
+                    , Svg.circle [ SA.cx "111", SA.cy "41", SA.r "1", SA.fill "#e8203f" ] []
+                    , Svg.circle [ SA.cx "115", SA.cy "44", SA.r "1", SA.fill "#f4c15d" ] []
+                    , Svg.circle [ SA.cx "119", SA.cy "40", SA.r "1", SA.fill "#ffffff" ] []
+                    , Svg.rect [ SA.x "124", SA.y "28", SA.width "3", SA.height "20", SA.fill "#7a5634" ] []
                     ]
 
                 else
-                    Svg.rect [ SA.x "199", SA.y "9", SA.width "34", SA.height "39", SA.fill "#7a5634" ] []
+                    Svg.rect [ SA.x "108", SA.y "28", SA.width "14", SA.height "20", SA.fill "#7a5634" ] []
                         :: List.indexedMap keyhole linesRight
                )
-            ++ [ Sprite.viewAt { x = 140, y = 26, pixelSize = 1.1 } Sprites.alice ]
+            -- Alice, far too big for the door, on the left: the messages at the top
+            -- of the stage never cover her.
+            ++ [ Sprite.viewAt { x = 56, y = 4, pixelSize = 2.75 } Sprites.alice ]
             ++ (if open then
                     []
 
