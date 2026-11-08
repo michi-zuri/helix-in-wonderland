@@ -79,22 +79,22 @@ plan difficulty =
             , "#####D#######D####C#"
             ]
 
-        -- The way to the key can be walked. Behind it, heaps of dropped
-        -- things fill the hall, with a few free stepping stones: only counts
-        -- get Alice across (#89), and 5 is the most here. Fewest moves: 12;
-        -- fewest keystrokes: 3l 5k 5l k 2h 4k l 5l 5l 2j 4j 3j (22).
+        -- Heaps of dropped things fill the whole hall, with a few free
+        -- stepping stones: only counts get Alice anywhere (#89, #91), and 5
+        -- is the most here. Fewest moves: 17; fewest keystrokes (33):
+        -- 3k 3l 3k 2h 3k 5l 5l 2j 5j 3h 4k 2j 2l 2j 4l 3l j.
         Mad ->
             [ "####D####D####D#####"
-            , "#.........xxx.xxx..#"
-            , "#..PP.....xxxxxPPxx#"
-            , "#..PP...TTTxxxxPPx.#"
-            , "#.......TKBxxxxx.xx#"
-            , "#.........xx.xxxxxx#"
-            , "#.........xxxxxxxxx#"
-            , "D....PP...xxxPPxxx.D"
-            , "#....PP...xxxPPxxxx#"
-            , "#.........xx.xxxxx.#"
-            , "#S........xxxxxxxxc#"
+            , "#x.xxxx.x.xx.xxxxxx#"
+            , "#xxPPxxxxxxxxxxPPxx#"
+            , "#xxPPxxxTTTx.xxPPxx#"
+            , "#x.x.xxxTKBxxxxxxxx#"
+            , "#xxxxxxxx.xxxxxxxxx#"
+            , "#xxx.xxxxxxx.xxxxxx#"
+            , "D.xx.PPxx.x.xPPx.x.D"
+            , "#xxxxPPxx.xx.PPxxxx#"
+            , "#x.xxxxxxxx.xxx..x.#"
+            , "#Sxxxxxxx.xxxxxx.xc#"
             , "#####D#######D####C#"
             ]
 

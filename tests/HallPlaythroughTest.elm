@@ -206,11 +206,12 @@ suite =
                         |> Expect.equal ( { x = 1, y = 7 }, True )
             , test "the mad hall's doors don't lead anywhere either" <|
                 \_ ->
+                    -- 3k jumps to the stone in front of the left door.
                     inMadHall
-                        |> press "4lj"
+                        |> press "3kh"
                         |> wait
                         |> (\run -> ( run.model.alice, shows (.hall >> .doorLocked) run ))
-                        |> Expect.equal ( { x = 5, y = 10 }, True )
+                        |> Expect.equal ( { x = 1, y = 7 }, True )
             ]
         , describe "mad: 5 is the most (#89)"
             [ test "6 isn't taken, with a note" <|

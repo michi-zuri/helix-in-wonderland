@@ -271,19 +271,21 @@ suite =
                 )
                 Difficulty.all
             )
-        , describe "the way to the key can be walked in every hall"
+        , describe "the way to the key can be walked in easy and challenge"
             (List.map
                 (\difficulty ->
                     test (difficultyLabel difficulty) <|
                         \_ -> reachable GoldenKey (mapOf difficulty) |> Expect.equal True
                 )
-                Difficulty.all
+                [ Easy, Challenge ]
             )
         , describe "mad: only counts get Alice to the curtain (#89)"
-            [ test "walking alone, the curtain can't be reached" <|
-                \_ -> reachable CurtainFront (mapOf Mad) |> Expect.equal False
+            [ test "walking alone, neither the key nor the curtain can be reached: the whole hall is full (#91)" <|
+                \_ -> ( reachable GoldenKey (mapOf Mad), reachable CurtainFront (mapOf Mad) ) |> Expect.equal ( False, False )
             , test "with counts but no jumps, the hall can't be finished" <|
                 \_ -> walkingRouteOf Mad |> Expect.equal Nothing
+            , test "the fewest keystrokes are many more than in the other halls" <|
+                \_ -> (routeOf Mad).keystrokes |> Expect.atLeast 30
             , test "even the fewest moves are at least 10" <|
                 \_ ->
                     Route.fewestMoves { largestCount = 5 } { at = startOf (mapOf Mad), hasKey = False } (mapOf Mad)
