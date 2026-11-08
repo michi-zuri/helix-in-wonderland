@@ -175,12 +175,13 @@ lettersSeenInStages layout =
     List.concat (lettersByStage layout)
 
 
-{-| A player who catches every jar until the last stage, then stops.
+{-| A player who catches every jar until the last stage, reads its
+instruction, then stops.
 -}
 stuckInTheLastStage : Run RabbitHole.Model
 stuckInTheLastStage =
     chosen Easy
-        |> playUntil (\run -> run.model.stage >= 11) (player Easy) 20000
+        |> playUntil (\run -> run.model.stage >= 11 && not (Story.isTalking run.model.story)) (player Easy) 20000
 
 
 idle : Float -> Run RabbitHole.Model -> Run RabbitHole.Model
@@ -212,6 +213,7 @@ suite : Test
 suite =
     describe "Chapter 1: Down the Rabbit Hole"
         [ fallTests
+        , readingTests
         , mainTests
         ]
 
@@ -278,12 +280,9 @@ fallTests =
             , test "after a minute: back to the whole left hand, with a word about it" <|
                 \_ ->
                     stuckInTheLastStage
-                        |> (\run -> ( run, Playthrough.toastCount run ))
-                        |> (\( run, toastsBefore ) ->
-                                idle (RabbitHole.stuckMilliseconds + 1000) run
-                                    |> (\later -> ( later.model.stage, Playthrough.toastCount later - toastsBefore ))
-                           )
-                        |> Expect.equal ( 4, 1 )
+                        |> idle (RabbitHole.stuckMilliseconds + 1000)
+                        |> (\run -> ( run.model.stage, Story.isTalking run.model.story ))
+                        |> Expect.equal ( 4, True )
             , test "then the whole right hand, then both hands again" <|
                 \_ ->
                     stuckInTheLastStage
@@ -303,6 +302,47 @@ fallTests =
                         |> Playthrough.finishedWith
                         |> Expect.equal (Just 1)
             ]
+        ]
+
+
+{-| Instructions come in dialogs that pause the fall (#81), so a player
+can read them at their own pace.
+-}
+readingTests : Test
+readingTests =
+    describe "instructions are read at the player's pace"
+        [ test "after picking a difficulty: how to catch, how to let go, the first stage; no jar rises meanwhile" <|
+            \_ ->
+                chosen Easy
+                    |> idle 10000
+                    |> (\run -> ( Story.isTalking run.model.story, run.model.jars, run.model.depth ))
+                    |> Expect.equal ( True, [], 0 )
+        , test "once the dialog is read, jars rise" <|
+            \_ ->
+                chosen Easy
+                    |> playUntil (\run -> not (Story.isTalking run.model.story)) (player Easy) 100
+                    |> idle 2000
+                    |> (\run -> List.isEmpty run.model.jars)
+                    |> Expect.equal False
+        , test "every new stage opens with its instruction, and the fall waits for it" <|
+            \_ ->
+                chosen Easy
+                    |> playUntil (\run -> run.model.stage == 1) (player Easy) 20000
+                    |> idle 10000
+                    |> (\run -> ( Story.isTalking run.model.story, run.model.jars ))
+                    |> Expect.equal ( True, [] )
+        , test "no toasts any more: everything is said in dialogs" <|
+            \_ ->
+                playToTheEnd (player Easy)
+                    |> Playthrough.toastCount
+                    |> Expect.equal 0
+        , test "the status line shows the stage's keys and the depth" <|
+            \_ ->
+                chosen Easy
+                    |> playUntil (\run -> not (Story.isTalking run.model.story)) (player Easy) 100
+                    |> (\run -> RabbitHole.view (contextFor UsQwerty) run.model)
+                    |> (\view -> ( view.status.pendingKeys, view.status.position ))
+                    |> Expect.equal ( "F", "0/" ++ String.fromInt RabbitHole.basicJars )
         ]
 
 

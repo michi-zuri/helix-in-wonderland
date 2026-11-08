@@ -43,12 +43,12 @@ suite =
     describe "Instructions wait until they are relevant"
         [ test "chapter 1: no difficulty question while the story plays" <|
             \_ ->
-                (RabbitHole.view context (RabbitHole.init (Random.initialSeed 1))).panel
+                (RabbitHole.view context (RabbitHole.init (Random.initialSeed 1))).stage
                     |> Query.fromHtml
                     |> Query.hasNot [ text context.texts.rabbitHole.chooseHint ]
-        , test "chapter 1: the difficulty question once the story is over" <|
+        , test "chapter 1 (no panel, #81): the difficulty question on the stage once the story is over" <|
             \_ ->
-                (RabbitHole.view context rabbitHoleAfterStory).panel
+                (RabbitHole.view context rabbitHoleAfterStory).stage
                     |> Query.fromHtml
                     |> Query.has [ text context.texts.rabbitHole.chooseHint ]
         , test "chapter 2: no task while the story plays" <|
