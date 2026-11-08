@@ -51,14 +51,14 @@ suite =
                 (RabbitHole.view context rabbitHoleAfterStory).stage
                     |> Query.fromHtml
                     |> Query.has [ text context.texts.rabbitHole.chooseHint ]
-        , test "chapter 2: no task while the story plays" <|
+        , test "chapter 2: no difficulty question while the story plays" <|
             \_ ->
-                (Hall.view context (Hall.init (Random.initialSeed 1))).panel
+                (Hall.view context (Hall.init (Random.initialSeed 1))).stage
                     |> Query.fromHtml
-                    |> Query.hasNot [ text context.texts.hall.findKey ]
-        , test "chapter 2: the difficulty question after the story, before the task" <|
+                    |> Query.hasNot [ text context.texts.hall.chooseHint ]
+        , test "chapter 2 (no panel, #85): the difficulty question on the stage once the story is over" <|
             \_ ->
-                (Hall.view context hallAfterStory).panel
+                (Hall.view context hallAfterStory).stage
                     |> Query.fromHtml
                     |> Query.has [ text context.texts.hall.chooseHint ]
         ]

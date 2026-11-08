@@ -7,6 +7,7 @@ out.
 
 import Chapter.Contract exposing (Context)
 import Chapter.Hall as Hall
+import Chapter.Story as Story
 import Expect
 import Keyboard.Layout exposing (Layout(..))
 import Language exposing (Language(..))
@@ -57,10 +58,59 @@ inEasyHall =
     start |> readStory |> press "1"
 
 
+{-| How many dialog lines are left, for a dialog whose first line has had
+time to show in full: Enter is pressed until the dialog closes, once for
+that line, then twice per line (reveal, continue).
+-}
+countDialogLines : Layout -> Run Hall.Model -> Int
+countDialogLines layout run =
+    let
+        go presses r =
+            if not (Story.isTalking r.model.story) || presses > 40 then
+                presses
+
+            else
+                go (presses + 1) (Playthrough.send (Hall.update { context | layout = layout }) (Hall.KeyPressed "Enter") r)
+    in
+    (go 0 run + 1) // 2
+
+
 suite : Test
 suite =
     describe "Chapter 2: The Hall of Doors"
-        [ test "the easy hall's fastest route earns its one tart" <|
+        [ describe "no panel: the status line and dialogs say what is needed (#85)"
+            [ test "while walking, the status line reminds of h j k l" <|
+                \_ ->
+                    inEasyHall
+                        |> .model
+                        |> Hall.view context
+                        |> .status
+                        |> .pendingKeys
+                        |> Expect.equal "h← j↓ k↑ l→"
+            , test "a count being typed takes its place, as in Helix" <|
+                \_ ->
+                    inEasyHall
+                        |> press "5"
+                        |> .model
+                        |> Hall.view context
+                        |> .status
+                        |> .pendingKeys
+                        |> Expect.equal "5"
+            , test "on AZERTY the key dialog adds that digits need Shift" <|
+                \_ ->
+                    let
+                        dialogsAfterKey layout =
+                            Playthrough.start (Hall.init (Random.initialSeed 1))
+                                |> Playthrough.sendAll (Hall.update { context | layout = layout })
+                                    (List.map Hall.KeyPressed (List.repeat 12 "Enter" ++ [ "1", "5", "k", "8", "l" ])
+                                        ++ List.repeat 400 (Hall.Frame 16)
+                                    )
+                                |> countDialogLines layout
+                    in
+                    ( dialogsAfterKey SwissQwertz, dialogsAfterKey FrenchAzerty )
+                        |> Expect.equal ( 2, 3 )
+            ]
+        , test "the easy hall's fastest route earns its one tart" <|
             \_ ->
                 inEasyHall
                     |> press "5k8l"

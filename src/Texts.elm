@@ -138,9 +138,6 @@ type alias HallTexts =
     , countLesson : String
     , locked : String
     , finale : String
-    , findKey : String
-    , goToCurtain : String
-    , countTip : String
     , azertyTip : String
     , arrows : String
     , chooseTitle : String
@@ -150,7 +147,6 @@ type alias HallTexts =
     , madInfo : String
     , doorFound : String
     , doorRule : String
-    , doorsTip : String
     }
 
 
@@ -490,9 +486,6 @@ english =
         , countLesson = "A faster way to walk: type a number first. 8l walks eight steps right. Helix calls this a count. Try it on your way to the little curtain in the bottom-right corner."
         , locked = "The little door is locked. Where is that key?"
         , finale = "Behind the curtain was a little door about fifteen inches high, and the tiny golden key was just the right size for it."
-        , findKey = "Find the tiny golden key."
-        , goToCurtain = "Walk to the little curtain, bottom right."
-        , countTip = "Type a number first, like 5j, to walk five steps."
         , azertyTip = "On AZERTY, digits need Shift: Shift+5, then j."
         , arrows = "Arrow keys are for rabbits in a hurry. Keep your fingers home: h j k l."
         , chooseTitle = "Which hall do you want to explore?"
@@ -502,7 +495,6 @@ english =
         , madInfo = "Heaps of dropped things cut the hall into parts. Only the doors lead on, and they keep changing where they go."
         , doorFound = "Alice opened the door and stepped out of another door, somewhere else in the hall!"
         , doorRule = "The doors in this hall play tricks. The door you just came out of takes you back. Every other door may lead somewhere new each time."
-        , doorsTip = "The way back always works. All the other doors change where they lead whenever you go through one."
         }
     , littleDoor =
         { intro1 = "Alice had the tiny golden key, and she had found the little door. But the little door had not one lock: it had lots of them!"
@@ -909,9 +901,6 @@ german =
         , countLesson = "Schneller laufen: tippe zuerst eine Zahl. 8l geht acht Schritte nach rechts. Helix nennt das einen Count. Probier es auf dem Weg zum kleinen Vorhang unten rechts."
         , locked = "Die kleine Tür ist verschlossen. Wo ist der Schlüssel?"
         , finale = "Hinter dem Vorhang war eine kleine Tür, kaum vierzig Zentimeter hoch, und der winzige goldene Schlüssel hatte genau die richtige Grösse dafür."
-        , findKey = "Finde den winzigen goldenen Schlüssel."
-        , goToCurtain = "Geh zum kleinen Vorhang unten rechts."
-        , countTip = "Tippe zuerst eine Zahl, zum Beispiel 5j, für fünf Schritte."
         , azertyTip = "Auf AZERTY brauchen Ziffern die Umschalttaste: Umschalt+5, dann j."
         , arrows = "Pfeiltasten sind für eilige Kaninchen. Lass die Finger zu Hause: h j k l."
         , chooseTitle = "Welchen Saal willst du erkunden?"
@@ -921,7 +910,6 @@ german =
         , madInfo = "Haufen von heruntergefallenen Sachen teilen den Saal. Nur die Türen führen weiter, und sie ändern ständig, wohin."
         , doorFound = "Alice öffnete die Tür und trat aus einer anderen Tür heraus, ganz woanders im Saal!"
         , doorRule = "Die Türen in diesem Saal spielen Streiche. Die Tür, aus der du gerade kommst, bringt dich zurück. Jede andere Tür kann jedes Mal woandershin führen."
-        , doorsTip = "Der Weg zurück klappt immer. Alle anderen Türen ändern, wohin sie führen, sobald du durch eine gehst."
         }
     , littleDoor =
         { intro1 = "Alice hatte den winzigen goldenen Schlüssel, und sie hatte die kleine Tür gefunden. Aber die kleine Tür hatte nicht ein Schloss, sondern ganz viele!"

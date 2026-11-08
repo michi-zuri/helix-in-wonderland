@@ -136,6 +136,9 @@ order above holds. Read old issues with that in mind.
   A door that would lead into the curtain's part of the hall steers away after a
   hidden 4-second clock, so a slow player can't reach the curtain that way; the
   countdown is deliberately not shown (#63).
+  No panel, as in chapter 1: the goal and the tips are in dialogs (on AZERTY
+  the key dialog adds that digits need Shift), and the status line shows
+  `h← j↓ k↑ l→` (or the count being typed) and the position (#85).
 - Chapter 1: twelve stages in one fall; on Easy, a player who stays in the
   last stage (both hands) for a minute without reaching the ground goes round
   the whole left hand, the whole right hand and both hands again (#72, #83).
