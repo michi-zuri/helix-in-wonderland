@@ -273,6 +273,8 @@ suite =
                     |> readStory
                     |> press [ "1" ]
                     |> ProgramTest.ensureViewHas [ text ("0/" ++ String.fromInt RabbitHole.basicJars) ]
+                    -- How to catch, how to let go, the first stage: the fall waits until they are read.
+                    |> readStory
                     |> wait 1000
                     -- The first stage is the left index finger: F.
                     |> press [ "f" ]

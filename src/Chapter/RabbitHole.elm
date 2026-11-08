@@ -32,7 +32,7 @@ import Chapter.Contract as Contract exposing (Context, Effect(..), Sound(..))
 import Chapter.RabbitHole.Well as Well
 import Chapter.Story as Story exposing (Story)
 import Difficulty exposing (Difficulty(..))
-import Html exposing (Html)
+import Html
 import Html.Attributes as A
 import Keyboard.Layout as Layout exposing (Layout)
 import Pixel.Sprite as Sprite
@@ -101,17 +101,17 @@ stages layout =
     , finger (left 1) (.rabbitHole >> .leftMiddle)
     , finger (left 2) (.rabbitHole >> .leftRing)
     , finger (left 3) (.rabbitHole >> .leftLittle)
-    , { keys = home.left, catches = 10, describe = .rabbitHole >> .allFourLeft }
+    , { keys = home.left, catches = 10, describe = \texts -> texts.rabbitHole.allFourLeft (keyList home.left) }
     , finger (right 0) (.rabbitHole >> .rightIndex)
     , finger (right 1) (.rabbitHole >> .rightMiddle)
     , finger (right 2) (.rabbitHole >> .rightRing)
     , finger (right 3) (.rabbitHole >> .rightLittle)
-    , { keys = home.right, catches = 10, describe = .rabbitHole >> .allFourRight }
+    , { keys = home.right, catches = 10, describe = \texts -> texts.rabbitHole.allFourRight (keyList home.right) }
     , { keys = [ stretchLeft, stretchRight ]
       , catches = 6
       , describe = \texts -> texts.rabbitHole.stretch (upper stretchLeft) (upper stretchRight)
       }
-    , { keys = allKeys layout, catches = 10, describe = .rabbitHole >> .bothHands }
+    , { keys = allKeys layout, catches = 10, describe = \texts -> texts.rabbitHole.bothHands (keyList (allKeys layout)) }
     ]
 
 
@@ -146,6 +146,11 @@ upper char =
     String.toUpper (String.fromChar char)
 
 
+keyList : List Char -> String
+keyList keys =
+    String.join " " (List.map upper keys)
+
+
 stageAt : Layout -> Int -> Maybe Stage
 stageAt layout index =
     stages layout |> List.drop index |> List.head
@@ -175,7 +180,7 @@ allKeysStage : Layout -> Stage
 allKeysStage layout =
     { keys = allKeys layout
     , catches = 0
-    , describe = .rabbitHole >> .allKeys
+    , describe = \texts -> texts.rabbitHole.allKeys (keyList (allKeys layout))
     }
 
 
@@ -544,11 +549,22 @@ choose layout key model =
             ( model, [] )
 
 
+{-| Before the first jar: how to catch, how to let go, and the first stage,
+in a dialog the player reads at their own pace (the fall waits for it).
+-}
 startFalling : Layout -> Difficulty -> Model -> ( Model, List Effect )
 startFalling layout difficulty model =
-    ( { model | difficulty = Just difficulty, spawnIn = 400 }
-    , PlaySound PickupSound
-        :: (stageAt layout 0 |> Maybe.map (\stage -> [ ShowToast stage.describe ]) |> Maybe.withDefault [])
+    ( { model
+        | difficulty = Just difficulty
+        , spawnIn = 400
+        , story =
+            Story.tell (Dialog.say Narrator (.rabbitHole >> .catchRule))
+                [ Dialog.say Narrator (.rabbitHole >> .letGo)
+                , Dialog.say Narrator (currentStage layout model).describe
+                ]
+                model.story
+      }
+    , [ PlaySound PickupSound ]
     )
 
 
@@ -648,8 +664,8 @@ nextStage layout model effects =
                 , inLastStage = 0
             }
     in
-    ( advanced
-    , effects ++ [ PlaySound PickupSound, ShowToast (currentStage layout advanced).describe ]
+    ( { advanced | story = Story.tell (Dialog.say Narrator (currentStage layout advanced).describe) [] advanced.story }
+    , effects ++ [ PlaySound PickupSound ]
     )
 
 
@@ -716,13 +732,14 @@ watchForStuck layout milliseconds ( model, effects ) =
                     , spawnIn = 800
                     , goingRound = True
                     , inLastStage = 0
+                    , story =
+                        Story.tell (Dialog.say Narrator (.rabbitHole >> .goRound))
+                            [ Dialog.say Narrator (currentStage layout { model | stage = leftHandStage }).describe ]
+                            model.story
                 }
         in
         ( again
-        , effects
-            ++ [ PlaySound PickupSound
-               , ShowToast (\texts -> texts.rabbitHole.goRound ++ " " ++ (currentStage layout again).describe texts)
-               ]
+        , effects ++ [ PlaySound PickupSound ]
         )
 
 
@@ -939,8 +956,9 @@ view context model =
     Story.instructions model.story (scene context model)
 
 
-{-| Everything the chapter shows; `view` holds back the instructions while
-the opening story plays.
+{-| Everything the chapter shows. There is no panel: every instruction comes
+in a dialog that pauses the fall, so it can be read at the player's pace
+(#81), and the status line keeps the keys of the stage and the depth.
 -}
 scene : Context -> Model -> Contract.View msg
 scene context model =
@@ -973,11 +991,16 @@ scene context model =
                 Html.text ""
             , Story.view context.texts model.story
             ]
-    , panel = viewPanel context model
+    , panel = Html.text ""
     , status =
         { mode = "INS"
         , file = file
-        , pendingKeys = ""
+        , pendingKeys =
+            if model.difficulty /= Nothing && model.landing == Nothing then
+                keyList (currentStage context.layout model).keys
+
+            else
+                ""
         , position =
             case model.difficulty of
                 Just difficulty ->
@@ -1073,60 +1096,3 @@ viewAliceAndHeap model =
 heapVisibility : Difficulty -> Int -> Float
 heapVisibility difficulty depth =
     clamp 0 1 ((nearness difficulty depth - 0.6) / 0.4)
-
-
-viewPanel : Context -> Model -> Html msg
-viewPanel context model =
-    let
-        texts =
-            context.texts
-
-        stat label value =
-            Html.span [] [ Html.text label, Html.b [] [ Html.text value ] ]
-    in
-    case model.difficulty of
-        Nothing ->
-            Html.div [ A.class "panel-content" ]
-                [ Html.p [ A.class "big" ] [ Html.text texts.rabbitHole.chooseTitle ]
-                , Html.p [] [ Html.text texts.rabbitHole.chooseHint ]
-                ]
-
-        Just difficulty ->
-            let
-                stage =
-                    currentStage context.layout model
-
-                allStages =
-                    stages context.layout
-
-                stageLabel =
-                    if isBeyondStages context.layout model then
-                        texts.rabbitHole.allKeysLabel
-
-                    else
-                        texts.rabbitHole.stage (model.stage + 1) (List.length allStages)
-
-                ground =
-                    groundDepth difficulty
-            in
-            Html.div [ A.class "panel-content" ]
-                [ Html.span [ A.class "eyebrow" ]
-                    [ Html.text
-                        (Difficulty.name texts difficulty
-                            ++ " · "
-                            ++ stageLabel
-                            ++ " · "
-                            ++ String.join " " (List.map upper stage.keys)
-                        )
-                    ]
-                , Html.p [ A.class "big" ] [ Html.text (stage.describe texts) ]
-                , Html.div [ A.class "meter" ]
-                    [ Html.i [ A.style "width" (String.fromFloat (100 * nearness difficulty model.depth) ++ "%") ] [] ]
-                , Html.div [ A.class "stats" ]
-                    [ stat texts.rabbitHole.toGround (String.fromInt (max 0 (ground - model.depth)))
-                    , stat texts.results.accuracy (percent (accuracy model))
-                    , stat texts.results.bestStreak (String.fromInt model.bestStreak)
-                    , stat texts.rabbitHole.speed (String.fromInt (round (jarSpeed difficulty model.depth * 1000)))
-                    ]
-                , Html.p [ A.class "eyebrow" ] [ Html.text texts.rabbitHole.letGo ]
-                ]
