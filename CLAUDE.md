@@ -136,13 +136,15 @@ order above holds. Read old issues with that in mind.
   A door that would lead into the curtain's part of the hall steers away after a
   hidden 4-second clock, so a slow player can't reach the curtain that way; the
   countdown is deliberately not shown (#63).
-- Chapter 1: twelve stages in one fall; a player who stays in the last stage
-  (both hands) for a minute without reaching the ground goes round the whole
-  left hand, the whole right hand and both hands again (#72).
+- Chapter 1: twelve stages in one fall; on Easy, a player who stays in the
+  last stage (both hands) for a minute without reaching the ground goes round
+  the whole left hand, the whole right hand and both hands again (#72, #83).
   No panel: test players missed instructions there, so each stage opens with
   a dialog that pauses the fall, the first one saying to press a jar's letter
   as soon as it shows; the status line keeps the stage's keys and the depth
-  (#81). An empty panel is hidden in every chapter (`.panel:empty`).
+  (#81). An empty panel is hidden in every chapter (`.panel:empty`). Keep the
+  dialogs few: Esc isn't announced, and the all-keys fall after the last
+  stage starts without one (#83).
 - A chapter opens if the one before has a tart, or if it or any later chapter
   has one, so reordering never locks away what a player reached
   (`Progress.isOpen`). Retired save names (`rabbit-hole-right-hand`) count for

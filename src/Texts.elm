@@ -123,9 +123,7 @@ type alias RabbitHoleTexts =
     , easyInfo : String
     , challengeInfo : String
     , madInfo : String
-    , allKeys : String -> String
     , catchRule : String
-    , letGo : String
     , landing1 : String
     , landing2 : String
     }
@@ -479,9 +477,7 @@ english =
         , easyInfo = "A gentle fall. You land after the basic jars."
         , challengeInfo = "Quicker jars, and a few seconds more."
         , madInfo = "We're all mad here: nearly 30 seconds of fast jars, no mistakes."
-        , allKeys = \keys -> keys ++ ": all keys now. Keep catching to reach the ground."
         , catchRule = "Jars float up from below. Press a jar's letter as soon as you see it! Don't wait for it to reach Alice. A wrong key, or a jar that floats away, lifts her up again."
-        , letGo = "Esc lets go: Alice lands where she is."
         , landing1 = "Thump! Thump! Down Alice came upon a heap of sticks and dry leaves, and the fall was over."
         , landing2 = "Your fingers know the home row now. The keys h j k l live there too, and you will need them in the next chapter."
         }
@@ -900,9 +896,7 @@ german =
         , easyInfo = "Gemütlich fallen. Nach den Grundgläsern bist du unten."
         , challengeInfo = "Flottere Gläser und ein paar Sekunden länger."
         , madInfo = "Wir sind hier alle verrückt: fast 30 Sekunden schnelle Gläser ohne Fehler."
-        , allKeys = \keys -> keys ++ ": jetzt alle Tasten. Fang weiter, bis du unten bist."
         , catchRule = "Gläser schweben von unten herauf. Drück den Buchstaben eines Glases, sobald du es siehst! Warte nicht, bis es bei Alice ist. Eine falsche Taste oder ein Glas, das davonschwebt, hebt sie wieder hoch."
-        , letGo = "Esc lässt los: Alice landet, wo sie gerade ist."
         , landing1 = "Plumps! Plumps! Alice landete auf einem Haufen Zweige und trockener Blätter, und der Fall war vorbei."
         , landing2 = "Deine Finger kennen jetzt die Grundreihe. Auch h j k l wohnen dort, und die brauchst du im nächsten Kapitel."
         }
