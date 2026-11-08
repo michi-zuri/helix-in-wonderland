@@ -12,8 +12,9 @@ import Expect
 import Keyboard.Layout exposing (Layout(..))
 import Language exposing (Language(..))
 import Playthrough exposing (Run)
-import Random
 import Test exposing (Test, describe, test)
+import Test.Html.Query as Query
+import Test.Html.Selector as Selector
 import Texts
 
 
@@ -48,7 +49,7 @@ readStory =
 
 start : Run Hall.Model
 start =
-    Playthrough.start (Hall.init (Random.initialSeed 1))
+    Playthrough.start Hall.init
 
 
 {-| Read the story and pick the easy hall with its number key.
@@ -56,6 +57,26 @@ start =
 inEasyHall : Run Hall.Model
 inEasyHall =
     start |> readStory |> press "1"
+
+
+inChallengeHall : Run Hall.Model
+inChallengeHall =
+    start |> readStory |> press "2"
+
+
+inMadHall : Run Hall.Model
+inMadHall =
+    start |> readStory |> press "3"
+
+
+{-| Whether the stage shows a text right now (in a dialog, say).
+-}
+shows : (Texts.Texts -> String) -> Run Hall.Model -> Bool
+shows text run =
+    (Hall.view context run.model).stage
+        |> Query.fromHtml
+        |> Query.has [ Selector.text (text context.texts) ]
+        |> (==) Expect.pass
 
 
 {-| How many dialog lines are left, for a dialog whose first line has had
@@ -73,6 +94,20 @@ countDialogLines layout run =
                 go (presses + 1) (Playthrough.send (Hall.update { context | layout = layout }) (Hall.KeyPressed "Enter") r)
     in
     (go 0 run + 1) // 2
+
+
+{-| Read the open dialog line by line; whether `line` was among them.
+-}
+readStoryUntil : (Texts.HallTexts -> String) -> Run Hall.Model -> Bool
+readStoryUntil line run =
+    if shows (.hall >> line) run then
+        True
+
+    else if Story.isTalking run.model.story then
+        readStoryUntil line (send (Hall.KeyPressed "Enter") run)
+
+    else
+        False
 
 
 suite : Test
@@ -100,7 +135,7 @@ suite =
                 \_ ->
                     let
                         dialogsAfterKey layout =
-                            Playthrough.start (Hall.init (Random.initialSeed 1))
+                            Playthrough.start Hall.init
                                 |> Playthrough.sendAll (Hall.update { context | layout = layout })
                                     (List.map Hall.KeyPressed (List.repeat 12 "Enter" ++ [ "1", "5", "k", "8", "l", "k" ])
                                         ++ List.repeat 400 (Hall.Frame 16)
@@ -109,6 +144,87 @@ suite =
                     in
                     ( dialogsAfterKey SwissQwertz, dialogsAfterKey FrenchAzerty )
                         |> Expect.equal ( 2, 3 )
+            ]
+        , describe "counts jump over dropped things (#89)"
+            -- Challenge, bottom row: S . . x . . x ...
+            [ test "4l jumps over the dropped thing and lands behind it" <|
+                \_ ->
+                    inChallengeHall
+                        |> press "4l"
+                        |> wait
+                        |> .model
+                        |> .alice
+                        |> Expect.equal { x = 5, y = 10 }
+            , test "3l would end on it: the whole move fails, Alice stays" <|
+                \_ ->
+                    inChallengeHall
+                        |> press "3l"
+                        |> wait
+                        |> .model
+                        |> .alice
+                        |> Expect.equal { x = 1, y = 10 }
+            , test "single steps bump into it" <|
+                \_ ->
+                    inChallengeHall
+                        |> press "lll"
+                        |> wait
+                        |> .model
+                        |> .alice
+                        |> Expect.equal { x = 3, y = 10 }
+            , test "a jump with moves typed ahead: planned from where Alice will be" <|
+                \_ ->
+                    inChallengeHall
+                        |> press "ll2l"
+                        |> wait
+                        |> .model
+                        |> .alice
+                        |> Expect.equal { x = 5, y = 10 }
+            , test "after the key, on challenge and mad, the count lesson also explains jumping" <|
+                \_ ->
+                    ( inEasyHall |> press "8l6k" |> wait |> readStoryUntil .jumpLesson
+                    , inChallengeHall |> press "8l6k" |> wait |> readStoryUntil .jumpLesson
+                    )
+                        |> Expect.equal ( False, True )
+            ]
+        , describe "every door is locked (#89)"
+            [ test "walking into a door: it's locked, Alice stays in front of it" <|
+                \_ ->
+                    inEasyHall
+                        |> press "4lj"
+                        |> wait
+                        |> (\run -> ( run.model.alice, shows (.hall >> .doorLocked) run ))
+                        |> Expect.equal ( { x = 5, y = 10 }, True )
+            , test "with the key: the key doesn't fit" <|
+                \_ ->
+                    inEasyHall
+                        |> press "8l6k"
+                        |> wait
+                        |> readStory
+                        |> press "8h2jh"
+                        |> wait
+                        |> (\run -> ( run.model.alice, shows (.hall >> .keyTooSmall) run ))
+                        |> Expect.equal ( { x = 1, y = 7 }, True )
+            , test "the mad hall's doors don't lead anywhere either" <|
+                \_ ->
+                    inMadHall
+                        |> press "4lj"
+                        |> wait
+                        |> (\run -> ( run.model.alice, shows (.hall >> .doorLocked) run ))
+                        |> Expect.equal ( { x = 5, y = 10 }, True )
+            ]
+        , describe "mad: 5 is the most (#89)"
+            [ test "6 isn't taken, with a note" <|
+                \_ ->
+                    inMadHall
+                        |> press "6"
+                        |> (\run -> ( run.model.pendingCount, Playthrough.toastCount run ))
+                        |> Expect.equal ( "", 1 )
+            , test "5 is" <|
+                \_ -> inMadHall |> press "5" |> .model |> .pendingCount |> Expect.equal "5"
+            , test "12 isn't: the 2 isn't taken" <|
+                \_ -> inMadHall |> press "12" |> .model |> .pendingCount |> Expect.equal "1"
+            , test "on challenge, big counts still work" <|
+                \_ -> inChallengeHall |> press "12" |> .model |> .pendingCount |> Expect.equal "12"
             ]
         , test "the easy hall's fastest route earns its one tart" <|
             \_ ->

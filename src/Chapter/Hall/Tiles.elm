@@ -19,7 +19,6 @@ type Tile
     | Pillar
     | GoldenKey
     | Bottle
-    | Portal
     | Dropped
 
 
@@ -29,8 +28,8 @@ size =
 
 
 {-| The maps are written as text in `Chapter.Hall.Map`; this is the legend.
-`O` is a door that leads to another `O` door (see `Chapter.Hall.Doors`);
-`x` is something dropped on the floor.
+`x` is something dropped on the floor: Alice can jump over it with a count
+(`Chapter.Hall.Move`).
 -}
 fromChar : Char -> Tile
 fromChar char =
@@ -65,9 +64,6 @@ fromChar char =
         'x' ->
             Dropped
 
-        'O' ->
-            Portal
-
         _ ->
             Wall
 
@@ -82,9 +78,6 @@ isWalkable tile =
             True
 
         CurtainFront ->
-            True
-
-        Portal ->
             True
 
         _ ->
@@ -104,10 +97,6 @@ view position tile =
 
                 Curtain ->
                     wall position ++ curtain
-
-                -- Looks like any other door: where it leads is a surprise.
-                Portal ->
-                    wall position ++ door
 
                 Dropped ->
                     floor position ++ dropped position

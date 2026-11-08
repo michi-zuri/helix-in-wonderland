@@ -145,8 +145,10 @@ type alias HallTexts =
     , easyInfo : String
     , challengeInfo : String
     , madInfo : String
-    , doorFound : String
-    , doorRule : String
+    , jumpLesson : String
+    , mostFive : String
+    , doorLocked : String
+    , keyTooSmall : String
     }
 
 
@@ -483,7 +485,7 @@ english =
         , intro3 = "In Helix you move without the mouse and without the arrow keys. Your right hand already rests on the keys you need."
         , intro4 = "h moves left, j down, k up, l right. A trick: the j has a hook that hangs down. Find the tiny golden key."
         , keyFound = "A tiny golden key! It must open one of these doors."
-        , countLesson = "A faster way to walk: type a number first. 8l walks eight steps right. Helix calls this a count. Try it on your way to the little curtain in the bottom-right corner."
+        , countLesson = "A faster way to walk: type a number first. 5l walks five steps right. Helix calls this a count. Try it on your way to the little curtain in the bottom-right corner."
         , locked = "The little door is locked. Where is that key?"
         , finale = "Behind the curtain was a little door about fifteen inches high, and the tiny golden key was just the right size for it."
         , azertyTip = "On AZERTY, digits need Shift: Shift+5, then j."
@@ -492,9 +494,11 @@ english =
         , chooseHint = "j / k to choose · Enter to go in"
         , easyInfo = "The hall as it is: find the key, then the little curtain."
         , challengeInfo = "Things dropped all over the floor: weave your way round them, turning in every direction."
-        , madInfo = "Heaps of dropped things cut the hall into parts. Only the doors lead on, and they keep changing where they go."
-        , doorFound = "Alice opened the door and stepped out of another door, somewhere else in the hall!"
-        , doorRule = "The doors in this hall play tricks. The door you just came out of takes you back. Every other door may lead somewhere new each time."
+        , madInfo = "Heaps of dropped things fill the hall. Getting to the curtain takes careful counting, and 5 is the most."
+        , jumpLesson = "A count also makes Alice jump over things lying on the floor: 3l hops over two of them. She must land on a free tile."
+        , mostFive = "In this hall, 5 is the most."
+        , doorLocked = "Alice tried the door, but it was locked."
+        , keyTooSmall = "Alas! Either the lock was too large, or the key was too small: it would not open this door."
         }
     , littleDoor =
         { intro1 = "Alice had the tiny golden key, and she had found the little door. But the little door had not one lock: it had lots of them!"
@@ -898,7 +902,7 @@ german =
         , intro3 = "In Helix bewegst du dich ohne Maus und ohne Pfeiltasten. Deine rechte Hand liegt schon auf den richtigen Tasten."
         , intro4 = "h geht nach links, j nach unten, k nach oben, l nach rechts. Merkhilfe: das j hat unten einen Haken. Finde den winzigen goldenen Schlüssel."
         , keyFound = "Ein winziger goldener Schlüssel! Er passt bestimmt in eine dieser Türen."
-        , countLesson = "Schneller laufen: tippe zuerst eine Zahl. 8l geht acht Schritte nach rechts. Helix nennt das einen Count. Probier es auf dem Weg zum kleinen Vorhang unten rechts."
+        , countLesson = "Schneller laufen: tippe zuerst eine Zahl. 5l geht fünf Schritte nach rechts. Helix nennt das einen Count. Probier es auf dem Weg zum kleinen Vorhang unten rechts."
         , locked = "Die kleine Tür ist verschlossen. Wo ist der Schlüssel?"
         , finale = "Hinter dem Vorhang war eine kleine Tür, kaum vierzig Zentimeter hoch, und der winzige goldene Schlüssel hatte genau die richtige Grösse dafür."
         , azertyTip = "Auf AZERTY brauchen Ziffern die Umschalttaste: Umschalt+5, dann j."
@@ -907,9 +911,11 @@ german =
         , chooseHint = "j / k zum Wählen · Enter zum Hineingehen"
         , easyInfo = "Der Saal, wie er ist: finde den Schlüssel, dann den kleinen Vorhang."
         , challengeInfo = "Überall liegen heruntergefallene Sachen: Schlängle dich drum herum, mit Kurven in alle Richtungen."
-        , madInfo = "Haufen von heruntergefallenen Sachen teilen den Saal. Nur die Türen führen weiter, und sie ändern ständig, wohin."
-        , doorFound = "Alice öffnete die Tür und trat aus einer anderen Tür heraus, ganz woanders im Saal!"
-        , doorRule = "Die Türen in diesem Saal spielen Streiche. Die Tür, aus der du gerade kommst, bringt dich zurück. Jede andere Tür kann jedes Mal woandershin führen."
+        , madInfo = "Haufen von heruntergefallenen Sachen füllen den Saal. Zum Vorhang braucht es genaues Zählen, und 5 ist das Höchste."
+        , jumpLesson = "Mit einem Count springt Alice auch über Sachen, die am Boden liegen: 3l hüpft über zwei davon. Sie muss auf einem freien Feld landen."
+        , mostFive = "In diesem Saal ist 5 das Höchste."
+        , doorLocked = "Alice versuchte die Tür zu öffnen, aber sie war verschlossen."
+        , keyTooSmall = "Ach! Entweder war das Schloss zu gross oder der Schlüssel zu klein: Diese Tür ging nicht auf."
         }
     , littleDoor =
         { intro1 = "Alice hatte den winzigen goldenen Schlüssel, und sie hatte die kleine Tür gefunden. Aber die kleine Tür hatte nicht ein Schloss, sondern ganz viele!"

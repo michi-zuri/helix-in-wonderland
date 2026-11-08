@@ -518,7 +518,7 @@ newChapter seed id =
             RabbitHoleChapter (RabbitHole.init seed)
 
         HallOfDoors ->
-            HallChapter (Hall.init seed)
+            HallChapter Hall.init
 
         LittleDoor ->
             LittleDoorChapter LittleDoor.init

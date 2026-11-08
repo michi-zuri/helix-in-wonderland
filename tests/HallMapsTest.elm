@@ -6,16 +6,17 @@ module HallMapsTest exposing (suite)
     keystrokes through the real chapter;
   - the harder halls are the easy hall with things dropped on the floor:
     walls, pillars, table, doors and key stay where they were;
-  - challenge needs all four directions, many turns and no long straight
-    runs, and always leaves more than one way open;
-  - in mad, parts of the hall only the doors connect; however the doors
-    shuffle, a player who keeps trying gets through.
+  - challenge can be walked without counts; walking, it needs all four
+    directions, many turns and no long straight runs, and always leaves
+    more than one way open;
+  - mad can't be finished without jumping over dropped things (#89): the
+    way to the key can be walked, the rest needs counts of at most 5, in
+    at least 10 moves.
 
 -}
 
 import Chapter.Contract exposing (Context)
 import Chapter.Hall as Hall
-import Chapter.Hall.Doors as Doors
 import Chapter.Hall.Map as Map exposing (Map, Point)
 import Chapter.Hall.Route as Route exposing (Route)
 import Chapter.Hall.Tiles as Tiles exposing (Tile(..))
@@ -25,7 +26,6 @@ import Expect
 import Keyboard.Layout exposing (Layout(..))
 import Language exposing (Language(..))
 import Playthrough exposing (Run)
-import Random
 import Set
 import Test exposing (Test, describe, test)
 import Texts
@@ -41,27 +41,57 @@ mapOf difficulty =
     Map.parse (Map.plan difficulty)
 
 
-{-| The fewest keystrokes from the start; in the mad hall with the luckiest
-doors.
+startOf : Map -> Point
+startOf map =
+    Map.find Start map |> Maybe.withDefault { x = 1, y = 10 }
+
+
+{-| The biggest count each hall accepts, as in the game.
+-}
+limitOf : Difficulty -> Int
+limitOf difficulty =
+    if difficulty == Mad then
+        5
+
+    else
+        30
+
+
+{-| The fewest keystrokes from the start.
 -}
 routeOf : Difficulty -> Route
 routeOf difficulty =
-    let
-        map =
-            mapOf difficulty
+    Route.fewest { largestCount = limitOf difficulty } { at = startOf (mapOf difficulty), hasKey = False } (mapOf difficulty)
+        |> Maybe.withDefault { keys = [], keystrokes = 0, moves = 0 }
 
-        doors =
-            Doors.init (Random.initialSeed 1) map
-    in
-    Route.fewest { largestCount = 30, exits = \door -> Doors.mightLeadTo door doors }
-        { at = Map.find Start map |> Maybe.withDefault { x = 1, y = 10 }, hasKey = False }
+
+{-| The hall as if nothing could be jumped over: every dropped thing is a
+wall.
+-}
+withoutJumps : Map -> Map
+withoutJumps map =
+    List.foldl
+        (\point current ->
+            if Map.tileAt point current == Dropped then
+                Map.setTile point Wall current
+
+            else
+                current
+        )
         map
-        |> Maybe.withDefault { keys = [], keystrokes = 0, doors = 0 }
+        allPoints
 
 
-inHall : Int -> Difficulty -> Run Hall.Model
-inHall seed difficulty =
-    Playthrough.start (Hall.init (Random.initialSeed seed))
+{-| The fewest keystrokes walking only, counts allowed but no jumps.
+-}
+walkingRouteOf : Difficulty -> Maybe Route
+walkingRouteOf difficulty =
+    Route.fewest { largestCount = limitOf difficulty } { at = startOf (mapOf difficulty), hasKey = False } (withoutJumps (mapOf difficulty))
+
+
+inHall : Difficulty -> Run Hall.Model
+inHall difficulty =
+    Playthrough.start Hall.init
         |> Playthrough.sendAll (Hall.update context) (List.repeat 12 (Hall.KeyPressed "Enter"))
         |> Playthrough.send (Hall.update context) (Hall.KeyPressed (numberKey difficulty))
 
@@ -90,7 +120,7 @@ playRoute difficulty =
             else
                 settle (send (Hall.KeyPressed key) run)
     in
-    inHall 1 difficulty
+    inHall difficulty
         |> (\run -> List.foldl pressKey run (List.concatMap splitCount (routeOf difficulty).keys))
         |> settle
 
@@ -109,78 +139,6 @@ settleWith send run =
         )
         run
         (List.range 1 400)
-
-
-{-| Like `settleWith`, but only until Alice stands still and nobody is
-talking: a quick player who moves on at once.
--}
-settleQuickly : (Hall.Msg -> Run Hall.Model -> Run Hall.Model) -> Int -> Run Hall.Model -> Run Hall.Model
-settleQuickly send framesLeft run =
-    if framesLeft <= 0 then
-        run
-
-    else if Story.isTalking run.model.story then
-        settleQuickly send (framesLeft - 1) (send (Hall.KeyPressed "Enter") run)
-
-    else if run.model.step /= Nothing || not (List.isEmpty run.model.queuedSteps) then
-        settleQuickly send (framesLeft - 1) (send (Hall.Frame 16) run)
-
-    else
-        run
-
-
-{-| A player in the mad hall: plan the best route with the luckiest doors
-from wherever Alice is, make its first move, look where she ended up, plan
-again. Gives up after `movesLeft` moves.
--}
-playMad : Int -> Run Hall.Model -> Run Hall.Model
-playMad movesLeft run =
-    let
-        send =
-            Playthrough.send (Hall.update context)
-
-        model =
-            run.model
-
-        plan =
-            Route.fewest { largestCount = 30, exits = \door -> Doors.mightLeadTo door model.doors }
-                { at = model.alice, hasKey = model.hasKey }
-                model.map
-    in
-    if movesLeft <= 0 || Playthrough.finishedWith run /= Nothing then
-        run
-
-    else
-        case plan |> Maybe.map (.keys >> firstMove) of
-            Just ((_ :: _) as move) ->
-                playMad (movesLeft - 1)
-                    (settleQuickly send 400 (List.foldl (\key current -> send (Hall.KeyPressed key) current) run move))
-
-            _ ->
-                run
-
-
-{-| The keys of the first move: an optional count, then a direction.
--}
-firstMove : List String -> List String
-firstMove keys =
-    case keys of
-        first :: rest ->
-            if String.all Char.isDigit first then
-                splitCount first ++ List.take 1 rest
-
-            else
-                [ first ]
-
-        [] ->
-            []
-
-
-{-| Game time passing with nothing pressed; story boxes are read at once.
--}
-wait : Float -> Run Hall.Model -> Run Hall.Model
-wait milliseconds run =
-    List.foldl (\_ current -> Playthrough.send (Hall.update context) (Hall.Frame 50) current) run (List.range 1 (round (milliseconds / 50)))
 
 
 {-| "12" is typed as "1" then "2".
@@ -208,19 +166,11 @@ turns route =
     List.map2 (/=) moves (List.drop 1 moves) |> List.filter identity |> List.length
 
 
-{-| The places Alice can walk to from the start without using any door.
+{-| The places Alice can walk to from the start without jumping.
 -}
-withoutDoors : Map -> Set.Set ( Int, Int )
-withoutDoors map =
+walkable : Map -> Set.Set ( Int, Int )
+walkable map =
     let
-        open point =
-            case Map.tileAt point map of
-                Portal ->
-                    False
-
-                tile ->
-                    Tiles.isWalkable tile
-
         spread todo seen =
             case todo of
                 point :: rest ->
@@ -228,30 +178,26 @@ withoutDoors map =
                         next =
                             Map.directions
                                 |> List.map (\direction -> Map.neighbour direction point)
-                                |> List.filter (\p -> open p && not (Set.member ( p.x, p.y ) seen))
+                                |> List.filter (\p -> Tiles.isWalkable (Map.tileAt p map) && not (Set.member ( p.x, p.y ) seen))
                     in
-                    spread (next ++ rest) (List.foldl (\p s -> Set.insert ( p.x, p.y ) s) seen next)
+                    spread (next ++ rest) (List.foldl (\p seenSoFar -> Set.insert ( p.x, p.y ) seenSoFar) seen next)
 
                 [] ->
                     seen
     in
-    case Map.find Start map of
-        Just start ->
-            spread [ start ] (Set.singleton ( start.x, start.y ))
-
-        Nothing ->
-            Set.empty
+    spread [ startOf map ] (Set.singleton ( (startOf map).x, (startOf map).y ))
 
 
-{-| Whether Alice can get to `tile` from the start without doors. The key
-lies on the table (#86): it counts as reached from any floor next to it.
+{-| Whether Alice can walk to `tile` from the start, without jumping. The
+key lies on the table (#86): it counts as reached from any floor next to
+it.
 -}
 reachable : Tile -> Map -> Bool
 reachable tile map =
     case Map.find tile map of
         Just point ->
             (point :: List.map (\direction -> Map.neighbour direction point) Map.directions)
-                |> List.any (\{ x, y } -> Set.member ( x, y ) (withoutDoors map))
+                |> List.any (\{ x, y } -> Set.member ( x, y ) (walkable map))
 
         Nothing ->
             False
@@ -260,7 +206,7 @@ reachable tile map =
 suite : Test
 suite =
     describe "The halls of chapter 2"
-        [ describe "easy and challenge can be finished in the fewest keystrokes, for their tarts"
+        [ describe "every hall can be finished in the fewest keystrokes, for its tarts"
             (List.map
                 (\difficulty ->
                     test (difficultyLabel difficulty) <|
@@ -269,43 +215,42 @@ suite =
                                 |> (\run -> ( Playthrough.finishedWith run, run.model.keystrokes ))
                                 |> Expect.equal ( Just (Difficulty.tarts difficulty), (routeOf difficulty).keystrokes )
                 )
-                [ Easy, Challenge ]
+                Difficulty.all
             )
-        , describe "mad: however the doors shuffle, a player who keeps trying earns three tarts"
-            (List.map
-                (\seed ->
-                    test ("seed " ++ String.fromInt seed) <|
-                        \_ ->
-                            inHall seed Mad
-                                |> playMad 200
-                                |> (\run -> ( Playthrough.finishedWith run, run.model.keystrokes >= (routeOf Mad).keystrokes ))
-                                |> Expect.equal ( Just 3, True )
-                )
-                (List.range 1 20)
-            )
-        , test "the easy hall is still today's hall: eight keystrokes at best" <|
+        , test "the easy hall: eight keystrokes at best" <|
             \_ -> (routeOf Easy).keystrokes |> Expect.equal 8
-        , test "challenge: the best route uses all four directions" <|
+        , test "challenge can be finished with single steps only, no counts (#89)" <|
             \_ ->
-                directionsUsed (routeOf Challenge)
-                    |> List.sort
-                    |> List.foldr
-                        (\key acc ->
-                            if List.head acc == Just key then
-                                acc
+                Route.fewest { largestCount = 1 } { at = startOf (mapOf Challenge), hasKey = False } (mapOf Challenge)
+                    |> Maybe.map (\route -> List.all (\key -> String.length key == 1 && not (String.all Char.isDigit key)) route.keys)
+                    |> Expect.equal (Just True)
+        , describe "challenge, walking without jumps"
+            (let
+                walking =
+                    walkingRouteOf Challenge |> Maybe.withDefault { keys = [], keystrokes = 0, moves = 0 }
+             in
+             [ test "the best route uses all four directions" <|
+                \_ ->
+                    directionsUsed walking
+                        |> List.sort
+                        |> List.foldr
+                            (\key acc ->
+                                if List.head acc == Just key then
+                                    acc
 
-                            else
-                                key :: acc
-                        )
-                        []
-                    |> Expect.equal [ "h", "j", "k", "l" ]
-        , test "challenge: the best route has at least 15 turns" <|
-            \_ -> turns (routeOf Challenge) |> Expect.atLeast 15
-        , test "challenge: no straight run is longer than 5 steps" <|
-            \_ -> longestCount (routeOf Challenge) |> Expect.atMost 5
-        , test "challenge: blocking any one tile still leaves a way through" <|
-            \_ ->
-                chokepoints (mapOf Challenge) |> Expect.equal []
+                                else
+                                    key :: acc
+                            )
+                            []
+                        |> Expect.equal [ "h", "j", "k", "l" ]
+             , test "the best route has at least 15 turns" <|
+                \_ -> turns walking |> Expect.atLeast 15
+             , test "no straight run is longer than 5 steps" <|
+                \_ -> longestCount walking |> Expect.atMost 5
+             , test "blocking any one tile still leaves a way through" <|
+                \_ -> chokepoints (mapOf Challenge) |> Expect.equal []
+             ]
+            )
         , describe "the harder halls keep the easy hall's walls, pillars, table, doors and key"
             (List.map
                 (\difficulty ->
@@ -326,92 +271,43 @@ suite =
                 )
                 Difficulty.all
             )
-        , test "easy and challenge: the key can be reached without doors (the check below is not empty)" <|
-            \_ ->
-                ( reachable GoldenKey (mapOf Easy), reachable GoldenKey (mapOf Challenge) )
-                    |> Expect.equal ( True, True )
-        , test "mad: the key and the curtain can't be reached without doors" <|
-            \_ ->
-                ( reachable GoldenKey (mapOf Mad), reachable CurtainFront (mapOf Mad) )
-                    |> Expect.equal ( False, False )
-        , test "mad: even with the luckiest doors, the way needs at least two of them" <|
-            \_ -> (routeOf Mad).doors |> Expect.atLeast 2
-        , describe "mad: the hidden clock on a door to the curtain"
-            (let
-                -- A quick player until a door here leads to the curtain.
-                untilClock movesLeft run =
-                    if run.model.doorClock /= Nothing || movesLeft <= 0 then
-                        run
-
-                    else
-                        untilClock (movesLeft - 1) (playMad 1 run)
-
-                withClock =
-                    List.range 1 20
-                        |> List.map (\seed -> untilClock 60 (inHall seed Mad))
-                        |> List.filter (\run -> run.model.doorClock /= Nothing && Playthrough.finishedWith run == Nothing)
-                        |> List.head
-
-                leadsToCurtain run door =
-                    Doors.toTheCurtain run.model.map run.model.alice run.model.doors == Just door
-             in
-             [ test "after 4 seconds of play, the door steers away from the curtain" <|
-                \_ ->
-                    case withClock of
-                        Just run ->
-                            let
-                                door =
-                                    Maybe.map .door run.model.doorClock |> Maybe.withDefault { x = 0, y = 0 }
-                            in
-                            ( leadsToCurtain run door, leadsToCurtain (wait 4100 run) door )
-                                |> Expect.equal ( True, False )
-
-                        Nothing ->
-                            Expect.fail "no door to the curtain came up"
-             , test "just under 4 seconds, it still leads there" <|
-                \_ ->
-                    case withClock of
-                        Just run ->
-                            let
-                                door =
-                                    Maybe.map .door run.model.doorClock |> Maybe.withDefault { x = 0, y = 0 }
-                            in
-                            leadsToCurtain (wait 3900 run) door |> Expect.equal True
-
-                        Nothing ->
-                            Expect.fail "no door to the curtain came up"
-             , test "a slow player, who stops to think for 4.5 seconds before each move, never reaches the curtain" <|
-                \_ ->
-                    List.range 1 5
-                        |> List.map
-                            (\seed ->
-                                List.foldl (\_ run -> run |> wait 4500 |> playMad 1) (inHall seed Mad) (List.range 1 150)
-                                    |> Playthrough.finishedWith
-                            )
-                        |> Expect.equal (List.repeat 5 Nothing)
-             ]
+        , describe "the way to the key can be walked in every hall"
+            (List.map
+                (\difficulty ->
+                    test (difficultyLabel difficulty) <|
+                        \_ -> reachable GoldenKey (mapOf difficulty) |> Expect.equal True
+                )
+                Difficulty.all
             )
-        , test "stepping into a door comes out in front of the door it leads to, and stops there" <|
-            \_ ->
-                let
-                    leftDoor =
-                        { x = 0, y = 7 }
-
-                    expected =
-                        Doors.leadsTo leftDoor (Doors.init (Random.initialSeed 7) (mapOf Mad))
-                            |> Maybe.andThen (\door -> Map.inFrontOf door (mapOf Mad))
-
-                    walked =
-                        inHall 7 Mad
-                            -- From the start (1,10): right to (2,10), up 3 to (2,7), then left:
-                            -- the second step enters the door on the left; the extra steps of
-                            -- "9h" must not carry on after Alice comes out.
-                            |> Playthrough.sendAll (Hall.update context)
-                                (List.map Hall.KeyPressed [ "l", "3", "k", "9", "h" ])
-                            |> Playthrough.sendAll (Hall.update context) (List.repeat 400 (Hall.Frame 16))
-                in
-                Just walked.model.alice
-                    |> Expect.equal expected
+        , describe "mad: only counts get Alice to the curtain (#89)"
+            [ test "walking alone, the curtain can't be reached" <|
+                \_ -> reachable CurtainFront (mapOf Mad) |> Expect.equal False
+            , test "with counts but no jumps, the hall can't be finished" <|
+                \_ -> walkingRouteOf Mad |> Expect.equal Nothing
+            , test "even the fewest moves are at least 10" <|
+                \_ ->
+                    Route.fewestMoves { largestCount = 5 } { at = startOf (mapOf Mad), hasKey = False } (mapOf Mad)
+                        |> Maybe.map .moves
+                        |> Maybe.withDefault 0
+                        |> Expect.atLeast 10
+            , test "nearly every move of the best route uses a count" <|
+                \_ ->
+                    let
+                        route =
+                            routeOf Mad
+                    in
+                    toFloat (List.length (List.filter (String.all Char.isDigit) route.keys))
+                        / toFloat route.moves
+                        |> Expect.atLeast 0.8
+            , test "no count above 5 is needed" <|
+                \_ -> longestCount (routeOf Mad) |> Expect.atMost 5
+            , test "with 5 as the most, 4 isn't enough: the limit matters" <|
+                \_ ->
+                    Route.fewest { largestCount = 4 } { at = startOf (mapOf Mad), hasKey = False } (mapOf Mad)
+                        |> Maybe.map .keystrokes
+                        |> Maybe.withDefault 999
+                        |> Expect.greaterThan (routeOf Mad).keystrokes
+            ]
         ]
 
 
@@ -422,7 +318,7 @@ allPoints =
 
 
 {-| Tiles that differ from the easy hall in a way other than something
-dropped on its floor or one of its doors leading somewhere.
+dropped on its floor.
 -}
 changedLayout : Map -> List Point
 changedLayout map =
@@ -435,16 +331,14 @@ changedLayout map =
                 ( Floor, Dropped ) ->
                     True
 
-                ( Door, Portal ) ->
-                    True
-
                 _ ->
                     before == after
     in
     allPoints |> List.filter (\point -> not (allowed (Map.tileAt point easy) (Map.tileAt point map)))
 
 
-{-| Floor tiles that, blocked, would leave no way to finish the hall. Tiles
+{-| Floor tiles that, blocked, would leave no way to finish the hall
+walking, without jumps. Tiles
 right next to the start, the key spot or the curtain don't count: those can
 always be blocked off. The key lies on the table (#86), so the key spot is
 the floor in front of it, where Alice takes it.
@@ -470,7 +364,7 @@ chokepoints map =
     allPoints
         |> List.filter (\point -> Map.tileAt point map == Floor)
         |> List.filter (\point -> not (nextTo Start point || nextToKeySpot point || nextTo CurtainFront point))
-        |> List.filter (\point -> Route.fewest { largestCount = 30, exits = always [] } { at = Map.find Start map |> Maybe.withDefault point, hasKey = False } (Map.setTile point Dropped map) == Nothing)
+        |> List.filter (\point -> Route.fewest { largestCount = 30 } { at = startOf map, hasKey = False } (withoutJumps (Map.setTile point Wall map)) == Nothing)
 
 
 longestCount : Route -> Int

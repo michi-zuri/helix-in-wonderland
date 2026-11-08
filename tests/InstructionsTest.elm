@@ -33,7 +33,7 @@ rabbitHoleAfterStory =
 
 hallAfterStory : Hall.Model
 hallAfterStory =
-    Playthrough.start (Hall.init (Random.initialSeed 1))
+    Playthrough.start Hall.init
         |> Playthrough.sendAll (Hall.update context) (List.repeat 12 (Hall.KeyPressed "Enter"))
         |> .model
 
@@ -53,7 +53,7 @@ suite =
                     |> Query.has [ text context.texts.rabbitHole.chooseHint ]
         , test "chapter 2: no difficulty question while the story plays" <|
             \_ ->
-                (Hall.view context (Hall.init (Random.initialSeed 1))).stage
+                (Hall.view context Hall.init).stage
                     |> Query.fromHtml
                     |> Query.hasNot [ text context.texts.hall.chooseHint ]
         , test "chapter 2 (no panel, #85): the difficulty question on the stage once the story is over" <|
