@@ -23,9 +23,9 @@ import Chapter.Hall.Route as Route
 import Chapter.Hall.Tiles as Tiles exposing (Tile(..))
 import Chapter.Story as Story exposing (Story)
 import Difficulty exposing (Difficulty(..))
-import Html exposing (Html)
+import Html
 import Html.Attributes as HA
-import Keyboard.Layout as Layout
+import Keyboard.Layout as Layout exposing (Layout)
 import Pixel.Sprite as Sprite
 import Pixel.Sprites as Sprites
 import Random
@@ -213,7 +213,7 @@ update context msg model =
                 , story = Story.tick milliseconds model.story
             }
                 |> runDoorClock milliseconds
-                |> animateWalking milliseconds
+                |> animateWalking context.layout milliseconds
 
 
 choose : String -> Model -> ( Model, List Effect )
@@ -367,8 +367,8 @@ walk direction model =
     )
 
 
-animateWalking : Float -> Model -> ( Model, List Effect )
-animateWalking milliseconds model =
+animateWalking : Layout -> Float -> Model -> ( Model, List Effect )
+animateWalking layout milliseconds model =
     case model.step of
         Just step ->
             let
@@ -376,7 +376,7 @@ animateWalking milliseconds model =
                     step.progress + milliseconds / stepMilliseconds
             in
             if progress >= 1 then
-                arrive { model | step = Nothing }
+                arrive layout { model | step = Nothing }
 
             else
                 ( { model | step = Just { step | progress = progress } }, [] )
@@ -416,8 +416,8 @@ startNextStep model =
 
 {-| What happens when Alice finishes a step onto a tile.
 -}
-arrive : Model -> ( Model, List Effect )
-arrive model =
+arrive : Layout -> Model -> ( Model, List Effect )
+arrive layout model =
     case Map.tileAt model.alice model.map of
         GoldenKey ->
             ( { model
@@ -426,7 +426,14 @@ arrive model =
                 , queuedSteps = []
                 , story =
                     Story.tell (Dialog.say Alice (.hall >> .keyFound))
-                        [ Dialog.say Narrator (.hall >> .countLesson) ]
+                        (Dialog.say Narrator (.hall >> .countLesson)
+                            :: (if Layout.needsShiftForDigits layout then
+                                    [ Dialog.say Narrator (.hall >> .azertyTip) ]
+
+                                else
+                                    []
+                               )
+                        )
                         model.story
               }
             , [ PlaySound PickupSound ]
@@ -552,8 +559,9 @@ view context model =
     Story.instructions model.story (scene context model)
 
 
-{-| Everything the chapter shows; `view` holds back the instructions while
-the opening story plays.
+{-| Everything the chapter shows. There is no panel (#85): the goal and the
+tips are said in dialogs, and the status line keeps what is needed while
+walking: the h j k l reminder (or the count being typed) and the position.
 -}
 scene : Context -> Model -> Contract.View msg
 scene context model =
@@ -580,11 +588,16 @@ scene context model =
                 Html.text ""
             , Story.view context.texts model.story
             ]
-    , panel = viewPanel context model
+    , panel = Html.text ""
     , status =
         { mode = "NOR"
         , file = file
-        , pendingKeys = model.pendingCount
+        , pendingKeys =
+            if model.pendingCount == "" && model.difficulty /= Nothing && Story.isPlaying model.story then
+                "h← j↓ k↑ l→"
+
+            else
+                model.pendingCount
         , position = String.fromInt (model.alice.y + 1) ++ ":" ++ String.fromInt (model.alice.x + 1)
         }
     }
@@ -756,65 +769,6 @@ viewPendingCount model =
             [ pixelRect (round x) (round y - 12) 16 10 "#efba5d"
             , label (round x + 8) (round y - 4) model.pendingCount
             ]
-
-
-viewPanel : Context -> Model -> Html msg
-viewPanel context model =
-    let
-        texts =
-            context.texts
-
-        paragraph class text =
-            Html.p [ HA.class class ] [ Html.text text ]
-
-        stat name value =
-            Html.span [] [ Html.text name, Html.b [] [ Html.text value ] ]
-    in
-    case model.difficulty of
-        Nothing ->
-            Html.div [ HA.class "panel-content" ]
-                [ paragraph "big" texts.hall.chooseTitle
-                , paragraph "" texts.hall.chooseHint
-                ]
-
-        Just difficulty ->
-            Html.div [ HA.class "panel-content" ]
-                (List.concat
-                    [ [ Html.span [ HA.class "eyebrow" ] [ Html.text (Difficulty.name texts difficulty) ]
-                      , Html.div [ HA.class "legend" ]
-                            (List.map
-                                (\( key, arrow ) -> Html.span [] [ Html.b [] [ Html.text key ], Html.text (" " ++ arrow) ])
-                                [ ( "h", "←" ), ( "j", "↓" ), ( "k", "↑" ), ( "l", "→" ) ]
-                            )
-                      ]
-                    , if model.hasKey then
-                        [ paragraph "big" texts.hall.goToCurtain, paragraph "" texts.hall.countTip ]
-
-                      else
-                        [ paragraph "big" texts.hall.findKey ]
-                    , if difficulty == Mad then
-                        [ paragraph "tip" texts.hall.doorsTip ]
-
-                      else
-                        []
-                    , if model.hasKey && Layout.needsShiftForDigits context.layout then
-                        [ paragraph "tip" texts.hall.azertyTip ]
-
-                      else
-                        []
-                    , [ Html.div [ HA.class "stats" ]
-                            [ stat texts.results.keystrokes (String.fromInt model.keystrokes)
-                            , stat texts.results.usedCount
-                                (if model.usedCount then
-                                    texts.results.yes
-
-                                 else
-                                    texts.results.notYet
-                                )
-                            ]
-                      ]
-                    ]
-                )
 
 
 
