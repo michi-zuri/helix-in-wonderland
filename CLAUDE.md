@@ -111,7 +111,8 @@ The local folder may be called `helix-wonderland`, but the repository is
 **Keys, by chapter** (what's taught where; don't use untaught keys in hints or
 "Our best" routes)
 1. Home row typing in one long fall: left hand finger by finger, then the
-right hand, then `g h`, then both hands (#72). 2. `h j k l`, counts like `5j`.
+right hand, then `g h`, then both hands (#72). 2. `h j k l`, counts like `5j`,
+which also jump over dropped things (#89).
 3. Insert mode with the golden key: `i`, Esc, `c` (#73); typed letters are
 home row only. 4. Typing words, `e`, `i`, space (#74 will add `o` and `.`).
 5. `gh gl gg ge gj gk g.` (`gw` works but is deliberately not taught;
@@ -131,11 +132,14 @@ order above holds. Read old issues with that in mind.
   later, with more thought about why they're needed.
 
 **Chapter specifics worth knowing**
-- Chapter 2, mad hall: doors lead to random doors, except the way back always
-  returns where you came from; only the pair just used stays linked (#29–#32).
-  A door that would lead into the curtain's part of the hall steers away after a
-  hidden 4-second clock, so a slow player can't reach the curtain that way; the
-  countdown is deliberately not shown (#63).
+- Chapter 2: every door is locked (a dialog says so; with the key, it doesn't
+  fit). A count jumps over dropped things (`x`); a single step bumps, and a
+  count that would land on one fails as a whole. One module decides what a
+  move does (`Chapter.Hall.Move`), for the game and for "Our best"
+  (`Chapter.Hall.Route`). Challenge can be walked with single steps; Mad is
+  walkable to the key, then only stepping stones, counts at most 5, at
+  least 10 moves (#89). The mad hall's shuffling doors and their hidden clock
+  (#29–#32, #63) are gone.
   No panel, as in chapter 1: the goal and the tips are in dialogs (on AZERTY
   the key dialog adds that digits need Shift), and the status line shows
   `h← j↓ k↑ l→` (or the count being typed) and the position (#85).

@@ -5,9 +5,9 @@ golden key, then learns counts (`8l`) on the way to the little curtain.
 
 Three halls to choose from (see `Chapter.Hall.Map`): easy is open,
 challenge has things dropped all over the floor, and in mad heaps of them
-split the hall into parts that only the doors join. Those doors change
-where they lead, except the way back (see `Chapter.Hall.Doors`). Finishing
-is worth the difficulty's tarts.
+fill the hall behind the key, with a few free stepping stones. A count
+jumps over dropped things (`Chapter.Hall.Move`); mad allows counts up to 5.
+Every door is locked. Finishing is worth the difficulty's tarts.
 
 Read top to bottom: the map, the tunable numbers, the model, `update`, then
 the view. Everything here is pure; sounds, toasts and the end of the chapter
@@ -17,8 +17,8 @@ are requested as `Effect`s for `Main` to carry out.
 
 import Array
 import Chapter.Contract as Contract exposing (Context, Effect(..), Sound(..))
-import Chapter.Hall.Doors as Doors exposing (Doors)
 import Chapter.Hall.Map as Map exposing (Direction(..), Map, Point)
+import Chapter.Hall.Move as Move
 import Chapter.Hall.Route as Route
 import Chapter.Hall.Tiles as Tiles exposing (Tile(..))
 import Chapter.Story as Story exposing (Story)
@@ -28,7 +28,6 @@ import Html.Attributes as HA
 import Keyboard.Layout as Layout exposing (Layout)
 import Pixel.Sprite as Sprite
 import Pixel.Sprites as Sprites
-import Random
 import Speaker exposing (Speaker(..))
 import Svg exposing (Svg)
 import Svg.Attributes as SA
@@ -52,16 +51,6 @@ stepMilliseconds =
     75
 
 
-{-| Mad hall: how long a door that leads into the curtain's part stays that
-way, in milliseconds of play (story boxes pause it). Then it steers away
-(`Doors.steerAway`), so only a quick player gets through. Nothing on screen
-shows this clock.
--}
-doorClockMilliseconds : Float
-doorClockMilliseconds =
-    4000
-
-
 bumpMilliseconds : Float
 bumpMilliseconds =
     150
@@ -72,6 +61,18 @@ bumpMilliseconds =
 largestCount : Int
 largestCount =
     30
+
+
+{-| The mad hall allows counts up to 5, so no jump crosses the whole hall
+(#89).
+-}
+countLimit : Maybe Difficulty -> Int
+countLimit difficulty =
+    if difficulty == Just Mad then
+        5
+
+    else
+        largestCount
 
 
 {-| Keycap hints around Alice disappear after this many steps.
@@ -94,14 +95,10 @@ type alias Model =
     { choice : Choice
     , difficulty : Maybe Difficulty
     , fewestKeystrokes : Int
-    , usedDoor : Bool
     , map : Map
-    , doors : Doors
-    , doorClock : Maybe { door : Point, left : Float }
-    , seed : Random.Seed
     , alice : Point
     , step : Maybe Step
-    , queuedSteps : List Direction
+    , queue : List Action
     , pendingCount : String
     , keystrokes : Int
     , usedCount : Bool
@@ -112,6 +109,17 @@ type alias Model =
     , bumpRemaining : Float
     , clock : Float
     }
+
+
+{-| What Alice will do next, planned when a move is typed
+(`Chapter.Hall.Move`): step onto a tile, then maybe take the key, knock at
+a locked door or bump into something.
+-}
+type Action
+    = StepTo Point
+    | TakeKeyAt Point
+    | KnockAt
+    | Bump
 
 
 {-| The step Alice is animating: she already stands on the new tile in the
@@ -134,22 +142,17 @@ type alias Rabbit =
     }
 
 
-{-| The seed decides where the mad hall's doors lead; the same seed plays
-the same game.
+{-| Chapters get a seed; nothing in this one is left to chance.
 -}
-init : Random.Seed -> Model
-init seed =
+init : Model
+init =
     { choice = DifficultyChoice.start 0
     , difficulty = Nothing
     , fewestKeystrokes = 0
-    , usedDoor = False
     , map = startingMap
-    , doors = Doors.init seed startingMap
-    , doorClock = Nothing
-    , seed = seed
     , alice = startOf startingMap
     , step = Nothing
-    , queuedSteps = []
+    , queue = []
     , pendingCount = ""
     , keystrokes = 0
     , usedCount = False
@@ -212,7 +215,6 @@ update context msg model =
                 , rabbit = moveRabbit milliseconds model.rabbit
                 , story = Story.tick milliseconds model.story
             }
-                |> runDoorClock milliseconds
                 |> animateWalking context.layout milliseconds
 
 
@@ -240,79 +242,18 @@ enterHall difficulty model =
 
             else
                 Map.parse (Map.plan difficulty)
-
-        doors =
-            Doors.init model.seed map
     in
-    startDoorClock
-        { model
-            | difficulty = Just difficulty
-            , map = map
-            , doors = doors
-            , alice = startOf map
-            , fewestKeystrokes =
-                Route.fewest { largestCount = largestCount, exits = \door -> Doors.mightLeadTo door doors }
-                    { at = startOf map, hasKey = False }
-                    map
-                    |> Maybe.map .keystrokes
-                    |> Maybe.withDefault 0
-        }
-
-
-{-| Start the hidden clock if a door here (other than the way back) leads
-into the curtain's part; keep it running if it is still the same door.
--}
-startDoorClock : Model -> Model
-startDoorClock model =
-    if model.difficulty == Just Mad then
-        case Doors.toTheCurtain model.map model.alice model.doors of
-            Just door ->
-                case model.doorClock of
-                    Just running ->
-                        if running.door == door then
-                            model
-
-                        else
-                            { model | doorClock = Just { door = door, left = doorClockMilliseconds } }
-
-                    Nothing ->
-                        { model | doorClock = Just { door = door, left = doorClockMilliseconds } }
-
-            Nothing ->
-                { model | doorClock = Nothing }
-
-    else
-        model
-
-
-{-| Time passing for the hidden clock, only while the player is playing.
-When it runs out, the door steers away from the curtain's part; if another
-door here leads there now, it gets its own clock.
--}
-runDoorClock : Float -> Model -> Model
-runDoorClock milliseconds model =
-    case model.doorClock of
-        Just running ->
-            if not (Story.isPlaying model.story) then
-                model
-
-            else if running.left - milliseconds > 0 then
-                { model | doorClock = Just { running | left = running.left - milliseconds } }
-
-            else
-                let
-                    steered =
-                        startDoorClock { model | doors = Doors.steerAway running.door model.doors, doorClock = Nothing }
-                in
-                if Maybe.map .door steered.doorClock == Just running.door then
-                    -- No way to steer this door away: let it be.
-                    { steered | doorClock = Nothing }
-
-                else
-                    steered
-
-        Nothing ->
-            model
+    { model
+        | difficulty = Just difficulty
+        , map = map
+        , alice = startOf map
+        , fewestKeystrokes =
+            Route.fewest { largestCount = countLimit (Just difficulty) }
+                { at = startOf map, hasKey = False }
+                map
+                |> Maybe.map .keystrokes
+                |> Maybe.withDefault 0
+    }
 
 
 startOf : Map -> Point
@@ -326,9 +267,13 @@ explore key model =
         ( model, [ ShowToast (.hall >> .arrows), PlaySound ErrorSound ] )
 
     else if isCountDigit key model.pendingCount then
-        ( { model | pendingCount = model.pendingCount ++ key, keystrokes = model.keystrokes + 1 }
-        , [ PlaySound TickSound ]
-        )
+        if (String.toInt (model.pendingCount ++ key) |> Maybe.withDefault 0) > countLimit model.difficulty then
+            ( model, [ ShowToast (.hall >> .mostFive), PlaySound ErrorSound ] )
+
+        else
+            ( { model | pendingCount = model.pendingCount ++ key, keystrokes = model.keystrokes + 1 }
+            , [ PlaySound TickSound ]
+            )
 
     else if key == "Escape" then
         ( { model | pendingCount = "" }, [] )
@@ -349,16 +294,61 @@ isCountDigit key pendingCount =
     String.length key == 1 && String.all Char.isDigit key && not (key == "0" && pendingCount == "")
 
 
+{-| A move is planned at once, from where Alice will stand once the moves
+already typed are done (`Chapter.Hall.Move`), and then played step by step.
+A move that fails as a whole (it would end on something dropped) is a bump.
+-}
 walk : Direction -> Model -> ( Model, List Effect )
 walk direction model =
     let
         count =
             String.toInt model.pendingCount
                 |> Maybe.withDefault 1
-                |> clamp 1 largestCount
+                |> clamp 1 (countLimit model.difficulty)
+
+        ( from, hasKey ) =
+            List.foldl
+                (\action ( at, key ) ->
+                    case action of
+                        StepTo point ->
+                            ( point, key )
+
+                        TakeKeyAt _ ->
+                            ( at, True )
+
+                        _ ->
+                            ( at, key )
+                )
+                ( model.alice, model.hasKey )
+                model.queue
+
+        actions =
+            case Move.resolve direction count from model.map of
+                Just move ->
+                    List.map StepTo move.path
+                        ++ (case move.ending of
+                                Move.Stops ->
+                                    []
+
+                                Move.TakesKey keyAt ->
+                                    if hasKey then
+                                        [ Bump ]
+
+                                    else
+                                        [ TakeKeyAt keyAt ]
+
+                                Move.KnocksAt ->
+                                    [ KnockAt ]
+
+                                Move.Bumps ->
+                                    [ Bump ]
+                           )
+
+                Nothing ->
+                    [ Bump ]
     in
     ( { model
-        | queuedSteps = model.queuedSteps ++ List.repeat count direction
+        | queue = model.queue ++ actions
         , pendingCount = ""
         , keystrokes = model.keystrokes + 1
         , usedCount = model.usedCount || count > 1
@@ -386,50 +376,70 @@ animateWalking layout milliseconds model =
                 ( model, [] )
 
             else
-                startNextStep layout model
+                startNextAction layout model
 
 
-startNextStep : Layout -> Model -> ( Model, List Effect )
-startNextStep layout model =
-    case model.queuedSteps of
-        direction :: rest ->
-            let
-                target =
-                    Map.neighbour direction model.alice
-            in
-            if Map.tileAt target model.map == GoldenKey then
-                takeKey layout target model
+startNextAction : Layout -> Model -> ( Model, List Effect )
+startNextAction layout model =
+    case model.queue of
+        (StepTo target) :: rest ->
+            ( { model
+                | alice = target
+                , step = Just { from = model.alice, progress = 0 }
+                , queue = rest
+                , stepsTaken = model.stepsTaken + 1
+              }
+            , [ PlaySound StepSound ]
+            )
 
-            else if Tiles.isWalkable (Map.tileAt target model.map) then
-                ( { model
-                    | alice = target
-                    , step = Just { from = model.alice, progress = 0 }
-                    , queuedSteps = rest
-                    , stepsTaken = model.stepsTaken + 1
-                  }
-                , [ PlaySound StepSound ]
-                )
+        (TakeKeyAt keyAt) :: _ ->
+            takeKey layout keyAt model
 
-            else
-                ( { model | queuedSteps = [], bumpRemaining = bumpMilliseconds }, [ PlaySound BumpSound ] )
+        KnockAt :: _ ->
+            ( { model
+                | queue = []
+                , bumpRemaining = bumpMilliseconds
+                , story =
+                    Story.tell
+                        (if model.hasKey then
+                            Dialog.say Narrator (.hall >> .keyTooSmall)
+
+                         else
+                            Dialog.say Narrator (.hall >> .doorLocked)
+                        )
+                        []
+                        model.story
+              }
+            , [ PlaySound BumpSound ]
+            )
+
+        Bump :: _ ->
+            ( { model | queue = [], bumpRemaining = bumpMilliseconds }, [ PlaySound BumpSound ] )
 
         [] ->
             ( model, [] )
 
 
 {-| The key lies on the glass table (#86): walking into it, Alice takes it
-and stays in front of the table. Any steps still queued are dropped.
+and stays in front of the table. Any steps still queued are dropped. The
+count lesson that follows also tells how to jump (#89).
 -}
 takeKey : Layout -> Point -> Model -> ( Model, List Effect )
 takeKey layout keyAt model =
     ( { model
         | hasKey = True
         , map = Map.setTile keyAt GlassTable model.map
-        , queuedSteps = []
+        , queue = []
         , story =
             Story.tell (Dialog.say Alice (.hall >> .keyFound))
                 (Dialog.say Narrator (.hall >> .countLesson)
-                    :: (if Layout.needsShiftForDigits layout then
+                    :: (if model.difficulty /= Just Easy then
+                            [ Dialog.say Narrator (.hall >> .jumpLesson) ]
+
+                        else
+                            []
+                       )
+                    ++ (if Layout.needsShiftForDigits layout then
                             [ Dialog.say Narrator (.hall >> .azertyTip) ]
 
                         else
@@ -450,50 +460,16 @@ arrive model =
         CurtainFront ->
             if model.hasKey then
                 ( { model
-                    | queuedSteps = []
+                    | queue = []
                     , story = Story.conclude (Dialog.say Narrator (.hall >> .finale)) []
                   }
                 , [ PlaySound PickupSound ]
                 )
 
             else
-                ( { model | queuedSteps = [] }, [ ShowToast (.hall >> .locked) ] )
-
-        Portal ->
-            goThroughDoor model
+                ( { model | queue = [] }, [ ShowToast (.hall >> .locked) ] )
 
         _ ->
-            ( model, [] )
-
-
-{-| Alice steps into a door and comes out in front of the door it leads to;
-then the other doors change where they lead (`Chapter.Hall.Doors`). The first time,
-the story explains what happened. Any steps still queued are dropped, so
-she stands still on the far side.
--}
-goThroughDoor : Model -> ( Model, List Effect )
-goThroughDoor model =
-    case Doors.leadsTo model.alice model.doors |> Maybe.andThen (\other -> Map.inFrontOf other model.map) of
-        Just exit ->
-            ( startDoorClock
-                { model
-                    | alice = exit
-                    , doors = Doors.walkThrough model.alice model.doors
-                    , queuedSteps = []
-                    , usedDoor = True
-                    , story =
-                        if model.usedDoor then
-                            model.story
-
-                        else
-                            Story.tell (Dialog.say Narrator (.hall >> .doorFound))
-                                [ Dialog.say Narrator (.hall >> .doorRule) ]
-                                model.story
-                }
-            , [ PlaySound PortalSound ]
-            )
-
-        Nothing ->
             ( model, [] )
 
 
@@ -728,10 +704,36 @@ aliceOnScreen model =
                 ( fromX, fromY ) =
                     toPixels step.from
             in
-            ( fromX + (toX - fromX) * step.progress, fromY + (toY - fromY) * step.progress )
+            ( fromX + (toX - fromX) * step.progress, fromY + (toY - fromY) * step.progress - hop model step )
 
         Nothing ->
             ( toX, toY )
+
+
+{-| Jumping over dropped things (#89), Alice is drawn a little higher while
+she is above them, rising and landing smoothly.
+-}
+hop : Model -> Step -> Float
+hop model step =
+    let
+        over point =
+            Map.tileAt point model.map == Dropped
+
+        height =
+            5
+    in
+    case ( over step.from, over model.alice ) of
+        ( True, True ) ->
+            height
+
+        ( False, True ) ->
+            height * step.progress
+
+        ( True, False ) ->
+            height * (1 - step.progress)
+
+        ( False, False ) ->
+            0
 
 
 {-| Little keycaps next to Alice, showing which key walks where.

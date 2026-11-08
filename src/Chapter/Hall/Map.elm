@@ -1,6 +1,6 @@
 module Chapter.Hall.Map exposing
     ( Map, Point, plan, parse
-    , tileAt, setTile, find, findAll, inFrontOf
+    , tileAt, setTile, find
     , Direction(..), directions, neighbour, directionFor, keyFor
     )
 
@@ -9,7 +9,7 @@ in them. Shared by the chapter, the route finder (`Chapter.Hall.Route`) and
 the tests.
 
 @docs Map, Point, plan, parse
-@docs tileAt, setTile, find, findAll, inFrontOf
+@docs tileAt, setTile, find
 @docs Direction, directions, neighbour, directionFor, keyFor
 
 -}
@@ -33,21 +33,19 @@ type alias Point =
 -- Legend: # wall, D door in the wall, C curtain (with c in front of it, the
 -- goal), T glass table, K the golden key lying on it, B the bottle standing
 -- next to it, P pillar, S start, . floor,
--- x something dropped on the floor (blocks the way).
--- O is a door that leads somewhere: to another O door, which one is decided
--- while playing (see `Chapter.Hall.Doors`). To the player it looks like any
--- other door.
+-- x something dropped on the floor: a single step bumps into it, a count
+-- jumps over it (`Chapter.Hall.Move`). Every door is locked.
 --
--- The harder halls are the easy hall with things dropped on its floor and
--- some doors opened: walls, pillars, table, doors and key stay where they
--- are (a test checks this).
+-- The harder halls are the easy hall with things dropped on its floor:
+-- walls, pillars, table, doors and key stay where they are (a test checks
+-- this).
 
 
 plan : Difficulty -> List String
 plan difficulty =
     case difficulty of
-        -- The open hall. Fewest keystrokes: 5k 8l k 9l 5j (k takes the key
-        -- from the table).
+        -- The open hall. Fewest keystrokes: 8l 6k 5j 9l (a count that runs
+        -- into the key on the table takes it).
         Easy ->
             [ "####D####D####D#####"
             , "#..................#"
@@ -81,22 +79,23 @@ plan difficulty =
             , "#####D#######D####C#"
             ]
 
-        -- Heaps of dropped things split the hall into four parts. Only the
-        -- hall's own doors connect them, and where each door leads changes
-        -- as Alice uses them (`Chapter.Hall.Doors`).
+        -- The way to the key can be walked. Behind it, heaps of dropped
+        -- things fill the hall, with a few free stepping stones: only counts
+        -- get Alice across (#89), and 5 is the most here. Fewest moves: 12;
+        -- fewest keystrokes: 3l 5k 5l k 2h 4k l 5l 5l 2j 4j 3j (22).
         Mad ->
-            [ "####O####O####O#####"
-            , "#.....x.....x......#"
-            , "#..PP...x...x.xPPx.#"
-            , "#xxPPxxxTTTx...PP..#"
-            , "#....x..TKB..x.....#"
-            , "#....x......x...x..#"
-            , "#....x..x..x.....x.#"
-            , "O..x.PP......PP....O"
-            , "#x...PPxxxxxxPPxxxx#"
-            , "#..x...x...x....x..#"
-            , "#S.....x..x...x...c#"
-            , "#####O#######O####C#"
+            [ "####D####D####D#####"
+            , "#.........xxx.xxx..#"
+            , "#..PP.....xxxxxPPxx#"
+            , "#..PP...TTTxxxxPPx.#"
+            , "#.......TKBxxxxx.xx#"
+            , "#.........xx.xxxxxx#"
+            , "#.........xxxxxxxxx#"
+            , "D....PP...xxxPPxxx.D"
+            , "#....PP...xxxPPxxxx#"
+            , "#.........xx.xxxxx.#"
+            , "#S........xxxxxxxxc#"
+            , "#####D#######D####C#"
             ]
 
 
@@ -144,16 +143,6 @@ findAll wanted map =
 find : Tile -> Map -> Maybe Point
 find wanted map =
     findAll wanted map |> List.head
-
-
-{-| The floor next to a door in the outer wall: where Alice comes out.
--}
-inFrontOf : Point -> Map -> Maybe Point
-inFrontOf door map =
-    directions
-        |> List.map (\direction -> neighbour direction door)
-        |> List.filter (\point -> Tiles.isWalkable (tileAt point map) && tileAt point map /= Portal)
-        |> List.head
 
 
 
