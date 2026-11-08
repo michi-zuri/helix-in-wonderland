@@ -294,6 +294,17 @@ fallTests =
                                     |> (\r -> [ afterLeft, r.model.stage ])
                            )
                         |> Expect.equal [ 9, 11 ]
+            , test "only on easy: on challenge and mad the fall just goes on (#83)" <|
+                \_ ->
+                    [ Challenge, Mad ]
+                        |> List.map
+                            (\difficulty ->
+                                chosen difficulty
+                                    |> playUntil (\run -> run.model.stage >= 11 && not (Story.isTalking run.model.story)) (player difficulty) 20000
+                                    |> idle (RabbitHole.stuckMilliseconds + 1000)
+                                    |> (\run -> ( run.model.stage, Story.isTalking run.model.story ))
+                            )
+                        |> Expect.equal [ ( 11, False ), ( 11, False ) ]
             , test "a player who keeps going reaches the ground after going round" <|
                 \_ ->
                     stuckInTheLastStage
@@ -331,6 +342,12 @@ readingTests =
                     |> idle 10000
                     |> (\run -> ( Story.isTalking run.model.story, run.model.jars ))
                     |> Expect.equal ( True, [] )
+        , test "after the last stage (both hands), the fall goes on with the same keys: no dialog (#83)" <|
+            \_ ->
+                chosen Mad
+                    |> playUntil (\run -> run.model.stage == 12) (player Mad) 20000
+                    |> (\run -> ( Story.isTalking run.model.story, (RabbitHole.view (contextFor UsQwerty) run.model).status.pendingKeys ))
+                    |> Expect.equal ( False, "A S D F G H J K L ;" )
         , test "no toasts any more: everything is said in dialogs" <|
             \_ ->
                 playToTheEnd (player Easy)

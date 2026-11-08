@@ -174,13 +174,14 @@ allKeys layout =
     home.left ++ Layout.stretchKeys layout ++ home.right
 
 
-{-| After the stages, jars come with all the home-row keys.
+{-| After the stages, jars keep coming with all the home-row keys, the same
+keys as the last stage, so nothing new is announced (#83).
 -}
 allKeysStage : Layout -> Stage
 allKeysStage layout =
     { keys = allKeys layout
     , catches = 0
-    , describe = \texts -> texts.rabbitHole.allKeys (keyList (allKeys layout))
+    , describe = \texts -> texts.rabbitHole.bothHands (keyList (allKeys layout))
     }
 
 
@@ -549,8 +550,9 @@ choose layout key model =
             ( model, [] )
 
 
-{-| Before the first jar: how to catch, how to let go, and the first stage,
-in a dialog the player reads at their own pace (the fall waits for it).
+{-| Before the first jar: how to catch, and the first stage, in a dialog the
+player reads at their own pace (the fall waits for it). Esc still lets go,
+but isn't announced (#83).
 -}
 startFalling : Layout -> Difficulty -> Model -> ( Model, List Effect )
 startFalling layout difficulty model =
@@ -559,9 +561,7 @@ startFalling layout difficulty model =
         , spawnIn = 400
         , story =
             Story.tell (Dialog.say Narrator (.rabbitHole >> .catchRule))
-                [ Dialog.say Narrator (.rabbitHole >> .letGo)
-                , Dialog.say Narrator (currentStage layout model).describe
-                ]
+                [ Dialog.say Narrator (currentStage layout model).describe ]
                 model.story
       }
     , [ PlaySound PickupSound ]
@@ -639,10 +639,20 @@ caught layout difficulty jar model =
 
 
 {-| On to the next stage. Going round again after being stuck, the whole
-left hand leads to the whole right hand, and that to both hands.
+left hand leads to the whole right hand, and that to both hands. After the
+last stage the fall just goes on with the same keys: no dialog, no pause.
 -}
 nextStage : Layout -> Model -> List Effect -> ( Model, List Effect )
 nextStage layout model effects =
+    if model.stage >= lastStage then
+        ( { model | stage = model.stage + 1, caughtThisStage = 0 }, effects )
+
+    else
+        newStage layout model effects
+
+
+newStage : Layout -> Model -> List Effect -> ( Model, List Effect )
+newStage layout model effects =
     let
         following =
             if model.goingRound && model.stage == leftHandStage then
@@ -701,7 +711,7 @@ frame layout milliseconds model =
                 advanced
                     |> spawnJar layout difficulty milliseconds
                     |> floatJars milliseconds
-                    |> watchForStuck layout milliseconds
+                    |> watchForStuck layout difficulty milliseconds
 
             else
                 ( advanced, [] )
@@ -710,13 +720,14 @@ frame layout milliseconds model =
             ( advanced, [] )
 
 
-{-| Time in the last stage (and the all-keys fall after it) adds up; after
-`stuckMilliseconds` without reaching the ground, the player goes round the
-whole left hand, the whole right hand and both hands again.
+{-| On easy, time in the last stage (and the all-keys fall after it) adds
+up; after `stuckMilliseconds` without reaching the ground, the player goes
+round the whole left hand, the whole right hand and both hands again. On
+challenge and mad the fall just goes on (#83).
 -}
-watchForStuck : Layout -> Float -> ( Model, List Effect ) -> ( Model, List Effect )
-watchForStuck layout milliseconds ( model, effects ) =
-    if model.stage < lastStage then
+watchForStuck : Layout -> Difficulty -> Float -> ( Model, List Effect ) -> ( Model, List Effect )
+watchForStuck layout difficulty milliseconds ( model, effects ) =
+    if difficulty /= Easy || model.stage < lastStage then
         ( model, effects )
 
     else if model.inLastStage + milliseconds < stuckMilliseconds then
