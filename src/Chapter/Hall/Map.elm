@@ -31,7 +31,8 @@ type alias Point =
 -- THE HALLS
 --
 -- Legend: # wall, D door in the wall, C curtain (with c in front of it, the
--- goal), T glass table, P pillar, K golden key, S start, . floor,
+-- goal), T glass table, K the golden key lying on it, B the bottle standing
+-- next to it, P pillar, S start, . floor,
 -- x something dropped on the floor (blocks the way).
 -- O is a door that leads somewhere: to another O door, which one is decided
 -- while playing (see `Chapter.Hall.Doors`). To the player it looks like any
@@ -45,14 +46,15 @@ type alias Point =
 plan : Difficulty -> List String
 plan difficulty =
     case difficulty of
-        -- The open hall. Fewest keystrokes: 5k 8l 9l 5j.
+        -- The open hall. Fewest keystrokes: 5k 8l k 9l 5j (k takes the key
+        -- from the table).
         Easy ->
             [ "####D####D####D#####"
             , "#..................#"
             , "#..PP..........PP..#"
             , "#..PP...TTT....PP..#"
-            , "#.......TTT........#"
-            , "#........K.........#"
+            , "#.......TKB........#"
+            , "#..................#"
             , "#..................#"
             , "D....PP......PP....D"
             , "#....PP......PP....#"
@@ -69,8 +71,8 @@ plan difficulty =
             , "#...x.....x....x...#"
             , "#.xPP.x.x...x..PPx.#"
             , "#..PP..xTTTx...PP.x#"
-            , "#xx...x.TTT......x.#"
-            , "#...x...xK...x.....#"
+            , "#xx...x.TKB......x.#"
+            , "#...x...x....x.....#"
             , "#.x...x..x.....x.x.#"
             , "D..x.PP.x.x..PP.x..D"
             , "#.x..PP...xx.PP...x#"
@@ -87,8 +89,8 @@ plan difficulty =
             , "#.....x.....x......#"
             , "#..PP...x...x.xPPx.#"
             , "#xxPPxxxTTTx...PP..#"
-            , "#....x..TTT..x.....#"
-            , "#....x...K..x...x..#"
+            , "#....x..TKB..x.....#"
+            , "#....x......x...x..#"
             , "#....x..x..x.....x.#"
             , "O..x.PP......PP....O"
             , "#x...PPxxxxxxPPxxxx#"

@@ -139,6 +139,9 @@ order above holds. Read old issues with that in mind.
   No panel, as in chapter 1: the goal and the tips are in dialogs (on AZERTY
   the key dialog adds that digits need Shift), and the status line shows
   `h← j↓ k↑ l→` (or the count being typed) and the position (#85).
+  The golden key lies on the glass table with the bottle next to it (`K B`
+  in the maps, both not walkable); walking into the key takes it and Alice
+  stays in front of the table, and `Chapter.Hall.Route` knows that (#86).
 - Chapter 1: twelve stages in one fall; on Easy, a player who stays in the
   last stage (both hands) for a minute without reaching the ground goes round
   the whole left hand, the whole right hand and both hands again (#72, #83).

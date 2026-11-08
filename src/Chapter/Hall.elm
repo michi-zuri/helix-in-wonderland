@@ -376,7 +376,7 @@ animateWalking layout milliseconds model =
                     step.progress + milliseconds / stepMilliseconds
             in
             if progress >= 1 then
-                arrive layout { model | step = Nothing }
+                arrive { model | step = Nothing }
 
             else
                 ( { model | step = Just { step | progress = progress } }, [] )
@@ -386,18 +386,21 @@ animateWalking layout milliseconds model =
                 ( model, [] )
 
             else
-                startNextStep model
+                startNextStep layout model
 
 
-startNextStep : Model -> ( Model, List Effect )
-startNextStep model =
+startNextStep : Layout -> Model -> ( Model, List Effect )
+startNextStep layout model =
     case model.queuedSteps of
         direction :: rest ->
             let
                 target =
                     Map.neighbour direction model.alice
             in
-            if Tiles.isWalkable (Map.tileAt target model.map) then
+            if Map.tileAt target model.map == GoldenKey then
+                takeKey layout target model
+
+            else if Tiles.isWalkable (Map.tileAt target model.map) then
                 ( { model
                     | alice = target
                     , step = Just { from = model.alice, progress = 0 }
@@ -414,31 +417,36 @@ startNextStep model =
             ( model, [] )
 
 
+{-| The key lies on the glass table (#86): walking into it, Alice takes it
+and stays in front of the table. Any steps still queued are dropped.
+-}
+takeKey : Layout -> Point -> Model -> ( Model, List Effect )
+takeKey layout keyAt model =
+    ( { model
+        | hasKey = True
+        , map = Map.setTile keyAt GlassTable model.map
+        , queuedSteps = []
+        , story =
+            Story.tell (Dialog.say Alice (.hall >> .keyFound))
+                (Dialog.say Narrator (.hall >> .countLesson)
+                    :: (if Layout.needsShiftForDigits layout then
+                            [ Dialog.say Narrator (.hall >> .azertyTip) ]
+
+                        else
+                            []
+                       )
+                )
+                model.story
+      }
+    , [ PlaySound PickupSound ]
+    )
+
+
 {-| What happens when Alice finishes a step onto a tile.
 -}
-arrive : Layout -> Model -> ( Model, List Effect )
-arrive layout model =
+arrive : Model -> ( Model, List Effect )
+arrive model =
     case Map.tileAt model.alice model.map of
-        GoldenKey ->
-            ( { model
-                | hasKey = True
-                , map = Map.setTile model.alice Floor model.map
-                , queuedSteps = []
-                , story =
-                    Story.tell (Dialog.say Alice (.hall >> .keyFound))
-                        (Dialog.say Narrator (.hall >> .countLesson)
-                            :: (if Layout.needsShiftForDigits layout then
-                                    [ Dialog.say Narrator (.hall >> .azertyTip) ]
-
-                                else
-                                    []
-                               )
-                        )
-                        model.story
-              }
-            , [ PlaySound PickupSound ]
-            )
-
         CurtainFront ->
             if model.hasKey then
                 ( { model

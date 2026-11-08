@@ -18,6 +18,7 @@ type Tile
     | GlassTable
     | Pillar
     | GoldenKey
+    | Bottle
     | Portal
     | Dropped
 
@@ -58,6 +59,9 @@ fromChar char =
         'K' ->
             GoldenKey
 
+        'B' ->
+            Bottle
+
         'x' ->
             Dropped
 
@@ -78,9 +82,6 @@ isWalkable tile =
             True
 
         CurtainFront ->
-            True
-
-        GoldenKey ->
             True
 
         Portal ->
@@ -113,6 +114,14 @@ view position tile =
 
                 GlassTable ->
                     floor position ++ glass
+
+                -- The key itself is drawn by the chapter, so it can sparkle
+                -- and be taken.
+                GoldenKey ->
+                    floor position ++ glass
+
+                Bottle ->
+                    floor position ++ glass ++ bottle
 
                 Pillar ->
                     floor position ++ pillar
@@ -258,6 +267,18 @@ glass =
     [ Svg.rect [ A.x "0", A.y "2", A.width "16", A.height "12", A.fill "#bfe6f0", A.fillOpacity "0.38" ] []
     , pixel 0 2 16 1 "#bfe6f0"
     , pixel 2 4 3 1 "#d7f1f7"
+    ]
+
+
+{-| The little bottle on the glass table, next to the key, as it looks in
+chapter 4: a cork, violet glass and a paper label.
+-}
+bottle : List (Svg msg)
+bottle =
+    [ pixel 7 2 2 2 "#8a5a3c"
+    , Svg.rect [ A.x "7", A.y "4", A.width "2", A.height "2", A.fill "#a4a0e8", A.fillOpacity "0.8" ] []
+    , Svg.rect [ A.x "5", A.y "6", A.width "6", A.height "8", A.fill "#a4a0e8", A.fillOpacity "0.8" ] []
+    , pixel 6 8 4 3 "#f4ead2"
     ]
 
 

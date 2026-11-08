@@ -10,7 +10,8 @@ the luckiest doors.
 A move is one count and a direction: `7l` walks seven steps right for two
 keystrokes, `l` one step for one. A move stops early, as in the game: at a
 wall, at the key (picking it up), at the curtain, and at a door (which
-leads on to the floor in front of another door).
+leads on to the floor in front of another door). The key lies on the glass
+table: walking into it takes it, and Alice stays where she is.
 
 -}
 
@@ -160,18 +161,17 @@ moves { largestCount, exits, map } visit direction =
                     }
                         |> extra
             in
-            if steps > largestCount || not (Tiles.isWalkable tile) then
+            if steps > largestCount then
+                found
+
+            else if tile == GoldenKey && not visit.hasKey then
+                arriving (\v -> { v | at = at, hasKey = True }) :: found
+
+            else if not (Tiles.isWalkable tile) then
                 found
 
             else
                 case tile of
-                    GoldenKey ->
-                        if visit.hasKey then
-                            go (steps + 1) next (arriving identity :: found)
-
-                        else
-                            arriving (\v -> { v | hasKey = True }) :: found
-
                     Portal ->
                         exits next
                             |> List.filterMap (\door -> Map.inFrontOf door map)
