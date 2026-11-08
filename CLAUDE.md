@@ -137,8 +137,10 @@ order above holds. Read old issues with that in mind.
   count that would land on one fails as a whole. One module decides what a
   move does (`Chapter.Hall.Move`), for the game and for "Our best"
   (`Chapter.Hall.Route`). Challenge can be walked with single steps; Mad is
-  walkable to the key, then only stepping stones, counts at most 5, at
-  least 10 moves (#89). The mad hall's shuffling doors and their hidden clock
+  full of dropped things with stepping stones only, counts at most 5, at
+  least 10 moves (#89; filled completely in #91: 17 moves, 33 keystrokes).
+  Halls were found with a throwaway Python copy of the move rules that
+  tries random stepping-stone chains; the Elm tests check the result. The mad hall's shuffling doors and their hidden clock
   (#29–#32, #63) are gone.
   No panel, as in chapter 1: the goal and the tips are in dialogs (on AZERTY
   the key dialog adds that digits need Shift), and the status line shows
