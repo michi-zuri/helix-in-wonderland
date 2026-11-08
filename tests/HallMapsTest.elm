@@ -243,11 +243,15 @@ withoutDoors map =
             Set.empty
 
 
+{-| Whether Alice can get to `tile` from the start without doors. The key
+lies on the table (#86): it counts as reached from any floor next to it.
+-}
 reachable : Tile -> Map -> Bool
 reachable tile map =
     case Map.find tile map of
-        Just { x, y } ->
-            Set.member ( x, y ) (withoutDoors map)
+        Just point ->
+            (point :: List.map (\direction -> Map.neighbour direction point) Map.directions)
+                |> List.any (\{ x, y } -> Set.member ( x, y ) (withoutDoors map))
 
         Nothing ->
             False
@@ -310,6 +314,22 @@ suite =
                 )
                 [ Challenge, Mad ]
             )
+        , describe "the key lies on the glass table, the bottle next to it (#86)"
+            (List.map
+                (\difficulty ->
+                    test (difficultyLabel difficulty) <|
+                        \_ ->
+                            ( Map.find GoldenKey (mapOf difficulty) |> Maybe.map (\key -> Map.tileAt { key | y = key.y - 1 } (mapOf difficulty))
+                            , Map.find Bottle (mapOf difficulty) |> Maybe.map (\bottle -> Map.tileAt { bottle | x = bottle.x - 1 } (mapOf difficulty))
+                            )
+                                |> Expect.equal ( Just GlassTable, Just GoldenKey )
+                )
+                Difficulty.all
+            )
+        , test "easy and challenge: the key can be reached without doors (the check below is not empty)" <|
+            \_ ->
+                ( reachable GoldenKey (mapOf Easy), reachable GoldenKey (mapOf Challenge) )
+                    |> Expect.equal ( True, True )
         , test "mad: the key and the curtain can't be reached without doors" <|
             \_ ->
                 ( reachable GoldenKey (mapOf Mad), reachable CurtainFront (mapOf Mad) )
@@ -425,18 +445,31 @@ changedLayout map =
 
 
 {-| Floor tiles that, blocked, would leave no way to finish the hall. Tiles
-right next to the start, the key or the curtain don't count: those can
-always be blocked off.
+right next to the start, the key spot or the curtain don't count: those can
+always be blocked off. The key lies on the table (#86), so the key spot is
+the floor in front of it, where Alice takes it.
 -}
 chokepoints : Map -> List Point
 chokepoints map =
     let
         nextTo tile point =
             List.any (\direction -> Map.tileAt (Map.neighbour direction point) map == tile) Map.directions
+
+        nextToKeySpot point =
+            nextTo GoldenKey point
+                || List.any
+                    (\direction ->
+                        let
+                            spot =
+                                Map.neighbour direction point
+                        in
+                        Map.tileAt spot map == Floor && nextTo GoldenKey spot
+                    )
+                    Map.directions
     in
     allPoints
         |> List.filter (\point -> Map.tileAt point map == Floor)
-        |> List.filter (\point -> not (nextTo Start point || nextTo GoldenKey point || nextTo CurtainFront point))
+        |> List.filter (\point -> not (nextTo Start point || nextToKeySpot point || nextTo CurtainFront point))
         |> List.filter (\point -> Route.fewest { largestCount = 30, exits = always [] } { at = Map.find Start map |> Maybe.withDefault point, hasKey = False } (Map.setTile point Dropped map) == Nothing)
 
 

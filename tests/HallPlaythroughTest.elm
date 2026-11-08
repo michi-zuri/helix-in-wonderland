@@ -102,7 +102,7 @@ suite =
                         dialogsAfterKey layout =
                             Playthrough.start (Hall.init (Random.initialSeed 1))
                                 |> Playthrough.sendAll (Hall.update { context | layout = layout })
-                                    (List.map Hall.KeyPressed (List.repeat 12 "Enter" ++ [ "1", "5", "k", "8", "l" ])
+                                    (List.map Hall.KeyPressed (List.repeat 12 "Enter" ++ [ "1", "5", "k", "8", "l", "k" ])
                                         ++ List.repeat 400 (Hall.Frame 16)
                                     )
                                 |> countDialogLines layout
@@ -113,7 +113,8 @@ suite =
         , test "the easy hall's fastest route earns its one tart" <|
             \_ ->
                 inEasyHall
-                    |> press "5k8l"
+                    -- k takes the key from the glass table (#86).
+                    |> press "5k8lk"
                     |> wait
                     |> readStory
                     |> press "9l5j"
@@ -121,10 +122,36 @@ suite =
                     |> readStory
                     |> Playthrough.finishedWith
                     |> Expect.equal (Just 1)
+        , test "walking into the key on the table takes it; Alice stays in front of the table (#86)" <|
+            \_ ->
+                inEasyHall
+                    |> press "5k8lk"
+                    |> wait
+                    |> .model
+                    |> (\model -> ( model.hasKey, model.alice ))
+                    |> Expect.equal ( True, { x = 9, y = 5 } )
+        , test "a count stops at the table when it takes the key" <|
+            \_ ->
+                inEasyHall
+                    |> press "5k8l"
+                    |> wait
+                    |> press "9k"
+                    |> wait
+                    |> .model
+                    |> (\model -> ( model.hasKey, model.alice ))
+                    |> Expect.equal ( True, { x = 9, y = 5 } )
+        , test "the bottle is only to look at: walking into it does nothing" <|
+            \_ ->
+                inEasyHall
+                    |> press "5k9lk"
+                    |> wait
+                    |> .model
+                    |> (\model -> ( model.hasKey, model.alice ))
+                    |> Expect.equal ( False, { x = 10, y = 5 } )
         , test "walking without counts still finishes, with one tart" <|
             \_ ->
                 inEasyHall
-                    |> press "kkkkkllllllll"
+                    |> press "kkkkkllllllllk"
                     |> wait
                     |> readStory
                     |> press "llllllllljjjjj"
