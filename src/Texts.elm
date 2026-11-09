@@ -414,7 +414,7 @@ english =
                     { name = "The Hall of Doors", skill = "Helix: move with h j k l, counts", lesson = "h ← j ↓ k ↑ l →, and 5j walks five steps." }
 
                 LittleDoor ->
-                    { name = "The Little Door", skill = "Helix: i puts the key in, Esc pulls it out, c", lesson = "i inserts, Esc goes back to NOR, c changes." }
+                    { name = "The Little Door", skill = "Helix: i puts the key in, Esc pulls it out, c", lesson = "i inserts, Esc goes back to NORMAL, c changes." }
 
                 DrinkMe ->
                     { name = "Drink Me", skill = "Typing words, new keys e and i", lesson = "Words with e and i, thumb on the space bar." }
@@ -426,7 +426,7 @@ english =
                     { name = "The Pool of Tears", skill = "Helix: w x select, d deletes, u undo, counts", lesson = "Select first, then act: w or x, then d. u undoes." }
 
                 CaterpillarsAdvice ->
-                    { name = "Advice from a Caterpillar", skill = "Helix: i and a insert, Esc returns", lesson = "i inserts before, a after, Esc goes back to NOR." }
+                    { name = "Advice from a Caterpillar", skill = "Helix: i and a insert, Esc returns", lesson = "i inserts before, a after, Esc goes back to NORMAL." }
     , results =
         { title = "Chapter complete!"
         , next = "Next"
@@ -503,8 +503,8 @@ english =
     , littleDoor =
         { intro1 = "Alice had the tiny golden key, and she had found the little door. But the little door had not just one lock: it had lots of them!"
         , intro2 = "What a lot of locks!"
-        , intro3 = "Press i to put the key into a lock. The status bar changes from NOR to INS: the key is in, and every key you press turns the lock, even h j k l."
-        , intro4 = "Esc pulls the key out: back to NOR, and Alice can walk again. A wrong letter is a wrong pin: stand on it and press c, and the key goes straight in."
+        , intro3 = "Press i to put the key into a lock. The status bar changes from NORMAL to INSERT: the key is in, and every key you press turns the lock, even h j k l."
+        , intro4 = "Esc pulls the key out: back to NORMAL, and Alice can walk again. A wrong letter is a wrong pin: stand on it and press c, and the key goes straight in."
         , finale1 = "Click! The last lock opened. Alice opened the little door and looked into the loveliest garden you ever saw."
         , finale2 = "But she could not even get her head through the doorway. So she shut the door and went back to the glass table. This time there was a little bottle on it."
         , easyStart =
@@ -693,7 +693,7 @@ english =
     , caterpillar =
         { intro1 = "On the top of a large mushroom sat a large blue Caterpillar, with its arms folded."
         , intro2 = "Who are YOU?"
-        , intro3 = "Some of the words are missing. You know how from the little door: move to a gap, press i, type, then Esc back to NOR."
+        , intro3 = "Some of the words are missing. You know how from the little door: move to a gap, press i, type, then Esc back to NORMAL."
         , intro4 = "Something new: a inserts after the cursor instead of before it. Handy at the end of a line."
         , finale1 = "One side will make you grow taller, and the other side will make you grow shorter."
         , finale2 = "And with that, the Caterpillar got down off the mushroom and crawled away into the grass."
@@ -709,10 +709,10 @@ english =
                 , "\"I hardly know, sir, just at present.\""
                 , "\"Keep your temper,\" said the Caterpillar."
                 ]
-        , pressI = "Move the cursor onto the ? and press i. NOR turns into INS."
+        , pressI = "Move the cursor onto the ? and press i. NORMAL turns into INSERT."
         , typeWord = "Type the missing word."
-        , pressEsc = "Press Esc to go back to NOR."
-        , fillAll = \filled -> "Fill all three gaps (" ++ String.fromInt filled ++ " of 3), then end in NOR."
+        , pressEsc = "Press Esc to go back to NORMAL."
+        , fillAll = \filled -> "Fill all three gaps (" ++ String.fromInt filled ++ " of 3), then end in NORMAL."
         , challengeStart =
             lines
                 [ "\"What do you mean by this?\" said the Caterpillar sternly."
@@ -759,7 +759,7 @@ english =
         , hintFind = "Compare with the goal. A word missing: i inserts before the cursor. A wrong word: select it with w, then c. A line that doesn't belong: x, then d."
         , hintChange = "Selected! c deletes the selection and starts inserting: type the right word."
         , hintAppend = "At the end of a line, a inserts after the cursor (gl gets you there)."
-        , hintTyping = "Type, then go back to NOR with Esc."
+        , hintTyping = "Type, then go back to NORMAL with Esc."
         , ourBest = "Our best"
         , goal = "What the Caterpillar really said:"
         , tip = "a inserts after the cursor. c deletes a selection and starts inserting."
@@ -831,7 +831,7 @@ german =
                     { name = "Der Saal der Türen", skill = "Helix: bewegen mit h j k l, Counts", lesson = "h ← j ↓ k ↑ l →, und 5j geht fünf Schritte." }
 
                 LittleDoor ->
-                    { name = "Die kleine Tür", skill = "Helix: i steckt den Schlüssel, Esc zieht ihn, c", lesson = "i fügt ein, Esc zurück zu NOR, c ändert." }
+                    { name = "Die kleine Tür", skill = "Helix: i steckt den Schlüssel, Esc zieht ihn, c", lesson = "i fügt ein, Esc zurück zu NORMAL, c ändert." }
 
                 DrinkMe ->
                     { name = "Trink mich", skill = "Wörter tippen, neue Tasten e und i", lesson = "Wörter mit e und i, Daumen auf der Leertaste." }
@@ -843,7 +843,7 @@ german =
                     { name = "Der Tränenteich", skill = "Helix: w x wählen, d löscht, u zurück, Zahlen", lesson = "Erst auswählen, dann handeln: w oder x, dann d. u macht rückgängig." }
 
                 CaterpillarsAdvice ->
-                    { name = "Die Raupe gibt Rat", skill = "Helix: i und a einfügen, Esc zurück", lesson = "i fügt davor ein, a dahinter, Esc zurück zu NOR." }
+                    { name = "Die Raupe gibt Rat", skill = "Helix: i und a einfügen, Esc zurück", lesson = "i fügt davor ein, a dahinter, Esc zurück zu NORMAL." }
     , results =
         { title = "Kapitel geschafft!"
         , next = "Weiter"
@@ -920,8 +920,8 @@ german =
     , littleDoor =
         { intro1 = "Alice hatte den winzigen goldenen Schlüssel, und sie hatte die kleine Tür gefunden. Aber die kleine Tür hatte nicht nur ein Schloss, sondern ganz viele!"
         , intro2 = "So viele Schlösser!"
-        , intro3 = "Mit i steckst du den Schlüssel in ein Schloss. In der Statusleiste wird aus NOR dann INS: Der Schlüssel steckt, und jede Taste dreht am Schloss, auch h j k l."
-        , intro4 = "Esc zieht den Schlüssel heraus: zurück zu NOR, und Alice kann wieder gehen. Ein falscher Buchstabe ist ein falscher Stift: Stell dich darauf und drücke c, dann steckt der Schlüssel sofort."
+        , intro3 = "Mit i steckst du den Schlüssel in ein Schloss. In der Statusleiste wird aus NORMAL dann INSERT: Der Schlüssel steckt, und jede Taste dreht am Schloss, auch h j k l."
+        , intro4 = "Esc zieht den Schlüssel heraus: zurück zu NORMAL, und Alice kann wieder gehen. Ein falscher Buchstabe ist ein falscher Stift: Stell dich darauf und drücke c, dann steckt der Schlüssel sofort."
         , finale1 = "Klick! Das letzte Schloss ging auf. Alice öffnete die kleine Tür und blickte in den schönsten Garten, den man sich denken kann."
         , finale2 = "Aber sie konnte nicht einmal den Kopf durch die Tür stecken. Also schloss sie die Tür und ging zurück zum Glastisch. Diesmal stand ein Fläschchen darauf."
         , easyStart =
@@ -1110,7 +1110,7 @@ german =
     , caterpillar =
         { intro1 = "Oben auf einem grossen Pilz sass eine grosse blaue Raupe mit verschränkten Armen."
         , intro2 = "Wer bist DU?"
-        , intro3 = "Ein paar Wörter fehlen. Wie das geht, weisst du von der kleinen Tür: zur Lücke gehen, i drücken, tippen, dann mit Esc zurück zu NOR."
+        , intro3 = "Ein paar Wörter fehlen. Wie das geht, weisst du von der kleinen Tür: zur Lücke gehen, i drücken, tippen, dann mit Esc zurück zu NORMAL."
         , intro4 = "Neu: a fügt hinter dem Cursor ein statt davor. Praktisch am Ende einer Zeile."
         , finale1 = "Die eine Seite lässt dich wachsen, die andere Seite lässt dich schrumpfen."
         , finale2 = "Und damit kletterte die Raupe vom Pilz und kroch davon ins Gras."
@@ -1126,10 +1126,10 @@ german =
                 , "\"Das kann ich kaum sagen, mein Herr.\""
                 , "\"Bleib ruhig,\" sagte die Raupe."
                 ]
-        , pressI = "Geh mit dem Cursor auf das ? und drücke i. Aus NOR wird INS."
+        , pressI = "Geh mit dem Cursor auf das ? und drücke i. Aus NORMAL wird INSERT."
         , typeWord = "Tippe das fehlende Wort."
-        , pressEsc = "Drücke Esc, um zurück zu NOR zu kommen."
-        , fillAll = \filled -> "Füll alle drei Lücken (" ++ String.fromInt filled ++ " von 3) und ende in NOR."
+        , pressEsc = "Drücke Esc, um zurück zu NORMAL zu kommen."
+        , fillAll = \filled -> "Füll alle drei Lücken (" ++ String.fromInt filled ++ " von 3) und ende in NORMAL."
         , challengeStart =
             lines
                 [ "\"Was meinst du dazu?\", fragte die Raupe streng."
@@ -1176,7 +1176,7 @@ german =
         , hintFind = "Vergleiche mit dem Ziel. Fehlt ein Wort: i fügt vor dem Cursor ein. Ein falsches Wort: Wähle es mit w aus, dann c. Eine Zeile, die nicht hineingehört: x, dann d."
         , hintChange = "Ausgewählt! c löscht die Auswahl und beginnt mit dem Einfügen: Tippe das richtige Wort."
         , hintAppend = "Am Ende einer Zeile fügt a hinter dem Cursor ein (mit gl kommst du hin)."
-        , hintTyping = "Tippe, dann mit Esc zurück zu NOR."
+        , hintTyping = "Tippe, dann mit Esc zurück zu NORMAL."
         , ourBest = "Unser Rekord"
         , goal = "Was die Raupe wirklich sagt:"
         , tip = "a fügt hinter dem Cursor ein. c löscht eine Auswahl und beginnt mit dem Einfügen."

@@ -15,16 +15,18 @@ import Html exposing (Html)
 import Html.Attributes as A
 
 
-{-| What Helix's status line shows on the left: NOR or INS.
+{-| The mode on the left of the status line, spelled out: NORMAL or INSERT.
+Helix itself shows NOR and INS; players who know the full words recognise
+the short ones later (#95).
 -}
 modeName : Buffer -> String
 modeName buffer =
     case Core.mode buffer of
         Normal ->
-            "NOR"
+            "NORMAL"
 
         Insert ->
-            "INS"
+            "INSERT"
 
 
 {-| What Helix's status line shows on the right: line:column.

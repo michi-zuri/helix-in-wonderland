@@ -574,7 +574,7 @@ scene context model =
             ]
     , panel = Html.text ""
     , status =
-        { mode = "NOR"
+        { mode = "NORMAL"
         , file = file
         , pendingKeys =
             if model.pendingCount == "" && model.difficulty /= Nothing && Story.isPlaying model.story then

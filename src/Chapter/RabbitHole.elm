@@ -1004,7 +1004,7 @@ scene context model =
             ]
     , panel = Html.text ""
     , status =
-        { mode = "INS"
+        { mode = "INSERT"
         , file = file
         , pendingKeys =
             if model.difficulty /= Nothing && model.landing == Nothing then

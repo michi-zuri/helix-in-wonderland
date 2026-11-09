@@ -846,5 +846,5 @@ cardScreen card panel =
             , Html.div [ A.class "overlay" ] [ card ]
             ]
     , panel = panel
-    , status = { mode = "NOR", file = "wonderland.txt", pendingKeys = "", position = "1:1" }
+    , status = { mode = "NORMAL", file = "wonderland.txt", pendingKeys = "", position = "1:1" }
     }

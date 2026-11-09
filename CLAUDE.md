@@ -161,7 +161,7 @@ order above holds. Read old issues with that in mind.
   has one, so reordering never locks away what a player reached
   (`Progress.isOpen`). Retired save names (`rabbit-hole-right-hand`) count for
   nothing.
-- Chapter 3: the key is Insert mode. `i` puts it into a lock (INS, the key
+- Chapter 3: the key is Insert mode. `i` puts it into a lock (INSERT, the key
   sticks out of the keyhole of the cursor's line), every key then works the
   lock, `h j k l` too; Esc pulls it out. Each gap or wrong letter is a lock;
   gaps between words are two spaces, a gap before punctuation one space. On

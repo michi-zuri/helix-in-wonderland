@@ -244,9 +244,9 @@ suite =
                         |> press [ "k", "Enter" ]
                         |> readStory
                         |> press [ "1", "i", "y" ]
-                        |> ProgramTest.ensureViewHas [ text "INS" ]
+                        |> ProgramTest.ensureViewHas [ text "INSERT" ]
                         |> press [ ";", ";" ]
-                        |> ProgramTest.expectViewHas [ text "NOR" ]
+                        |> ProgramTest.expectViewHas [ text "NORMAL" ]
             ]
         , test "Ctrl+[ works as Esc" <|
             \_ ->
@@ -255,9 +255,9 @@ suite =
                     |> press [ "k", "Enter" ]
                     |> readStory
                     |> press [ "1", "i", "y" ]
-                    |> ProgramTest.ensureViewHas [ text "INS" ]
+                    |> ProgramTest.ensureViewHas [ text "INSERT" ]
                     |> ProgramTest.simulateIncomingPort "keydown" (keyEvent { key = "[", ctrl = True })
-                    |> ProgramTest.expectViewHas [ text "NOR" ]
+                    |> ProgramTest.expectViewHas [ text "NORMAL" ]
         , describe "settings"
             [ test "German: the menu changes language, and the choice is saved" <|
                 \_ ->
