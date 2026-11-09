@@ -453,7 +453,7 @@ scene context model =
             ]
     , panel = viewPanel context.texts words model
     , status =
-        { mode = "INS"
+        { mode = "INSERT"
         , file = file
         , pendingKeys = ""
         , position = String.fromInt model.wordIndex ++ "/" ++ String.fromInt (List.length words)

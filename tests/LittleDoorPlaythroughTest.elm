@@ -330,7 +330,7 @@ suite =
                     |> Playthrough.finishedWith
                     |> Expect.equal Nothing
         , describe "the key is Insert mode"
-            [ test "i puts the key in: INS" <|
+            [ test "i puts the key in: INSERT" <|
                 \_ -> start "1" |> pressIn english [ "i" ] |> modeOf |> Expect.equal (Just Insert)
             , test "with the key in, h j k l type letters" <|
                 \_ ->
@@ -339,7 +339,7 @@ suite =
                         |> textOf
                         |> String.startsWith "jkAlice"
                         |> Expect.equal True
-            , test "Esc pulls it out: NOR" <|
+            , test "Esc pulls it out: NORMAL" <|
                 \_ -> start "1" |> pressIn english [ "i", "Escape" ] |> modeOf |> Expect.equal (Just Normal)
             , test "c pulls the wrong pin and puts the key in" <|
                 \_ ->
@@ -382,7 +382,7 @@ suite =
                 [ "w d", "x d", "a", "g l", "u", "e", "b" ]
             )
         , describe "mad: the key slips out if you wait"
-            [ test "after more than two seconds with the key in, back to NOR; the first time a dialog says why" <|
+            [ test "after more than two seconds with the key in, back to NORMAL; the first time a dialog says why" <|
                 \_ ->
                     start "3"
                         |> pressIn english [ "6", "l", "i", "h" ]

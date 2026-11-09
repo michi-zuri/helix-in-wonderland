@@ -73,7 +73,7 @@ statusLine exit status =
     Html.div [ A.class "status-line" ]
         ([ Html.span
             [ A.class "status-mode"
-            , A.classList [ ( "insert", status.mode == "INS" ) ]
+            , A.classList [ ( "insert", status.mode == "INSERT" ) ]
             ]
             [ Html.text status.mode ]
          , Html.span [ A.class "status-file" ] [ Html.text status.file ]
