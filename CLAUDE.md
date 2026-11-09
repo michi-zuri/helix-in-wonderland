@@ -165,7 +165,10 @@ order above holds. Read old issues with that in mind.
   sticks out of the keyhole of the cursor's line), every key then works the
   lock, `h j k l` too; Esc pulls it out. Each gap or wrong letter is a lock;
   gaps between words are two spaces, a gap before punctuation one space. On
-  mad the key slips out after 2 s without a key (#73).
+  mad the key slips out after 2 s without a key (#73). No panel (#93): each
+  hint is a dialog told once, the first time it helps; closing a dialog
+  counts as a key, so reading never makes the key slip; the goal stands in
+  the editor box under the lines, so everything fits on one screen.
 - Chapter 4: typing from memory; a word hides after its first key and starts
   over after a pause over 300 ms between correct keys (#35).
 - Chapter 5: lines without indents (#55); cheeky currants (`g.`) are shy and run
