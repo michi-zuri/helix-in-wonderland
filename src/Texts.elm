@@ -564,7 +564,7 @@ english =
         , challengeInfo = "More locks, all over the lines."
         , madInfo = "A long story, and the key slips out if you wait."
         , hintFind = "Find a lock: a gap or a wrong letter. Walk there with h j k l, then press i to put the key in."
-        , hintPin = "A wrong pin! Press c: it pulls the pin out and puts the key in. Type the right letter, then Esc."
+        , hintPin = "A wrong letter! Press c to replace it with the right one."
         , hintTurn =
             \escapeKeys ->
                 case escapeKeys of
@@ -988,7 +988,7 @@ german =
         , challengeInfo = "Mehr Schlösser, über alle Zeilen verteilt."
         , madInfo = "Eine lange Geschichte, und der Schlüssel rutscht heraus, wenn du wartest."
         , hintFind = "Such ein Schloss: eine Lücke oder einen falschen Buchstaben. Geh mit h j k l hin, dann steckt i den Schlüssel hinein."
-        , hintPin = "Ein falscher Stift! Drücke c: Das zieht den Stift heraus und steckt den Schlüssel hinein. Tippe den richtigen Buchstaben, dann Esc."
+        , hintPin = "Ein falscher Buchstabe! Drücke c, um ihn durch den richtigen zu ersetzen."
         , hintTurn =
             \escapeKeys ->
                 case escapeKeys of
