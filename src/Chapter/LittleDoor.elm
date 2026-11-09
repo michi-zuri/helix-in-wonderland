@@ -431,15 +431,19 @@ giveHints context ( model, effects ) =
                     ( tell KeyBinds [ Dialog.say Narrator (.littleDoor >> .hintBound) ] model, effects )
 
                 else
+                    let
+                        escapeKeys =
+                            Maybe.map (\( first, second ) -> String.fromList [ first, second ]) context.escapeKeys
+                    in
+                    -- The hint names the player's own escape keys (#97); without
+                    -- them, Ctrl+[ is the fallback for browsers that keep Esc.
                     ( tell KeyIsIn
-                        (Dialog.say Narrator (.littleDoor >> .hintTurn)
-                            :: Dialog.say Narrator (.caterpillar >> .escTip)
-                            :: (case context.escapeKeys of
-                                    Just ( first, second ) ->
-                                        [ Dialog.say Narrator (\texts -> texts.escapeKeysWork (String.fromList [ first, second ])) ]
+                        (Dialog.say Narrator (\texts -> texts.littleDoor.hintTurn escapeKeys)
+                            :: (if escapeKeys == Nothing then
+                                    [ Dialog.say Narrator (.caterpillar >> .escTip) ]
 
-                                    Nothing ->
-                                        []
+                                else
+                                    []
                                )
                         )
                         model
