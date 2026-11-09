@@ -463,12 +463,22 @@ suite =
                     start "1"
                         |> pressIn english (keys [ "6l", "ihad⎋", "j", "iglad⎋", "j", "2l", "ihalf⎋", "j", "11l" ])
                         |> onlyHint english.texts.littleDoor.hintPin
-            , test "without escape keys, the key-in hint names Esc, and Ctrl+[ follows" <|
+            , test "without escape keys, on US QWERTY: the key-in hint names Esc, and Ctrl+[ follows" <|
+                \_ ->
+                    let
+                        qwerty =
+                            { english | layout = UsQwerty }
+                    in
+                    startIn qwerty "1"
+                        |> pressIn qwerty (keys [ "6l", "i" ])
+                        |> dialogLines qwerty
+                        |> Expect.equal [ english.texts.littleDoor.hintTurn Nothing, english.texts.caterpillar.escTip ]
+            , test "on QWERTZ, where [ needs AltGr, no word about Ctrl+[ (#97)" <|
                 \_ ->
                     start "1"
                         |> pressIn english (keys [ "6l", "i" ])
                         |> dialogLines english
-                        |> Expect.equal [ english.texts.littleDoor.hintTurn Nothing, english.texts.caterpillar.escTip ]
+                        |> Expect.equal [ english.texts.littleDoor.hintTurn Nothing ]
             , test "German, with escape keys: the sentence names them (#97)" <|
                 \_ ->
                     (contextIn German).texts.littleDoor.hintTurn (Just ";;")

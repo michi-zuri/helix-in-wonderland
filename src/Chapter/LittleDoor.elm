@@ -28,6 +28,7 @@ import Editor.View
 import Html exposing (Html)
 import Html.Attributes as A
 import Html.Lazy
+import Keyboard.Layout as Layout
 import Pixel.Sprite as Sprite
 import Pixel.Sprites as Sprites
 import Speaker exposing (Speaker(..))
@@ -436,10 +437,11 @@ giveHints context ( model, effects ) =
                             Maybe.map (\( first, second ) -> String.fromList [ first, second ]) context.escapeKeys
                     in
                     -- The hint names the player's own escape keys (#97); without
-                    -- them, Ctrl+[ is the fallback for browsers that keep Esc.
+                    -- them, Ctrl+[ is the fallback for browsers that keep Esc,
+                    -- told only where [ is a plain key.
                     ( tell KeyIsIn
                         (Dialog.say Narrator (\texts -> texts.littleDoor.hintTurn escapeKeys)
-                            :: (if escapeKeys == Nothing then
+                            :: (if escapeKeys == Nothing && Layout.typesBracketEasily context.layout then
                                     [ Dialog.say Narrator (.caterpillar >> .escTip) ]
 
                                 else

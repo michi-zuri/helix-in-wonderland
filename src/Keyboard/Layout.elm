@@ -1,7 +1,7 @@
 module Keyboard.Layout exposing
     ( Layout(..), all, name, toKey, fromKey
     , homeKeys, stretchKeys
-    , needsShiftForDigits, detect
+    , needsShiftForDigits, typesBracketEasily, detect
     )
 
 {-| Physical keyboard layouts: where the letters sit.
@@ -13,7 +13,7 @@ on AZERTY.
 
 @docs Layout, all, name, toKey, fromKey
 @docs homeKeys, stretchKeys
-@docs needsShiftForDigits, detect
+@docs needsShiftForDigits, typesBracketEasily, detect
 
 -}
 
@@ -115,6 +115,26 @@ when a chapter teaches counts like `5j`.
 needsShiftForDigits : Layout -> Bool
 needsShiftForDigits layout =
     layout == FrenchAzerty
+
+
+{-| Whether `[` is a plain key, so Ctrl+[ (the Esc fallback) is easy to
+type. On the QWERTZ and AZERTY layouts `[` needs AltGr, so the game doesn't
+mention Ctrl+[ there (#97).
+-}
+typesBracketEasily : Layout -> Bool
+typesBracketEasily layout =
+    case layout of
+        UsQwerty ->
+            True
+
+        GermanQwertz ->
+            False
+
+        SwissQwertz ->
+            False
+
+        FrenchAzerty ->
+            False
 
 
 {-| Guess the layout from one key press: `code` names the physical key (as

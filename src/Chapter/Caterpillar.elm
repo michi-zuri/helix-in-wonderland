@@ -22,6 +22,7 @@ import Editor.View
 import Html exposing (Html)
 import Html.Attributes as A
 import Html.Lazy
+import Keyboard.Layout as Layout exposing (Layout)
 import Pixel.Shapes as Shapes
 import Pixel.Sprite as Sprite
 import Pixel.Sprites as Sprites
@@ -211,7 +212,7 @@ edit context key model =
     of
         Session.Ran ran ->
             { model | work = Just { work | session = ran.session } }
-                |> notice ran.command
+                |> notice context.layout ran.command
                 |> finishIfAnswered work.puzzle ran.session
 
         Session.Waiting session ->
@@ -224,8 +225,8 @@ edit context key model =
             ( dropCount work session model, [] )
 
 
-notice : Command -> Model -> ( Model, List Effect )
-notice command model =
+notice : Layout -> Command -> Model -> ( Model, List Effect )
+notice layout command model =
     case command of
         TypeChar _ ->
             ( { model | typedInInsert = True, typedThisVisit = True }, [ PlaySound TickSound ] )
@@ -238,19 +239,19 @@ notice command model =
 
         _ ->
             if List.member command [ InsertBefore, InsertAfter, Change ] then
-                enterInsert model
+                enterInsert layout model
 
             else
                 ( model, [] )
 
 
 {-| The first time someone enters Insert mode, tell them the Esc fallback:
-some browsers keep Esc for themselves.
+some browsers keep Esc for themselves. Only where `[` is a plain key (#97).
 -}
-enterInsert : Model -> ( Model, List Effect )
-enterInsert model =
+enterInsert : Layout -> Model -> ( Model, List Effect )
+enterInsert layout model =
     ( { model | enteredInsert = True, typedThisVisit = False, escTipShown = True }
-    , if model.escTipShown then
+    , if model.escTipShown || not (Layout.typesBracketEasily layout) then
         [ PlaySound TickSound ]
 
       else
