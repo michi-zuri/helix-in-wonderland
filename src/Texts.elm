@@ -180,7 +180,7 @@ type alias LittleDoorTexts =
     , madInfo : String
     , hintFind : String
     , hintPin : String
-    , hintTurn : String
+    , hintTurn : Maybe String -> String
     , hintBound : String
     , linesRight : Int -> Int -> String
     , keySlipped : String
@@ -565,7 +565,14 @@ english =
         , madInfo = "A long story, and the key slips out if you wait."
         , hintFind = "Find a lock: a gap or a wrong letter. Walk there with h j k l, then press i to put the key in."
         , hintPin = "A wrong pin! Press c: it pulls the pin out and puts the key in. Type the right letter, then Esc."
-        , hintTurn = "The key is in. Type the missing letters, then Esc pulls the key out."
+        , hintTurn =
+            \escapeKeys ->
+                case escapeKeys of
+                    Just keys ->
+                        "The key is in. Type the missing letters, then pull the key out again by pressing Esc or your own keys " ++ keys ++ "."
+
+                    Nothing ->
+                        "The key is in. Type the missing letters, then pull the key out again with Esc."
         , hintBound = "The key is in the lock: h j k l type letters now. Pull it out with Esc to walk."
         , linesRight = \right total -> "Lines right: " ++ String.fromInt right ++ " of " ++ String.fromInt total
         , keySlipped = "The key slipped out! Look first, then type in one go."
@@ -982,7 +989,14 @@ german =
         , madInfo = "Eine lange Geschichte, und der Schlüssel rutscht heraus, wenn du wartest."
         , hintFind = "Such ein Schloss: eine Lücke oder einen falschen Buchstaben. Geh mit h j k l hin, dann steckt i den Schlüssel hinein."
         , hintPin = "Ein falscher Stift! Drücke c: Das zieht den Stift heraus und steckt den Schlüssel hinein. Tippe den richtigen Buchstaben, dann Esc."
-        , hintTurn = "Der Schlüssel steckt. Tippe die fehlenden Buchstaben, dann zieht Esc den Schlüssel heraus."
+        , hintTurn =
+            \escapeKeys ->
+                case escapeKeys of
+                    Just keys ->
+                        "Der Schlüssel steckt. Tippe die fehlenden Buchstaben, dann ziehe den Schlüssel wieder heraus, indem du Esc oder deine alternative Tastenkombination " ++ keys ++ " drückst."
+
+                    Nothing ->
+                        "Der Schlüssel steckt. Tippe die fehlenden Buchstaben, dann ziehe den Schlüssel mit Esc wieder heraus."
         , hintBound = "Der Schlüssel steckt im Schloss: h j k l tippen jetzt Buchstaben. Zieh ihn mit Esc heraus, um zu gehen."
         , linesRight = \right total -> "Richtige Zeilen: " ++ String.fromInt right ++ " von " ++ String.fromInt total
         , keySlipped = "Der Schlüssel ist herausgerutscht! Zuerst schauen, dann in einem Zug tippen."

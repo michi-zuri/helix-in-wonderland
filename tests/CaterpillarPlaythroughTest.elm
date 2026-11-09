@@ -294,12 +294,22 @@ suite =
                     |> readStory
                     |> Playthrough.finishedWith
                     |> Expect.equal (Just 1)
-        , test "the Esc fallback tip appears only the first time" <|
+        , test "the Esc fallback tip appears only the first time (US QWERTY)" <|
+            \_ ->
+                let
+                    qwerty =
+                        { context | layout = UsQwerty }
+                in
+                startIn qwerty "1"
+                    |> pressIn qwerty (fillTheGaps [ "Escape" ])
+                    |> Playthrough.toastCount
+                    |> Expect.equal 1
+        , test "on QWERTZ, where [ needs AltGr, the Ctrl+[ tip isn't shown (#97)" <|
             \_ ->
                 start "1"
                     |> press (fillTheGaps [ "Escape" ])
                     |> Playthrough.toastCount
-                    |> Expect.equal 1
+                    |> Expect.equal 0
         , test "e and b wait for a later chapter" <|
             \_ ->
                 start "3"

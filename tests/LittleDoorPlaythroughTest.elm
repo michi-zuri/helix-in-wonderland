@@ -164,7 +164,7 @@ stageHas wanted run =
 
 hints : Texts -> List String
 hints texts =
-    [ texts.littleDoor.hintFind, texts.littleDoor.hintPin, texts.littleDoor.hintTurn, texts.littleDoor.hintBound ]
+    [ texts.littleDoor.hintFind, texts.littleDoor.hintPin, texts.littleDoor.hintTurn Nothing, texts.littleDoor.hintTurn (Just ";;"), texts.littleDoor.hintBound ]
 
 
 {-| A hint dialog is open (#93), it shows `wanted` once its letters have
@@ -455,7 +455,7 @@ suite =
             [ test "first: find a lock" <|
                 \_ -> start "1" |> onlyHint english.texts.littleDoor.hintFind
             , test "with the key in: type, then Esc" <|
-                \_ -> start "1" |> pressIn english (keys [ "6l", "i" ]) |> onlyHint english.texts.littleDoor.hintTurn
+                \_ -> start "1" |> pressIn english (keys [ "6l", "i" ]) |> onlyHint (english.texts.littleDoor.hintTurn Nothing)
             , test "typing h j k l with the key in, as if to walk: the key binds you" <|
                 \_ -> start "1" |> pressIn english (keys [ "6l", "ij" ]) |> onlyHint english.texts.littleDoor.hintBound
             , test "on a wrong pin: c" <|
@@ -463,7 +463,27 @@ suite =
                     start "1"
                         |> pressIn english (keys [ "6l", "ihad⎋", "j", "iglad⎋", "j", "2l", "ihalf⎋", "j", "11l" ])
                         |> onlyHint english.texts.littleDoor.hintPin
-            , test "the first time the key goes in, the dialog also tells the ways to Esc" <|
+            , test "without escape keys, on US QWERTY: the key-in hint names Esc, and Ctrl+[ follows" <|
+                \_ ->
+                    let
+                        qwerty =
+                            { english | layout = UsQwerty }
+                    in
+                    startIn qwerty "1"
+                        |> pressIn qwerty (keys [ "6l", "i" ])
+                        |> dialogLines qwerty
+                        |> Expect.equal [ english.texts.littleDoor.hintTurn Nothing, english.texts.caterpillar.escTip ]
+            , test "on QWERTZ, where [ needs AltGr, no word about Ctrl+[ (#97)" <|
+                \_ ->
+                    start "1"
+                        |> pressIn english (keys [ "6l", "i" ])
+                        |> dialogLines english
+                        |> Expect.equal [ english.texts.littleDoor.hintTurn Nothing ]
+            , test "German, with escape keys: the sentence names them (#97)" <|
+                \_ ->
+                    (contextIn German).texts.littleDoor.hintTurn (Just ";;")
+                        |> Expect.equal "Der Schlüssel steckt. Tippe die fehlenden Buchstaben, dann ziehe den Schlüssel wieder heraus, indem du Esc oder deine alternative Tastenkombination ;; drückst."
+            , test "with escape keys, the key-in hint names them, in one line (#97)" <|
                 \_ ->
                     let
                         withEscapeKeys =
@@ -472,7 +492,7 @@ suite =
                     startIn withEscapeKeys "1"
                         |> pressIn withEscapeKeys (keys [ "6l", "i" ])
                         |> dialogLines withEscapeKeys
-                        |> Expect.equal [ english.texts.littleDoor.hintTurn, english.texts.caterpillar.escTip, english.texts.escapeKeysWork ";;" ]
+                        |> Expect.equal [ english.texts.littleDoor.hintTurn (Just ";;") ]
             , test "only once: the second time the key goes in, no dialog" <|
                 \_ ->
                     start "1"
