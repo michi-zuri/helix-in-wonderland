@@ -62,7 +62,7 @@ type alias Model =
     , difficulty : Maybe Difficulty
     , work : Maybe Work
     , typedThisVisit : String
-    , escTipShown : Bool
+    , hintsGiven : List Hint
     , backspaces : Int
     , slips : Int
     , doorOpen : Bool
@@ -77,6 +77,16 @@ type alias Work =
     { puzzle : Puzzle
     , session : Session
     }
+
+
+{-| The hints, each told once in a dialog, the first time it helps (#93).
+-}
+type Hint
+    = FindALock
+    | KeyIsIn
+    | WrongPin
+    | KeyBinds
+    | KeySlipped
 
 
 type alias Puzzle =
@@ -98,7 +108,7 @@ init =
     , difficulty = Nothing
     , work = Nothing
     , typedThisVisit = ""
-    , escTipShown = False
+    , hintsGiven = []
     , backspaces = 0
     , slips = 0
     , doorOpen = False
@@ -162,6 +172,7 @@ update context msg model =
                                 -- Remember when: for the escape keys' timeout, and for mad's slipping key.
                                 edit context key model
                                     |> Tuple.mapFirst (\edited -> { edited | lastKeyAt = edited.clock })
+                                    |> giveHints context
 
                             Nothing ->
                                 choose context.texts key model
@@ -173,7 +184,8 @@ update context msg model =
                     ( model, [] )
 
                 Story.Advanced story ->
-                    ( { model | story = story }, [ PlaySound TickSound ] )
+                    -- Reading counts as pressing a key: on mad, the key doesn't slip while a hint is read.
+                    ( { model | story = story, lastKeyAt = model.clock }, [ PlaySound TickSound ] )
 
                 Story.IntroOver story ->
                     ( { model | story = story, choice = DifficultyChoice.start model.clock }, [] )
@@ -198,6 +210,7 @@ choose texts key model =
                     puzzleFor texts difficulty
             in
             ( { model | difficulty = Just difficulty, work = Just { puzzle = puzzle, session = Session.start puzzle.start } }
+                |> tell FindALock [ Dialog.say Narrator (.littleDoor >> .hintFind) ]
             , [ PlaySound PickupSound ]
             )
 
@@ -295,18 +308,9 @@ notice command model =
             ( model, [] )
 
 
-{-| The key goes into a lock. The first time, tell them the Esc fallback:
-some browsers keep Esc for themselves.
--}
 putKeyIn : Model -> ( Model, List Effect )
 putKeyIn model =
-    ( { model | typedThisVisit = "", escTipShown = True }
-    , if model.escTipShown then
-        [ PlaySound PickupSound ]
-
-      else
-        [ PlaySound PickupSound, ShowToast (.caterpillar >> .escTip) ]
-    )
+    ( { model | typedThisVisit = "" }, [ PlaySound PickupSound ] )
 
 
 {-| On mad, a key left in the lock too long slips out: back to Normal mode,
@@ -317,13 +321,20 @@ slipIfWaiting model =
     case ( model.difficulty, model.work ) of
         ( Just Mad, Just work ) ->
             if isInsert work.session && Story.isPlaying model.story && model.clock - model.lastKeyAt > slipMilliseconds then
-                ( { model
-                    | work = Just { work | session = Session.apply ExitInsert work.session }
-                    , slips = model.slips + 1
-                    , typedThisVisit = ""
-                  }
-                , [ PlaySound BumpSound, ShowToast (.littleDoor >> .keySlipped) ]
-                )
+                let
+                    slipped =
+                        { model
+                            | work = Just { work | session = Session.apply ExitInsert work.session }
+                            , slips = model.slips + 1
+                            , typedThisVisit = ""
+                        }
+                in
+                -- The first time it is told in a dialog, later only noted.
+                if List.member KeySlipped model.hintsGiven then
+                    ( slipped, [ PlaySound BumpSound, ShowToast (.littleDoor >> .keySlipped) ] )
+
+                else
+                    ( tell KeySlipped [ Dialog.say Narrator (.littleDoor >> .keySlipped) ] slipped, [ PlaySound BumpSound ] )
 
             else
                 ( model, [] )
@@ -398,28 +409,70 @@ score texts model =
 -- HINTS
 
 
-{-| One hint at a time, the one that helps now:
+{-| Each hint is told once, in a dialog, the first time it helps (#93):
 
-  - with the key in, after `h j k l` typed as if to walk: the key binds you;
-  - with the key in otherwise: type, then Esc;
-  - on a wrong pin: `c`;
-  - else: find a lock.
+  - after picking the difficulty: find a lock (see `choose`);
+  - the key goes in for the first time: type, then Esc (and the ways to
+    Esc when the browser keeps it);
+  - Alice stands on a wrong pin: `c`;
+  - with the key in, `h j k l` typed as if to walk: the key binds you;
+  - on mad, the key slips out (see `slipIfWaiting`).
 
 -}
-hint : Texts -> Model -> Work -> String
-hint texts model work =
-    if isInsert work.session then
-        if walkedWithKeyIn model.typedThisVisit work.puzzle.answer then
-            texts.littleDoor.hintBound
+giveHints : Context -> ( Model, List Effect ) -> ( Model, List Effect )
+giveHints context ( model, effects ) =
+    case model.work of
+        Just work ->
+            if model.doorOpen then
+                ( model, effects )
 
-        else
-            texts.littleDoor.hintTurn
+            else if isInsert work.session then
+                if walkedWithKeyIn model.typedThisVisit work.puzzle.answer then
+                    ( tell KeyBinds [ Dialog.say Narrator (.littleDoor >> .hintBound) ] model, effects )
 
-    else if onWrongPin work then
-        texts.littleDoor.hintPin
+                else
+                    ( tell KeyIsIn
+                        (Dialog.say Narrator (.littleDoor >> .hintTurn)
+                            :: Dialog.say Narrator (.caterpillar >> .escTip)
+                            :: (case context.escapeKeys of
+                                    Just ( first, second ) ->
+                                        [ Dialog.say Narrator (\texts -> texts.escapeKeysWork (String.fromList [ first, second ])) ]
 
-    else
-        texts.littleDoor.hintFind
+                                    Nothing ->
+                                        []
+                               )
+                        )
+                        model
+                    , effects
+                    )
+
+            else if onWrongPin work then
+                ( tell WrongPin [ Dialog.say Narrator (.littleDoor >> .hintPin) ] model, effects )
+
+            else
+                ( model, effects )
+
+        Nothing ->
+            ( model, effects )
+
+
+{-| Tell a hint in a dialog, unless it was told before.
+-}
+tell : Hint -> List Dialog.Line -> Model -> Model
+tell hint lines model =
+    case lines of
+        first :: rest ->
+            if List.member hint model.hintsGiven then
+                model
+
+            else
+                { model
+                    | hintsGiven = hint :: model.hintsGiven
+                    , story = Story.tell first rest model.story
+                }
+
+        [] ->
+            model
 
 
 {-| The letters typed with the key in end in `h j k l` and fit no word of
@@ -500,8 +553,9 @@ view context model =
     Story.instructions model.story (scene context model)
 
 
-{-| Everything the chapter shows; `view` holds back the instructions while
-the opening story plays.
+{-| Everything the chapter shows. There is no panel (#93): hints come in
+dialogs, and the goal stands under the lines in the editor, so everything
+fits on one screen. The status line is Helix's own.
 -}
 scene : Context -> Model -> Contract.View msg
 scene context model =
@@ -524,7 +578,14 @@ scene context model =
                         Nothing
                 , open = model.doorOpen
                 }
-            , Html.Lazy.lazy viewEditor work.session
+            , Html.div [ A.class "editor-with-goal" ]
+                [ Html.Lazy.lazy viewEditor work.session
+                , if model.difficulty == Nothing then
+                    Html.text ""
+
+                  else
+                    Checklist.goal context.texts.littleDoor.goal work.puzzle.answer
+                ]
             , if model.difficulty == Nothing && Story.isPlaying model.story then
                 DifficultyChoice.view
                     { texts = context.texts
@@ -538,7 +599,7 @@ scene context model =
                 Html.text ""
             , Story.view context.texts model.story
             ]
-    , panel = viewPanel context model work
+    , panel = Html.text ""
     , status =
         { mode = Editor.View.modeName buffer
         , file = file
@@ -580,44 +641,6 @@ difficultyInfo texts difficulty =
 
         Mad ->
             texts.littleDoor.madInfo
-
-
-viewPanel : Context -> Model -> Work -> Html msg
-viewPanel context model work =
-    let
-        texts =
-            context.texts
-
-        right =
-            List.length (List.filter identity (lineMatches work))
-
-        total =
-            List.length (lineMatches work)
-    in
-    case model.difficulty of
-        Nothing ->
-            Html.div [ A.class "panel-content" ]
-                [ Html.p [ A.class "big" ] [ Html.text texts.littleDoor.chooseTitle ]
-                , Html.p [] [ Html.text texts.littleDoor.chooseHint ]
-                ]
-
-        Just difficulty ->
-            Html.div [ A.class "panel-content" ]
-                [ Html.span [ A.class "eyebrow" ] [ Html.text (Difficulty.name texts difficulty ++ " · " ++ texts.littleDoor.linesRight right total) ]
-                , Html.div [ A.class "columns" ]
-                    [ Html.div [ A.class "column" ]
-                        (Html.p [ A.class "big" ] [ Html.text (hint texts model work) ]
-                            :: (case context.escapeKeys of
-                                    Just ( first, second ) ->
-                                        [ Html.p [ A.class "tip" ] [ Html.text (texts.escapeKeysWork (String.fromList [ first, second ])) ] ]
-
-                                    Nothing ->
-                                        []
-                               )
-                        )
-                    , Checklist.goal texts.littleDoor.goal work.puzzle.answer
-                    ]
-                ]
 
 
 {-| The hall's wall, a low curtain drawn aside and the little door, about

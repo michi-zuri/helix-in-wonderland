@@ -195,13 +195,21 @@ suite =
                     |> press [ "j", "j", "Enter" ]
                     |> readStory
                     |> press [ "1" ]
-                    |> typeIn "6lihad"
+                    -- Each hint dialog line takes two Enters: one shows it in full, one goes on (#93).
+                    |> press [ "Enter", "Enter" ]
+                    |> typeIn "6li"
+                    -- The key is in, and the Esc fallback: two lines.
+                    |> press [ "Enter", "Enter", "Enter", "Enter" ]
+                    |> typeIn "had"
                     |> press [ "Escape" ]
                     |> typeIn "jiglad"
                     |> press [ "Escape" ]
                     |> typeIn "j2lihalf"
                     |> press [ "Escape" ]
-                    |> typeIn "j11lcl"
+                    |> typeIn "j11l"
+                    -- A wrong pin.
+                    |> press [ "Enter", "Enter" ]
+                    |> typeIn "cl"
                     |> press [ "Escape" ]
                     |> press (List.repeat 4 "Enter")
                     |> ProgramTest.ensureViewHas [ text "Chapter complete!" ]

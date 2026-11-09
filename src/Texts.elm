@@ -501,7 +501,7 @@ english =
         , keyTooSmall = "Alas! Either the lock was too large, or the key was too small: it would not open this door."
         }
     , littleDoor =
-        { intro1 = "Alice had the tiny golden key, and she had found the little door. But the little door had not one lock: it had lots of them!"
+        { intro1 = "Alice had the tiny golden key, and she had found the little door. But the little door had not just one lock: it had lots of them!"
         , intro2 = "What a lot of locks!"
         , intro3 = "Press i to put the key into a lock. The status bar changes from NOR to INS: the key is in, and every key you press turns the lock, even h j k l."
         , intro4 = "Esc pulls the key out: back to NOR, and Alice can walk again. A wrong letter is a wrong pin: stand on it and press c, and the key goes straight in."
@@ -918,7 +918,7 @@ german =
         , keyTooSmall = "Ach! Entweder war das Schloss zu gross oder der Schlüssel zu klein: Diese Tür ging nicht auf."
         }
     , littleDoor =
-        { intro1 = "Alice hatte den winzigen goldenen Schlüssel, und sie hatte die kleine Tür gefunden. Aber die kleine Tür hatte nicht ein Schloss, sondern ganz viele!"
+        { intro1 = "Alice hatte den winzigen goldenen Schlüssel, und sie hatte die kleine Tür gefunden. Aber die kleine Tür hatte nicht nur ein Schloss, sondern ganz viele!"
         , intro2 = "So viele Schlösser!"
         , intro3 = "Mit i steckst du den Schlüssel in ein Schloss. In der Statusleiste wird aus NOR dann INS: Der Schlüssel steckt, und jede Taste dreht am Schloss, auch h j k l."
         , intro4 = "Esc zieht den Schlüssel heraus: zurück zu NOR, und Alice kann wieder gehen. Ein falscher Buchstabe ist ein falscher Stift: Stell dich darauf und drücke c, dann steckt der Schlüssel sofort."

@@ -6,6 +6,7 @@ three difficulties and both languages.
 
 import Chapter.Contract exposing (Context)
 import Chapter.LittleDoor as LittleDoor
+import Chapter.Story as Story
 import Dict
 import Editor.Core as Core exposing (Mode(..))
 import Editor.Session as Session
@@ -29,9 +30,33 @@ english =
     contextIn English
 
 
+{-| Press keys like a player: a hint dialog that pops up (#93) is read
+with Enter before the next key.
+-}
 pressIn : Context -> List String -> Run LittleDoor.Model -> Run LittleDoor.Model
-pressIn context pressed =
-    Playthrough.sendAll (LittleDoor.update context) (List.map LittleDoor.KeyPressed pressed)
+pressIn context pressed run =
+    List.foldl
+        (\key current ->
+            Playthrough.send (LittleDoor.update context)
+                (LittleDoor.KeyPressed key)
+                (if key == "Enter" then
+                    current
+
+                 else
+                    readDialogs context 20 current
+                )
+        )
+        run
+        pressed
+
+
+readDialogs : Context -> Int -> Run LittleDoor.Model -> Run LittleDoor.Model
+readDialogs context fuel run =
+    if fuel > 0 && Story.isTalking run.model.story && Story.isPlaying run.model.story == False && run.model.difficulty /= Nothing && not run.model.doorOpen then
+        readDialogs context (fuel - 1) (Playthrough.send (LittleDoor.update context) (LittleDoor.KeyPressed "Enter") run)
+
+    else
+        run
 
 
 {-| Read the story, then pick a difficulty: "1" easy, "2" challenge, "3" mad.
@@ -132,9 +157,9 @@ keystrokesOf run =
     run.model.work |> Maybe.map (.session >> Session.keystrokes) |> Maybe.withDefault 0
 
 
-panelHas : String -> Run LittleDoor.Model -> Expect.Expectation
-panelHas wanted run =
-    (LittleDoor.view english run.model).panel |> Query.fromHtml |> Query.has [ text wanted ]
+stageHas : String -> Run LittleDoor.Model -> Expect.Expectation
+stageHas wanted run =
+    (LittleDoor.view english run.model).stage |> Query.fromHtml |> Query.has [ text wanted ]
 
 
 hints : Texts -> List String
@@ -142,13 +167,59 @@ hints texts =
     [ texts.littleDoor.hintFind, texts.littleDoor.hintPin, texts.littleDoor.hintTurn, texts.littleDoor.hintBound ]
 
 
-{-| Exactly one of the hints is in the panel, and it is `wanted`.
+{-| A hint dialog is open (#93), it shows `wanted` once its letters have
+appeared, and no other hint.
 -}
 onlyHint : String -> Run LittleDoor.Model -> Expect.Expectation
 onlyHint wanted run =
+    let
+        shown =
+            wait 3000 run
+    in
     hints english.texts
-        |> List.filter (\hint -> (LittleDoor.view english run.model).panel |> Query.fromHtml |> Query.has [ text hint ] |> (==) Expect.pass)
+        |> List.filter (\hint -> (LittleDoor.view english shown.model).stage |> Query.fromHtml |> Query.has [ text hint ] |> (==) Expect.pass)
         |> Expect.equal [ wanted ]
+
+
+{-| Every line of the open dialog, read to its end with Enter.
+-}
+dialogLines : Context -> Run LittleDoor.Model -> List String
+dialogLines context run =
+    let
+        go fuel current seen =
+            if fuel <= 0 || not (Story.isTalking current.model.story) then
+                List.reverse seen
+
+            else
+                let
+                    shown =
+                        Playthrough.sendAll (LittleDoor.update context) (List.repeat 60 (LittleDoor.Frame 50)) current
+
+                    lines =
+                        allLines context.texts
+                            |> List.filter (\line -> (LittleDoor.view context shown.model).stage |> Query.fromHtml |> Query.has [ text line ] |> (==) Expect.pass)
+                in
+                go (fuel - 1) (Playthrough.sendAll (LittleDoor.update context) [ LittleDoor.KeyPressed "Enter" ] shown) (List.reverse lines ++ seen)
+    in
+    go 20 run [] |> unique
+
+
+allLines : Texts -> List String
+allLines texts =
+    hints texts ++ [ texts.caterpillar.escTip, texts.escapeKeysWork ";;", texts.littleDoor.keySlipped ]
+
+
+unique : List String -> List String
+unique =
+    List.foldl
+        (\line found ->
+            if List.member line found then
+                found
+
+            else
+                found ++ [ line ]
+        )
+        []
 
 
 {-| How often each character occurs.
@@ -311,16 +382,35 @@ suite =
                 [ "w d", "x d", "a", "g l", "u", "e", "b" ]
             )
         , describe "mad: the key slips out if you wait"
-            [ test "after more than two seconds with the key in, back to NOR, with a word about it" <|
+            [ test "after more than two seconds with the key in, back to NOR; the first time a dialog says why" <|
                 \_ ->
                     start "3"
                         |> pressIn english [ "6", "l", "i", "h" ]
+                        |> wait (LittleDoor.slipMilliseconds + 200)
+                        |> (\later -> ( modeOf later, later.model.slips, dialogLines english later ))
+                        |> Expect.equal ( Just Normal, 1, [ english.texts.littleDoor.keySlipped ] )
+            , test "later slips only get a short note" <|
+                \_ ->
+                    start "3"
+                        |> pressIn english [ "6", "l", "i", "h" ]
+                        |> wait (LittleDoor.slipMilliseconds + 200)
+                        |> pressIn english [ "i", "a" ]
                         |> (\run -> ( run, Playthrough.toastCount run ))
                         |> (\( run, before ) ->
                                 wait (LittleDoor.slipMilliseconds + 200) run
-                                    |> (\later -> ( modeOf later, later.model.slips, Playthrough.toastCount later - before ))
+                                    |> (\later -> ( later.model.slips, Playthrough.toastCount later - before, Story.isTalking later.model.story ))
                            )
-                        |> Expect.equal ( Just Normal, 1, 1 )
+                        |> Expect.equal ( 2, 1, False )
+            , test "reading a hint never makes the key slip: closing the dialog counts as a key" <|
+                \_ ->
+                    start "3"
+                        |> pressIn english [ "6", "l", "i" ]
+                        -- The dialog about the key is open now; the player takes their time.
+                        |> wait 8000
+                        |> Playthrough.sendAll (LittleDoor.update english) (List.repeat 12 (LittleDoor.KeyPressed "Enter"))
+                        |> wait (LittleDoor.slipMilliseconds - 200)
+                        |> modeOf
+                        |> Expect.equal (Just Insert)
             , test "a little under two seconds is fine" <|
                 \_ ->
                     start "3"
@@ -347,7 +437,7 @@ suite =
             , test "the results show how often it slipped" <|
                 \_ ->
                     start "3"
-                        |> pressIn english [ "i" ]
+                        |> pressIn english [ "i", "a", "Backspace" ]
                         |> wait (LittleDoor.slipMilliseconds + 200)
                         |> pressIn english (keys (route English "3"))
                         |> (\run -> run.model.slips)
@@ -361,23 +451,42 @@ suite =
                     |> readOutro english
                     |> Playthrough.finishedWith
                     |> Expect.equal (Just 1)
-        , describe "one hint at a time, the one that helps now"
+        , describe "each hint is told once, in a dialog, the first time it helps (#93)"
             [ test "first: find a lock" <|
                 \_ -> start "1" |> onlyHint english.texts.littleDoor.hintFind
             , test "with the key in: type, then Esc" <|
-                \_ -> start "1" |> pressIn english (keys [ "6l", "iha" ]) |> onlyHint english.texts.littleDoor.hintTurn
+                \_ -> start "1" |> pressIn english (keys [ "6l", "i" ]) |> onlyHint english.texts.littleDoor.hintTurn
             , test "typing h j k l with the key in, as if to walk: the key binds you" <|
-                \_ -> start "1" |> pressIn english (keys [ "6l", "ijjl" ]) |> onlyHint english.texts.littleDoor.hintBound
+                \_ -> start "1" |> pressIn english (keys [ "6l", "ij" ]) |> onlyHint english.texts.littleDoor.hintBound
             , test "on a wrong pin: c" <|
                 \_ ->
                     start "1"
                         |> pressIn english (keys [ "6l", "ihad⎋", "j", "iglad⎋", "j", "2l", "ihalf⎋", "j", "11l" ])
                         |> onlyHint english.texts.littleDoor.hintPin
-            , test "the panel counts the lines that read right" <|
+            , test "the first time the key goes in, the dialog also tells the ways to Esc" <|
+                \_ ->
+                    let
+                        withEscapeKeys =
+                            { english | escapeKeys = Just ( ';', ';' ) }
+                    in
+                    startIn withEscapeKeys "1"
+                        |> pressIn withEscapeKeys (keys [ "6l", "i" ])
+                        |> dialogLines withEscapeKeys
+                        |> Expect.equal [ english.texts.littleDoor.hintTurn, english.texts.caterpillar.escTip, english.texts.escapeKeysWork ";;" ]
+            , test "only once: the second time the key goes in, no dialog" <|
                 \_ ->
                     start "1"
-                        |> pressIn english (keys [ "6l", "ihad⎋" ])
-                        |> panelHas (english.texts.littleDoor.linesRight 1 4)
+                        |> pressIn english (keys [ "6l", "ihad⎋", "j", "i" ])
+                        |> (\run -> Story.isTalking run.model.story)
+                        |> Expect.equal False
+            , test "no panel: the goal stands under the lines, in the editor" <|
+                \_ ->
+                    start "1"
+                        |> pressIn english (keys [ "6l" ])
+                        |> Expect.all
+                            [ stageHas english.texts.littleDoor.goal
+                            , stageHas "She was glad to see a garden."
+                            ]
             ]
         , test "the text follows the language until a difficulty is picked" <|
             \_ ->
