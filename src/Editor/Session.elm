@@ -1,6 +1,6 @@
 module Editor.Session exposing
     ( Session, start, fromBuffer, buffer, keystrokes, recentKeys, pendingCount, isWaiting, jumpLabels
-    , Outcome(..), press, pressWith, escapeTimeout, splash, replaceChar, apply, matches, matchingLines
+    , Outcome(..), press, pressWith, escapeTimeout, splash, replaceChar, apply, matches, matchesExactly, exactLines, matchingLines
     )
 
 {-| One player working on one text: the buffer plus what the status line
@@ -22,7 +22,7 @@ key after `g` cancels it.
 selects that word, as in Helix. Esc or a key that matches no label cancels.
 
 @docs Session, start, fromBuffer, buffer, keystrokes, recentKeys, pendingCount, isWaiting, jumpLabels
-@docs Outcome, press, pressWith, escapeTimeout, splash, replaceChar, apply, matches, matchingLines
+@docs Outcome, press, pressWith, escapeTimeout, splash, replaceChar, apply, matches, matchesExactly, exactLines, matchingLines
 
 -}
 
@@ -403,6 +403,27 @@ lines and empty lines don't count, so a child who deletes a word with `e`
 matches : String -> Session -> Bool
 matches target session =
     normalize (Core.toString (buffer session)) == normalize target
+
+
+{-| Does the text read exactly like the target: the same lines, the same
+spaces, nothing extra (#101)? Only the final newline every buffer ends with
+doesn't count.
+-}
+matchesExactly : String -> Session -> Bool
+matchesExactly target session =
+    exactLines (Core.toString (buffer session)) == exactLines target
+
+
+{-| The lines of a text as they are, spaces included; a final newline adds
+no empty line.
+-}
+exactLines : String -> List String
+exactLines text =
+    if String.endsWith "\n" text then
+        String.lines (String.dropRight 1 text)
+
+    else
+        String.lines text
 
 
 {-| Something from outside runs a command, not the player: it isn't a

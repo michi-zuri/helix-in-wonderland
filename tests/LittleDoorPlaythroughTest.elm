@@ -508,6 +508,48 @@ suite =
                             , stageHas "She was glad to see a garden."
                             ]
             ]
+        , describe "the door opens only on exactly the goal (#101)"
+            (let
+                answer =
+                    english.texts.littleDoor.challengeAnswer
+
+                opens text =
+                    Session.matchesExactly answer (Session.start text)
+
+                finishes steps =
+                    start "1"
+                        |> pressIn english (keys steps)
+                        |> readOutro english
+                        |> Playthrough.finishedWith
+             in
+             [ test "the reported text: the four lines with spaces around them, and three lines too many" <|
+                \_ ->
+                    opens "Alice had the key, and she was glad. \n   The door was half as tall as she was.   \n\"I shall try the lock,\" said Alice. \nShe asked the door to open, and it did.      \nThe door was  as tall as she wds. \n\"I  try the lock,\" said Alice. \nShe ssked the door to open, and it dif. \n"
+                        |> Expect.equal False
+             , test "the four lines exactly, but one line too many" <|
+                \_ -> opens (answer ++ "\nAlice\n") |> Expect.equal False
+             , test "a space at the end of a line counts" <|
+                \_ -> opens (String.replace "glad." "glad. " answer) |> Expect.equal False
+             , test "a double space counts" <|
+                \_ -> opens (String.replace "the key" "the  key" answer) |> Expect.equal False
+             , test "exactly the goal opens it" <|
+                \_ -> opens answer |> Expect.equal True
+             , test "in play: a double space left in, the door stays shut" <|
+                \_ ->
+                    finishes [ "6l", "ihad ⎋", "j", "iglad⎋", "j", "2l", "ihalf⎋", "j", "11l", "cl⎋" ]
+                        |> Expect.equal Nothing
+             , test "in play: Enter adds no line, not even right after a hint closes" <|
+                \_ ->
+                    start "1"
+                        |> pressIn english [ "6", "l", "i" ]
+                        -- The key-in hint is open: Enter shows it, Enter closes it, and one Enter too many.
+                        |> Playthrough.sendAll (LittleDoor.update english) (List.repeat 7 (LittleDoor.KeyPressed "Enter"))
+                        |> pressIn english (keys [ "had⎋", "j", "iglad⎋", "j", "2l", "ihalf⎋", "j", "11l", "cl⎋" ])
+                        |> readOutro english
+                        |> Playthrough.finishedWith
+                        |> Expect.equal (Just 1)
+             ]
+            )
         , test "the text follows the language until a difficulty is picked" <|
             \_ ->
                 Playthrough.start LittleDoor.init

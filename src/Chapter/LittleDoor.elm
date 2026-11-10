@@ -259,12 +259,24 @@ isUnlocked command =
             False
 
 
+{-| Enter does nothing here: no lock needs a new line, and an Enter pressed
+once too often to close a hint would otherwise add lines to the text (#101).
+-}
 edit : Context -> String -> Model -> ( Model, List Effect )
 edit context key model =
     let
         work =
             currentWork context.texts model
     in
+    if key == "Enter" then
+        ( model, [] )
+
+    else
+        editWith context key work model
+
+
+editWith : Context -> String -> Work -> Model -> ( Model, List Effect )
+editWith context key work model =
     case
         Session.pressWith
             (Maybe.map (\keys -> { keys = keys, sinceLastKey = model.clock - model.lastKeyAt }) context.escapeKeys)
@@ -348,7 +360,7 @@ slipIfWaiting model =
 -}
 finishIfOpen : Puzzle -> Session -> ( Model, List Effect ) -> ( Model, List Effect )
 finishIfOpen puzzle session ( model, effects ) =
-    if not (isInsert session) && Session.matches puzzle.answer session then
+    if not (isInsert session) && Session.matchesExactly puzzle.answer session then
         ( { model
             | doorOpen = True
             , story =
@@ -615,25 +627,25 @@ scene context model =
     }
 
 
-{-| Which lines of the work already read right, line by line.
+{-| Which locks are open, line by line: a line counts only when it reads
+exactly right, spaces included, and only while the text has exactly as many
+lines as the goal, so an extra line shows on every keyhole (#101).
 -}
 lineMatches : Work -> List Bool
 lineMatches work =
     let
-        clean =
-            String.words >> String.join " "
-
         typed =
-            String.lines (Core.toString (Session.buffer work.session))
+            Session.exactLines (Core.toString (Session.buffer work.session))
 
         target =
-            String.lines work.puzzle.answer
+            Session.exactLines work.puzzle.answer
+
+        sameCount =
+            List.length typed == List.length target
     in
     List.indexedMap
-        (\index wanted ->
-            (typed |> List.drop index |> List.head |> Maybe.map clean) == Just (clean wanted)
-        )
-        (List.filter (not << String.isEmpty << String.trim) target)
+        (\index wanted -> sameCount && (typed |> List.drop index |> List.head) == Just wanted)
+        target
 
 
 difficultyInfo : Texts -> Difficulty -> String
