@@ -538,16 +538,45 @@ suite =
                 \_ ->
                     finishes [ "6l", "ihad ⎋", "j", "iglad⎋", "j", "2l", "ihalf⎋", "j", "11l", "cl⎋" ]
                         |> Expect.equal Nothing
-             , test "in play: Enter adds no line, not even right after a hint closes" <|
+             , test "in play: a new line typed with Enter and taken back with Backspace, the door opens (#103)" <|
                 \_ ->
                     start "1"
-                        |> pressIn english [ "6", "l", "i" ]
-                        -- The key-in hint is open: Enter shows it, Enter closes it, and one Enter too many.
-                        |> Playthrough.sendAll (LittleDoor.update english) (List.repeat 7 (LittleDoor.KeyPressed "Enter"))
-                        |> pressIn english (keys [ "had⎋", "j", "iglad⎋", "j", "2l", "ihalf⎋", "j", "11l", "cl⎋" ])
+                        |> pressIn english (keys [ "6l", "ihad" ] ++ [ "Enter", "Backspace", "Escape" ])
+                        |> pressIn english (keys [ "j", "iglad⎋", "j", "2l", "ihalf⎋", "j", "11l", "cl⎋" ])
                         |> readOutro english
                         |> Playthrough.finishedWith
                         |> Expect.equal (Just 1)
+             ]
+            )
+        , describe "one lock per line, gold while the line is exact (#103)"
+            (let
+                locksAfter steps =
+                    start "1"
+                        |> pressIn english steps
+                        |> (\run -> LittleDoor.locks english.texts run.model)
+             in
+             [ test "four lines, four locks, none open yet" <|
+                \_ -> locksAfter [] |> Expect.equal [ False, False, False, False ]
+             , test "a line made right turns its lock gold" <|
+                \_ -> locksAfter (keys [ "6l", "ihad⎋" ]) |> Expect.equal [ True, False, False, False ]
+             , test "Enter splits a line: five lines, five locks, and the fifth never opens" <|
+                \_ ->
+                    locksAfter (keys [ "6l", "ihad⎋", "20l", "i" ] ++ [ "Enter" ])
+                        |> Expect.equal [ False, False, False, False, False ]
+             , test "Backspace joins the lines again: four locks, the first gold again" <|
+                \_ ->
+                    locksAfter (keys [ "6l", "ihad⎋", "20l", "i" ] ++ [ "Enter", "Backspace" ])
+                        |> Expect.equal [ True, False, False, False ]
+             , test "two lines joined: three locks" <|
+                \_ ->
+                    locksAfter (keys [ "j", "20h", "i" ] ++ [ "Backspace" ])
+                        |> List.length
+                        |> Expect.equal 3
+             , test "joined and split again with Enter: four locks" <|
+                \_ ->
+                    locksAfter (keys [ "j", "20h", "i" ] ++ [ "Backspace", "Enter" ])
+                        |> List.length
+                        |> Expect.equal 4
              ]
             )
         , test "the text follows the language until a difficulty is picked" <|
