@@ -665,17 +665,24 @@ viewDoor { linesRight, keyIn, open } =
         count =
             List.length linesRight
 
+        -- At most 5 keyholes a column, each 3 pixels tall with a 1-pixel
+        -- gap, and as many columns as needed (at least two), drawn closer
+        -- together the more there are: every keyhole stays countable (#105).
+        columns =
+            max 2 ((count + 4) // 5)
+
         perColumn =
-            max 1 ((count + 1) // 2)
+            max 1 ((count + columns - 1) // columns)
+
+        columnGap =
+            min 6 (12 / toFloat (columns - 1))
+
+        top =
+            28 + (20 - toFloat (perColumn * 4 - 1)) / 2
 
         holeAt index =
-            { x =
-                if index < perColumn then
-                    111
-
-                else
-                    117
-            , y = 31 + toFloat (modBy perColumn index) * (15 / toFloat perColumn)
+            { x = 114 - columnGap * toFloat (columns - 1) / 2 + columnGap * toFloat (index // perColumn)
+            , y = top + 4 * toFloat (modBy perColumn index)
             }
 
         keyhole index isRight =
