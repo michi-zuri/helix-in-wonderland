@@ -563,6 +563,10 @@ suite =
                 \_ ->
                     locksAfter (keys [ "6l", "ihad⎋", "20l", "i" ] ++ [ "Enter" ])
                         |> Expect.equal [ False, False, False, False, False ]
+             , test "many lines too many: still only one extra lock (#105)" <|
+                \_ ->
+                    locksAfter (keys [ "6l", "ihad⎋", "i" ] ++ List.repeat 6 "Enter")
+                        |> Expect.equal [ False, False, False, False, False ]
              , test "Backspace joins the lines again: four locks, the first gold again" <|
                 \_ ->
                     locksAfter (keys [ "6l", "ihad⎋", "20l", "i" ] ++ [ "Enter", "Backspace" ])

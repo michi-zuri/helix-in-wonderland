@@ -170,7 +170,7 @@ order above holds. Read old issues with that in mind.
   counts as a key, so reading never makes the key slip; the goal stands in
   the editor box under the lines, so everything fits on one screen. The door
   has one lock per line of the text, gold while that line is exactly its
-  goal line (spaces included); a line too many is a lock that never opens,
+  goal line (spaces included); lines too many add one lock that never opens (only one, however many; #105),
   fewer lines show fewer locks; it opens on exactly the goal's locks, all
   gold (#101, #103). Enter inserts new lines (blocking it made a deleted
   line break impossible to restore).
