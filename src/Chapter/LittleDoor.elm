@@ -617,19 +617,29 @@ scene context model =
 
 
 {-| One lock per line of the text, gold while that line reads exactly like
-its line of the goal, spaces included (#103). A line beyond the goal is a
-lock that never opens: it goes away only when the line does. With fewer
-lines than the goal there are fewer locks. The door opens on exactly the
-goal's number of locks, all gold (`Session.matchesExactly`).
+its line of the goal, spaces included (#103). With fewer lines than the goal
+there are fewer locks. Lines beyond the goal add one lock that never opens,
+however many there are (#105): it goes away only with the extra lines. The
+door opens on exactly the goal's number of locks, all gold
+(`Session.matchesExactly`).
 -}
 lineMatches : Work -> List Bool
 lineMatches work =
     let
         target =
             Session.exactLines work.puzzle.answer
+
+        typed =
+            Session.exactLines (Core.toString (Session.buffer work.session))
+
+        locksForLines =
+            List.map2 (==) typed target
     in
-    Session.exactLines (Core.toString (Session.buffer work.session))
-        |> List.indexedMap (\index line -> (target |> List.drop index |> List.head) == Just line)
+    if List.length typed > List.length target then
+        locksForLines ++ [ False ]
+
+    else
+        locksForLines
 
 
 {-| The locks on the door right now, for tests: one per line, `True` when
@@ -665,17 +675,24 @@ viewDoor { linesRight, keyIn, open } =
         count =
             List.length linesRight
 
+        -- At most 5 keyholes a column, each 3 pixels tall with a 1-pixel
+        -- gap, and as many columns as needed (at least two), drawn closer
+        -- together the more there are: every keyhole stays countable (#105).
+        columns =
+            max 2 ((count + 4) // 5)
+
         perColumn =
-            max 1 ((count + 1) // 2)
+            max 1 ((count + columns - 1) // columns)
+
+        columnGap =
+            min 6 (12 / toFloat (columns - 1))
+
+        top =
+            28 + (20 - toFloat (perColumn * 4 - 1)) / 2
 
         holeAt index =
-            { x =
-                if index < perColumn then
-                    111
-
-                else
-                    117
-            , y = 31 + toFloat (modBy perColumn index) * (15 / toFloat perColumn)
+            { x = 114 - columnGap * toFloat (columns - 1) / 2 + columnGap * toFloat (index // perColumn)
+            , y = top + 4 * toFloat (modBy perColumn index)
             }
 
         keyhole index isRight =
