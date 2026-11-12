@@ -164,6 +164,7 @@ type alias LittleDoorTexts =
     , intro2 : String
     , intro3 : String
     , intro4 : String
+    , intro5 : String
     , finale1 : String
     , finale2 : String
     , easyStart : String
@@ -503,8 +504,9 @@ english =
     , littleDoor =
         { intro1 = "Alice had the tiny golden key, and she had found the little door. But the little door had not just one lock: it had lots of them!"
         , intro2 = "What a lot of locks!"
-        , intro3 = "Press i to put the key into a lock. The status bar changes from NORMAL to INSERT: the key is in, and every key you press turns the lock, even h j k l."
-        , intro4 = "Esc pulls the key out: back to NORMAL, and Alice can walk again. A wrong letter is a wrong pin: stand on it and press c, and the key goes straight in."
+        , intro3 = "Press i to put the key into a lock. The status bar changes from NORMAL to INSERT: the key is in, and every key you press is sent into the lock as literal letters."
+        , intro4 = "Esc pulls the key out: back to NORMAL, and Alice can move freely through the poem again."
+        , intro5 = "With the magic word c, the key goes in so that the selected text tumbles out of the lock, and Alice is back in INSERT mode."
         , finale1 = "Click! The last lock opened. Alice opened the little door and looked into the loveliest garden you ever saw."
         , finale2 = "But she could not even get her head through the doorway. So she shut the door and went back to the glass table. This time there was a little bottle on it."
         , easyStart =
@@ -558,10 +560,10 @@ english =
                 , "It was the loveliest garden, and she longed to go in."
                 ]
         , madBest = 71
-        , chooseTitle = "How many locks?"
+        , chooseTitle = "How hard should it be?"
         , chooseHint = "j / k to choose · Enter to start"
-        , easyInfo = "Three locks and a wrong pin."
-        , challengeInfo = "More locks, all over the lines."
+        , easyInfo = "Four easy locks."
+        , challengeInfo = "Several fixes per line."
         , madInfo = "A long story, and the key slips out if you wait."
         , hintFind = "Find a lock: a gap or a wrong letter. Walk there with h j k l, then press i to put the key in."
         , hintPin = "A wrong letter! Press c to replace it with the right one."
@@ -927,8 +929,9 @@ german =
     , littleDoor =
         { intro1 = "Alice hatte den winzigen goldenen Schlüssel, und sie hatte die kleine Tür gefunden. Aber die kleine Tür hatte nicht nur ein Schloss, sondern ganz viele!"
         , intro2 = "So viele Schlösser!"
-        , intro3 = "Mit i steckst du den Schlüssel in ein Schloss. In der Statusleiste wird aus NORMAL dann INSERT: Der Schlüssel steckt, und jede Taste dreht am Schloss, auch h j k l."
-        , intro4 = "Esc zieht den Schlüssel heraus: zurück zu NORMAL, und Alice kann wieder gehen. Ein falscher Buchstabe ist ein falscher Stift: Stell dich darauf und drücke c, dann steckt der Schlüssel sofort."
+        , intro3 = "Mit i steckst du den Schlüssel in ein Schloss. In der Statusleiste wird aus NORMAL dann INSERT: Der Schlüssel steckt und jede gedrückte Taste wird buchstäblich in das Schloss geschickt."
+        , intro4 = "Esc zieht den Schlüssel heraus: zurück zu NORMAL, und Alice kann sich im Gedicht wieder frei bewegen."
+        , intro5 = "Mit dem Zauberspruch c kann der Schlüssel so eingesteckt werden, dass dabei der selektierte Text aus dem Schloss purzelt, anschliessend ist Alice auch wieder im INSERT-Modus."
         , finale1 = "Klick! Das letzte Schloss ging auf. Alice öffnete die kleine Tür und blickte in den schönsten Garten, den man sich denken kann."
         , finale2 = "Aber sie konnte nicht einmal den Kopf durch die Tür stecken. Also schloss sie die Tür und ging zurück zum Glastisch. Diesmal stand ein Fläschchen darauf."
         , easyStart =
@@ -982,10 +985,10 @@ german =
                 , "Es war der schönste Garten, den sie je gesehen hatte."
                 ]
         , madBest = 67
-        , chooseTitle = "Wie viele Schlösser?"
+        , chooseTitle = "Wie schwierig darf es sein?"
         , chooseHint = "j / k zum Wählen · Enter zum Starten"
-        , easyInfo = "Drei Schlösser und ein falscher Stift."
-        , challengeInfo = "Mehr Schlösser, über alle Zeilen verteilt."
+        , easyInfo = "Vier einfache Schlösser."
+        , challengeInfo = "Mehrere Korrekturen pro Zeile."
         , madInfo = "Eine lange Geschichte, und der Schlüssel rutscht heraus, wenn du wartest."
         , hintFind = "Such ein Schloss: eine Lücke oder einen falschen Buchstaben. Geh mit h j k l hin, dann steckt i den Schlüssel hinein."
         , hintPin = "Ein falscher Buchstabe! Drücke c, um ihn durch den richtigen zu ersetzen."

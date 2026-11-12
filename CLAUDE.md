@@ -169,9 +169,11 @@ order above holds. Read old issues with that in mind.
   hint is a dialog told once, the first time it helps; closing a dialog
   counts as a key, so reading never makes the key slip; the goal stands in
   the editor box under the lines, so everything fits on one screen. The door
-  opens only on exactly the goal lines, spaces included; a keyhole is gold
-  only while the line is exact and there's no extra line; Enter does nothing
-  here (an extra Enter after a hint used to add lines) (#101).
+  has one lock per line of the text, gold while that line is exactly its
+  goal line (spaces included); a line too many is a lock that never opens,
+  fewer lines show fewer locks; it opens on exactly the goal's locks, all
+  gold (#101, #103). Enter inserts new lines (blocking it made a deleted
+  line break impossible to restore).
 - Chapter 4: typing from memory; a word hides after its first key and starts
   over after a pause over 300 ms between correct keys (#35).
 - Chapter 5: lines without indents (#55); cheeky currants (`g.`) are shy and run

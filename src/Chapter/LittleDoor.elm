@@ -1,4 +1,4 @@
-module Chapter.LittleDoor exposing (Model, Msg(..), init, slipMilliseconds, update, view)
+module Chapter.LittleDoor exposing (Model, Msg(..), init, locks, slipMilliseconds, update, view)
 
 {-| Chapter 3, "The Little Door": Insert mode, taught with the golden key.
 
@@ -104,6 +104,7 @@ init =
             [ Dialog.say Alice (.littleDoor >> .intro2)
             , Dialog.say Narrator (.littleDoor >> .intro3)
             , Dialog.say Narrator (.littleDoor >> .intro4)
+            , Dialog.say Narrator (.littleDoor >> .intro5)
             ]
     , choice = DifficultyChoice.start 0
     , difficulty = Nothing
@@ -259,24 +260,12 @@ isUnlocked command =
             False
 
 
-{-| Enter does nothing here: no lock needs a new line, and an Enter pressed
-once too often to close a hint would otherwise add lines to the text (#101).
--}
 edit : Context -> String -> Model -> ( Model, List Effect )
 edit context key model =
     let
         work =
             currentWork context.texts model
     in
-    if key == "Enter" then
-        ( model, [] )
-
-    else
-        editWith context key work model
-
-
-editWith : Context -> String -> Work -> Model -> ( Model, List Effect )
-editWith context key work model =
     case
         Session.pressWith
             (Maybe.map (\keys -> { keys = keys, sinceLastKey = model.clock - model.lastKeyAt }) context.escapeKeys)
@@ -627,25 +616,28 @@ scene context model =
     }
 
 
-{-| Which locks are open, line by line: a line counts only when it reads
-exactly right, spaces included, and only while the text has exactly as many
-lines as the goal, so an extra line shows on every keyhole (#101).
+{-| One lock per line of the text, gold while that line reads exactly like
+its line of the goal, spaces included (#103). A line beyond the goal is a
+lock that never opens: it goes away only when the line does. With fewer
+lines than the goal there are fewer locks. The door opens on exactly the
+goal's number of locks, all gold (`Session.matchesExactly`).
 -}
 lineMatches : Work -> List Bool
 lineMatches work =
     let
-        typed =
-            Session.exactLines (Core.toString (Session.buffer work.session))
-
         target =
             Session.exactLines work.puzzle.answer
-
-        sameCount =
-            List.length typed == List.length target
     in
-    List.indexedMap
-        (\index wanted -> sameCount && (typed |> List.drop index |> List.head) == Just wanted)
-        target
+    Session.exactLines (Core.toString (Session.buffer work.session))
+        |> List.indexedMap (\index line -> (target |> List.drop index |> List.head) == Just line)
+
+
+{-| The locks on the door right now, for tests: one per line, `True` when
+gold.
+-}
+locks : Texts -> Model -> List Bool
+locks texts model =
+    lineMatches (currentWork texts model)
 
 
 difficultyInfo : Texts -> Difficulty -> String
