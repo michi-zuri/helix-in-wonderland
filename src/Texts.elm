@@ -512,9 +512,9 @@ english =
         , easyStart =
             lines
                 [ "Alice  the tiny golden key."
-                , "She was  to see a garden."
+                , "She was 😊 to see a garden."
                 , "The door was  as tall as Alice."
-                , "It was at the end of the hakl."
+                , "It was at the end of the 🏰."
                 ]
         , easyAnswer =
             lines
@@ -525,48 +525,48 @@ english =
                 ]
         , challengeStart =
             lines
-                [ "Alice  the key, and she was ."
-                , "The door was  as tall as she wds."
-                , "\"I  try the lock,\" said Alice."
-                , "She ssked the door to open, and it dif."
+                [ "Alice  the key, and she was 😊."
+                , "The door was ½  tall  she was."
+                , "\"I  🙋 the lock,\" said Alice."
+                , "She asked, and  the locks  a ✨."
                 ]
         , challengeAnswer =
             lines
                 [ "Alice had the key, and she was glad."
                 , "The door was half as tall as she was."
-                , "\"I shall try the lock,\" said Alice."
-                , "She asked the door to open, and it did."
+                , "\"I shall ask the lock,\" said Alice."
+                , "She asked, and all the locks had a flash."
                 ]
         , madStart =
             lines
-                [ "Alice  the tiny golden key, and she was ."
-                , "She ssked herself which lock it would fit."
-                , "\"I  try them all,\" she said, \"one by one.\""
-                , "The first lock was not  as big as the key."
-                , "\"Oh, !\" cried Alice, \"this one is too small.\""
-                , "She turned the key, and the door opened ss she had hoped."
-                , "She looked along the passage to the fsr end."
-                , "It was the loveliest garden, and she lonfed to go in."
+                [ "Alice  the tiny golden key, and she was 😊."
+                , "Which lock was it? She  to 🙋."
+                , "\"I  try them 💯,\" she said, \"one by one.\""
+                , "The first lock was not ½  big as the key."
+                , "\"Oh, 😢!\" cried Alice, \"this one is too small.\""
+                , "She turned the key, and the door opened  she  hoped."
+                , "She looked along  🏰 to the far end."
+                , "It was the loveliest garden, and she  to go in."
                 ]
         , madAnswer =
             lines
                 [ "Alice had the tiny golden key, and she was glad."
-                , "She asked herself which lock it would fit."
+                , "Which lock was it? She had to ask."
                 , "\"I shall try them all,\" she said, \"one by one.\""
                 , "The first lock was not half as big as the key."
                 , "\"Oh, alas!\" cried Alice, \"this one is too small.\""
                 , "She turned the key, and the door opened as she had hoped."
-                , "She looked along the passage to the far end."
-                , "It was the loveliest garden, and she longed to go in."
+                , "She looked along a hall to the far end."
+                , "It was the loveliest garden, and she had to go in."
                 ]
-        , madBest = 71
+        , madBest = 114
         , chooseTitle = "How hard should it be?"
         , chooseHint = "j / k to choose · Enter to start"
         , easyInfo = "Four easy locks."
         , challengeInfo = "Several fixes per line."
         , madInfo = "A long story, and the key slips out if you wait."
         , hintFind = "Find a lock: a gap or a wrong letter. Walk there with h j k l, then press i to put the key in."
-        , hintPin = "A wrong letter! Press c to replace it with the right one."
+        , hintPin = "An emoji! Press c to replace it with the right word."
         , hintTurn =
             \escapeKeys ->
                 case escapeKeys of
@@ -937,61 +937,61 @@ german =
         , easyStart =
             lines
                 [ "Alice  den goldenen Schlüssel."
-                , "Er  auf dem Glastisch."
+                , "Er 🛌 auf dem Glastisch."
                 , "Die Tür war kleiner  Alice."
-                , "Sie war am Ende des Ssals."
+                , "Sie 👀 sie am Ende des Saals."
                 ]
         , easyAnswer =
             lines
                 [ "Alice sah den goldenen Schlüssel."
                 , "Er lag auf dem Glastisch."
                 , "Die Tür war kleiner als Alice."
-                , "Sie war am Ende des Saals."
+                , "Sie sah sie am Ende des Saals."
                 ]
         , challengeStart =
             lines
-                [ "Alice  den Schlüssel und fanf die Tür."
-                , "Die Tür im Ssal war viel kleiner  sie."
-                , "\"Ja,  es mich versuchen\", sagte Alice."
-                , "Sie wsr froh,  er passte."
+                [ "Alice  den Schlüssel, und da 🛌 er."
+                , "Die Tür war viel kleiner  sie, 👀 sah sie."
+                , "\"Gut,  es mich versuchen, 👍\", sagte Alice."
+                , "Sie war froh,  er 📍 passte."
                 ]
         , challengeAnswer =
             lines
-                [ "Alice sah den Schlüssel und fand die Tür."
-                , "Die Tür im Saal war viel kleiner als sie."
-                , "\"Ja, lass es mich versuchen\", sagte Alice."
-                , "Sie war froh, dass er passte."
+                [ "Alice sah den Schlüssel, und da lag er."
+                , "Die Tür war viel kleiner als sie, das sah sie."
+                , "\"Gut, lass es mich versuchen, ja\", sagte Alice."
+                , "Sie war froh, dass er da passte."
                 ]
         , madStart =
             lines
                 [ "Alice  den winzigen goldenen Schlüssel."
-                , "Er  auf dem Glsstisch, und sie war froh."
-                , "Sie frsgte sich, in welches Schloss er passte."
-                , "Das erste Schloss war kleiner  der Schlüssel."
-                , "\"Ja,  es mich versuchen\", sagte Alice."
-                , "Sie drehte den Schlüssel, und die Tür ging suf."
+                , "Er  auf dem Glastisch, und sie 👀 ihn."
+                , "Sie fragte sich, ob er  passte."
+                , "Das erste Schloss war kleiner  der Schlüssel, 🔍 sah sie."
+                , "\"Gut,  es mich versuchen, 👍\", sagte Alice."
+                , "Sie drehte den Schlüssel, und  Schloss sprang auf."
                 , "Dahinter war ein Gang, und  hinten ein Garten."
-                , "Es war der schönste Garten, den sie je gesehen hstte."
+                , "Es war der schönste Garten, den sie je 👀."
                 ]
         , madAnswer =
             lines
                 [ "Alice sah den winzigen goldenen Schlüssel."
-                , "Er lag auf dem Glastisch, und sie war froh."
-                , "Sie fragte sich, in welches Schloss er passte."
-                , "Das erste Schloss war kleiner als der Schlüssel."
-                , "\"Ja, lass es mich versuchen\", sagte Alice."
-                , "Sie drehte den Schlüssel, und die Tür ging auf."
+                , "Er lag auf dem Glastisch, und sie sah ihn."
+                , "Sie fragte sich, ob er da passte."
+                , "Das erste Schloss war kleiner als der Schlüssel, das sah sie."
+                , "\"Gut, lass es mich versuchen, ja\", sagte Alice."
+                , "Sie drehte den Schlüssel, und das Schloss sprang auf."
                 , "Dahinter war ein Gang, und da hinten ein Garten."
-                , "Es war der schönste Garten, den sie je gesehen hatte."
+                , "Es war der schönste Garten, den sie je sah."
                 ]
-        , madBest = 67
+        , madBest = 86
         , chooseTitle = "Wie schwierig darf es sein?"
         , chooseHint = "j / k zum Wählen · Enter zum Starten"
         , easyInfo = "Vier einfache Schlösser."
         , challengeInfo = "Mehrere Korrekturen pro Zeile."
         , madInfo = "Eine lange Geschichte, und der Schlüssel rutscht heraus, wenn du wartest."
         , hintFind = "Such ein Schloss: eine Lücke oder einen falschen Buchstaben. Geh mit h j k l hin, dann steckt i den Schlüssel hinein."
-        , hintPin = "Ein falscher Buchstabe! Drücke c, um ihn durch den richtigen zu ersetzen."
+        , hintPin = "Ein Emoji! Drücke c, um es durch das richtige Wort zu ersetzen."
         , hintTurn =
             \escapeKeys ->
                 case escapeKeys of

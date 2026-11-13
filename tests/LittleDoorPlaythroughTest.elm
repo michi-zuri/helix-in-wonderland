@@ -114,22 +114,22 @@ route : Language -> String -> List String
 route language difficulty =
     case ( language, difficulty ) of
         ( English, "1" ) ->
-            [ "6l", "ihad⎋", "j", "iglad⎋", "j", "2l", "ihalf⎋", "j", "11l", "cl⎋" ]
+            [ "6lihad⎋", "jcglad⎋", "j2lihalf⎋", "j9lchall⎋" ]
 
         ( English, "2" ) ->
-            [ "6l", "ihad⎋", "23l", "iglad⎋", "j", "20h", "ihalf⎋", "18l", "ca⎋", "j", "27h", "ishall⎋", "j", "3h", "ca⎋", "33l", "cd⎋" ]
+            [ "6lihad⎋", "23lcglad⎋", "j17hchalf⎋", "2lias⎋", "7lias⎋", "j24hishall⎋", "2lcask⎋", "j4liall⎋", "12lihad⎋", "4lcflash⎋" ]
 
         ( English, _ ) ->
-            [ "6l", "ihad⎋", "35l", "iglad⎋", "j", "38h", "ca⎋", "j", "h", "ishall⎋", "j", "16l", "ihalf⎋", "j", "21h", "ialas⎋", "j", "32l", "ca⎋", "j", "3h", "ca⎋", "j", "3l", "cg⎋" ]
+            [ "6lihad⎋", "35lcglad⎋", "j6hihad⎋", "5lcask⎋", "j29hishall⎋", "11lcall⎋", "j3lchalf⎋", "2lias⎋", "j24hcalas⎋", "j32lias⎋", "6lihad⎋", "j18hia⎋", "2lchall⎋", "j15lihad⎋" ]
 
         ( German, "1" ) ->
-            [ "6l", "isah⎋", "j", "5h", "ilag⎋", "j", "15l", "ials⎋", "j", "h", "ca⎋" ]
+            [ "6lisah⎋", "j5hclag⎋", "j15lials⎋", "j18hcsah⎋" ]
 
         ( German, "2" ) ->
-            [ "6l", "isah⎋", "23l", "cd⎋", "j", "19h", "ca⎋", "21l", "ials⎋", "j", "30h", "ilass⎋", "j", "3h", "ca⎋", "9l", "idass⎋" ]
+            [ "6lisah⎋", "24lclag⎋", "j9hials⎋", "7lcdas⎋", "j30hilass⎋", "21lcja⎋", "j13hidass⎋", "5lcda⎋" ]
 
         ( German, _ ) ->
-            [ "6l", "isah⎋", "j", "6l", "ca⎋", "11h", "ilag⎋", "j", "l", "ca⎋", "j", "24l", "ials⎋", "j", "27h", "ilass⎋", "j", "35l", "ca⎋", "j", "16h", "ida⎋", "j", "20l", "ca⎋" ]
+            [ "6lisah⎋", "j5hilag⎋", "29lcsah⎋", "j8hida⎋", "j6lials⎋", "17lcdas⎋", "j36hilass⎋", "21lcja⎋", "jhidas⎋", "j5hida⎋", "j11lcsah⎋" ]
 
 
 nameOf : Language -> String
@@ -341,11 +341,11 @@ suite =
                         |> Expect.equal True
             , test "Esc pulls it out: NORMAL" <|
                 \_ -> start "1" |> pressIn english [ "i", "Escape" ] |> modeOf |> Expect.equal (Just Normal)
-            , test "c pulls the wrong pin and puts the key in" <|
+            , test "c on an emoji lets it tumble out and puts the key in (#107)" <|
                 \_ ->
                     start "1"
-                        |> pressIn english (keys [ "3j", "27l", "c" ])
-                        |> (\run -> ( modeOf run, String.contains "the hal." (textOf run) ))
+                        |> pressIn english (keys [ "j", "8l", "c" ])
+                        |> (\run -> ( modeOf run, String.contains "She was  to see" (textOf run) ))
                         |> Expect.equal ( Just Insert, True )
             , test "the player's own escape keys pull the key out too" <|
                 \_ ->
@@ -447,7 +447,7 @@ suite =
             \_ ->
                 start "3"
                     |> pressIn english (keys [ "6l", "ihhhhhhhhhh⌫⌫⌫⌫⌫⌫⌫⌫⌫⌫had⎋" ])
-                    |> pressIn english (keys (List.drop 2 (route English "3")))
+                    |> pressIn english (keys (List.drop 1 (route English "3")))
                     |> readOutro english
                     |> Playthrough.finishedWith
                     |> Expect.equal (Just 1)
@@ -458,10 +458,10 @@ suite =
                 \_ -> start "1" |> pressIn english (keys [ "6l", "i" ]) |> onlyHint (english.texts.littleDoor.hintTurn Nothing)
             , test "typing h j k l with the key in, as if to walk: the key binds you" <|
                 \_ -> start "1" |> pressIn english (keys [ "6l", "ij" ]) |> onlyHint english.texts.littleDoor.hintBound
-            , test "on a wrong pin: c" <|
+            , test "on an emoji: c (#107)" <|
                 \_ ->
                     start "1"
-                        |> pressIn english (keys [ "6l", "ihad⎋", "j", "iglad⎋", "j", "2l", "ihalf⎋", "j", "11l" ])
+                        |> pressIn english (keys [ "6lihad⎋", "j" ])
                         |> onlyHint english.texts.littleDoor.hintPin
             , test "without escape keys, on US QWERTY: the key-in hint names Esc, and Ctrl+[ follows" <|
                 \_ ->
@@ -542,7 +542,7 @@ suite =
                 \_ ->
                     start "1"
                         |> pressIn english (keys [ "6l", "ihad" ] ++ [ "Enter", "Backspace", "Escape" ])
-                        |> pressIn english (keys [ "j", "iglad⎋", "j", "2l", "ihalf⎋", "j", "11l", "cl⎋" ])
+                        |> pressIn english (keys (List.drop 1 (route English "1")))
                         |> readOutro english
                         |> Playthrough.finishedWith
                         |> Expect.equal (Just 1)
