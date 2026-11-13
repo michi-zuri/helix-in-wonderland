@@ -113,8 +113,8 @@ The local folder may be called `helix-wonderland`, but the repository is
 1. Home row typing in one long fall: left hand finger by finger, then the
 right hand, then `g h`, then both hands (#72). 2. `h j k l`, counts like `5j`,
 which also jump over dropped things (#89).
-3. Insert mode with the golden key: `i`, Esc, `c` (#73); typed letters are
-home row only. 4. Typing words, `e`, `i`, space (#74 will add `o` and `.`).
+3. Insert mode with the golden key: `i`, Esc, `c` on emojis that stand for
+words (#73, #107); typed letters are lowercase home row only. 4. Typing words, `e`, `i`, space (#74 will add `o` and `.`).
 5. `gh gl gg ge gj gk g.` (`gw` works but is deliberately not taught;
 finishing chapter 5 with only `gw` jumps and no mistake brings out the
 Cheshire Cat, an easter egg nothing announces).
@@ -163,8 +163,12 @@ order above holds. Read old issues with that in mind.
   nothing.
 - Chapter 3: the key is Insert mode. `i` puts it into a lock (INSERT, the key
   sticks out of the keyhole of the cursor's line), every key then works the
-  lock, `h j k l` too; Esc pulls it out. Each gap or wrong letter is a lock;
-  gaps between words are two spaces, a gap before punctuation one space. On
+  lock, `h j k l` too; Esc pulls it out. Missing words are gaps (two spaces
+  between words, one before punctuation) for `i`, or emojis standing in for
+  a word for `c` (no single wrong letters: that's `r`, kept for later;
+  #107). Everything typed is lowercase home row. The puzzles and routes were
+  generated from a notation (`{had}` gap, `{😊:glad}` emoji) by a throwaway
+  script, then verified in the tests. On
   mad the key slips out after 2 s without a key (#73). No panel (#93): each
   hint is a dialog told once, the first time it helps; closing a dialog
   counts as a key, so reading never makes the key slip; the goal stands in

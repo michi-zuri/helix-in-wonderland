@@ -202,14 +202,14 @@ suite =
                     |> press [ "Enter", "Enter", "Enter", "Enter" ]
                     |> typeIn "had"
                     |> press [ "Escape" ]
-                    |> typeIn "jiglad"
+                    |> typeIn "j"
+                    -- On the emoji: c replaces it with a word (#107).
+                    |> press [ "Enter", "Enter" ]
+                    |> typeIn "cglad"
                     |> press [ "Escape" ]
                     |> typeIn "j2lihalf"
                     |> press [ "Escape" ]
-                    |> typeIn "j11l"
-                    -- A wrong pin.
-                    |> press [ "Enter", "Enter" ]
-                    |> typeIn "cl"
+                    |> typeIn "j9lchall"
                     |> press [ "Escape" ]
                     |> press (List.repeat 4 "Enter")
                     |> ProgramTest.ensureViewHas [ text "Chapter complete!" ]

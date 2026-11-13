@@ -2,16 +2,17 @@ module Chapter.LittleDoor exposing (Model, Msg(..), init, locks, slipMillisecond
 
 {-| Chapter 3, "The Little Door": Insert mode, taught with the golden key.
 
-The little door behind the curtain has lots of locks: every gap and every
-wrong letter (a wrong pin) in the lines below it. In Normal mode Alice holds
-the key and walks with `h j k l` and counts. `i` puts the key into a lock:
-Insert mode, where every key works the lock, `h j k l` too, because Alice is
-bound to it. Esc pulls the key out again. On a wrong pin, `c` pulls the pin
-out and puts the key straight in. Once every line reads right and the key is
-out, the door opens on the garden.
+The little door behind the curtain has a lock for every line below it. In
+the lines, words are missing: a gap, or an emoji standing in for the word.
+In Normal mode Alice holds the key and walks with `h j k l` and counts. `i`
+puts the key into a lock: Insert mode, where every key is sent into the lock
+as a letter, `h j k l` too. Esc pulls the key out again. On an emoji, `c`
+lets it tumble out and puts the key straight in, so the word can be typed
+(#107). Once every line reads right and the key is out, the door opens on
+the garden.
 
-  - Easy: three locks and one wrong pin.
-  - Challenge: more locks and pins, all over the lines.
+  - Easy: one gap or emoji a line.
+  - Challenge: several a line.
   - Mad: a longer passage, and the key slips out of the lock when the player
     waits more than `slipMilliseconds` while it is in.
 
@@ -85,7 +86,7 @@ type alias Work =
 type Hint
     = FindALock
     | KeyIsIn
-    | WrongPin
+    | OnEmoji
     | KeyBinds
     | KeySlipped
 
@@ -416,7 +417,7 @@ score texts model =
   - after picking the difficulty: find a lock (see `choose`);
   - the key goes in for the first time: type, then Esc (and the ways to
     Esc when the browser keeps it);
-  - Alice stands on a wrong pin: `c`;
+  - Alice stands on an emoji: `c`;
   - with the key in, `h j k l` typed as if to walk: the key binds you;
   - on mad, the key slips out (see `slipIfWaiting`).
 
@@ -453,8 +454,8 @@ giveHints context ( model, effects ) =
                     , effects
                     )
 
-            else if onWrongPin work then
-                ( tell WrongPin [ Dialog.say Narrator (.littleDoor >> .hintPin) ] model, effects )
+            else if onEmoji work then
+                ( tell OnEmoji [ Dialog.say Narrator (.littleDoor >> .hintPin) ] model, effects )
 
             else
                 ( model, effects )
@@ -500,55 +501,27 @@ walkedWithKeyIn typed answer =
     lastIsWalking && not fitsAWord
 
 
-{-| The cursor stands on a letter that differs from the answer, with the
-letters around it matching: a wrong pin. Lines are compared from the start
-and from the end, so a gap elsewhere on the line doesn't hide the pin.
+{-| The cursor stands on an emoji: a stand-in for a word, which `c` replaces
+(#107). It is a character the goal doesn't have anywhere. Characters are
+taken as a list, since an emoji is one character to the editor but two
+units to Elm's `String` functions.
 -}
-onWrongPin : Work -> Bool
-onWrongPin work =
+onEmoji : Work -> Bool
+onEmoji work =
     let
         buffer =
             Session.buffer work.session
 
         ( lineNumber, column ) =
             Core.cursorLineColumn buffer
-
-        nth list =
-            list |> List.drop (lineNumber - 1) |> List.head |> Maybe.withDefault ""
-
-        line =
-            nth (String.lines (Core.toString buffer))
-
-        target =
-            nth (String.lines work.puzzle.answer)
-
-        index =
-            column - 1
-
-        fromStart =
-            String.left index line
-                == String.left index target
-                && String.slice index (index + 1) line
-                /= String.slice index (index + 1) target
-                && String.slice (index + 1) (index + 3) line
-                == String.slice (index + 1) (index + 3) target
-
-        after =
-            String.dropLeft (index + 1) line
-
-        targetIndex =
-            String.length target - String.length after - 1
-
-        fromEnd =
-            targetIndex
-                >= 0
-                && String.endsWith after target
-                && String.slice targetIndex (targetIndex + 1) target
-                /= String.slice index (index + 1) line
-                && String.slice (index - 2) index line
-                == String.slice (targetIndex - 2) targetIndex target
     in
-    index < String.length line && (fromStart || fromEnd)
+    String.lines (Core.toString buffer)
+        |> List.drop (lineNumber - 1)
+        |> List.head
+        |> Maybe.map (String.toList >> List.drop (column - 1) >> List.head)
+        |> Maybe.andThen identity
+        |> Maybe.map (\char -> not (Char.isAlphaNum char) && not (String.contains (String.fromChar char) work.puzzle.answer))
+        |> Maybe.withDefault False
 
 
 
