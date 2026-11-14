@@ -30,6 +30,7 @@ import Chapter.Id as ChapterId exposing (ChapterId(..))
 import Chapter.LittleDoor as LittleDoor
 import Chapter.Pool as Pool
 import Chapter.RabbitHole as RabbitHole
+import Editor.Session as Session
 import Html exposing (Html)
 import Html.Attributes as A
 import Html.Lazy
@@ -70,7 +71,7 @@ type alias Model =
     , toast : Maybe Toast
     , links : Project.Links
     , fullscreen : Bool
-    , escapePrompt : Maybe String
+    , fullscreenHelp : Bool
     }
 
 
@@ -136,7 +137,7 @@ init flags =
       , seed = Random.initialSeed (decodeFlag "seed" Decode.int 1865)
       , toast = Nothing
       , fullscreen = False
-      , escapePrompt = Nothing
+      , fullscreenHelp = False
       , links = decodeFlag "links" Project.decoder Project.fallback
       }
     , []
@@ -180,13 +181,17 @@ update : Msg -> Model -> ( Model, List Command )
 update msg model =
     case msg of
         KeyDown press ->
-            case model.escapePrompt of
-                Just typed ->
-                    chooseEscapeKeys press.key typed model
+            if model.fullscreenHelp then
+                -- The card about j k: Enter closes it.
+                if press.key == "Enter" then
+                    ( { model | fullscreenHelp = False }, [] )
 
-                Nothing ->
-                    detectLayout press model
-                        |> andThen (handleKey press.key)
+                else
+                    ( model, [] )
+
+            else
+                detectLayout press model
+                    |> andThen (handleKey press.key)
 
         Frame elapsed ->
             let
@@ -206,16 +211,11 @@ update msg model =
             saveSettings (\s -> { s | soundOn = not s.soundOn }) model
 
         ToggledFullscreen ->
-            -- Entering fullscreen asks for the escape keys first: the browser
-            -- will use Esc to leave fullscreen.
+            -- Entering fullscreen explains j k first, every time: the browser
+            -- will use Esc to leave fullscreen (#110).
             ( { model
                 | fullscreen = not model.fullscreen
-                , escapePrompt =
-                    if model.fullscreen then
-                        Nothing
-
-                    else
-                        Just ""
+                , fullscreenHelp = not model.fullscreen
               }
             , [ SetFullscreen (not model.fullscreen) ]
             )
@@ -228,7 +228,7 @@ update msg model =
                 ( model, [] )
 
             else
-                ( { model | fullscreen = False, escapePrompt = Nothing }, [] )
+                ( { model | fullscreen = False, fullscreenHelp = False }, [] )
 
         ToggledUnlockAll ->
             saveSettings (\s -> { s | unlockAll = not s.unlockAll }) model
@@ -430,42 +430,7 @@ context : Model -> Context
 context model =
     { texts = Texts.forLanguage model.settings.language
     , layout = model.settings.layout
-    , escapeKeys =
-        case Maybe.map String.toList model.settings.escapeKeys of
-            Just [ first, second ] ->
-                Just ( first, second )
-
-            _ ->
-                Nothing
     }
-
-
-{-| A key while the escape-keys card is open: two keys that type a
-character become the escape keys; Enter keeps the ones from before, Esc
-closes the card without changing them.
--}
-chooseEscapeKeys : String -> String -> Model -> ( Model, List Command )
-chooseEscapeKeys key typed model =
-    if key == "Escape" || (key == "Enter" && model.settings.escapeKeys /= Nothing) then
-        ( { model | escapePrompt = Nothing }, [] )
-
-    else if String.length key == 1 && key /= " " then
-        let
-            keys =
-                typed ++ key
-        in
-        if String.length keys == 2 then
-            saveSettings (\s -> { s | escapeKeys = Just keys })
-                { model
-                    | escapePrompt = Nothing
-                    , toast = Just { text = \texts -> texts.escapeKeys.chosen keys, remaining = toastMilliseconds }
-                }
-
-        else
-            ( { model | escapePrompt = Just keys }, [] )
-
-    else
-        ( model, [] )
 
 
 shiftChapter : Int -> ChapterId -> ChapterId
@@ -742,12 +707,11 @@ view model =
 
                 Nothing ->
                     Html.text ""
-            , case model.escapePrompt of
-                Just typed ->
-                    viewEscapePrompt texts model.settings.escapeKeys typed
+            , if model.fullscreenHelp then
+                viewFullscreenHelp texts
 
-                Nothing ->
-                    Html.text ""
+              else
+                Html.text ""
             ]
         , Html.section [ A.class "panel", A.attribute "aria-live" "polite" ] [ screen.panel ]
         , Chrome.statusLine
@@ -762,22 +726,19 @@ view model =
         ]
 
 
-{-| The card that asks for the escape keys when entering fullscreen: the
-keys typed so far, and the ones from before, which Enter keeps.
+{-| The card shown each time fullscreen starts (#110): Esc leaves the
+browser's fullscreen, so back to NORMAL is `j k`, as with this Helix
+config. Enter closes it.
 -}
-viewEscapePrompt : Texts -> Maybe String -> String -> Html Msg
-viewEscapePrompt texts saved typed =
+viewFullscreenHelp : Texts -> Html Msg
+viewFullscreenHelp texts =
     Html.div [ A.class "overlay" ]
         [ Html.div [ A.class "card" ]
-            [ Html.h2 [] [ Html.text texts.escapeKeys.title ]
-            , Html.p [] [ Html.text texts.escapeKeys.explain ]
-            , Html.p [ A.class "escape-keys" ] [ Html.text (String.padRight 2 '_' typed) ]
-            , case saved of
-                Just keys ->
-                    Html.p [ A.class "hint" ] [ Html.text (texts.escapeKeys.keep keys) ]
-
-                Nothing ->
-                    Html.text ""
+            [ Html.h2 [] [ Html.text texts.fullscreenHelp.title ]
+            , Html.p [] [ Html.text texts.fullscreenHelp.explain ]
+            , Html.p [ A.class "hint" ] [ Html.text texts.fullscreenHelp.config ]
+            , Html.pre [ A.class "config" ] [ Html.text Session.escapeConfig ]
+            , Html.p [ A.class "hint" ] [ Html.text texts.continueHint ]
             ]
         ]
 

@@ -1,4 +1,4 @@
-module Editor.View exposing (Decorations, modeName, position, view, viewWith)
+module Editor.View exposing (Decorations, keyMenu, modeName, position, view, viewWith)
 
 {-| Draws a buffer the way Helix does: line numbers in the gutter, the
 selection in purple, the cursor as a block (or, in Insert mode, as a bar in
@@ -13,6 +13,22 @@ a chapter puts on the text (chapter 5's currants).
 import Editor.Core as Core exposing (Buffer, Mode(..))
 import Html exposing (Html)
 import Html.Attributes as A
+
+
+{-| The little menu Helix shows while a key sequence waits for its next
+key (#110): each next key with what it does. Chapters show it while a `j`
+in Insert mode waits (`Editor.Session.isAfterJ`).
+-}
+keyMenu : List ( String, String ) -> Html msg
+keyMenu entries =
+    Html.div [ A.class "key-menu" ]
+        (List.map
+            (\( key, does ) ->
+                Html.div [ A.class "key-menu-row" ]
+                    [ Html.b [] [ Html.text key ], Html.text does ]
+            )
+            entries
+        )
 
 
 {-| The mode on the left of the status line, spelled out: NORMAL or INSERT.

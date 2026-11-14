@@ -33,8 +33,8 @@ type alias Texts =
     , soundOff : String
     , fullscreen : String
     , exitFullscreen : String
-    , escapeKeys : { title : String, explain : String, keep : String -> String, chosen : String -> String }
-    , escapeKeysWork : String -> String
+    , fullscreenHelp : { title : String, explain : String, config : String }
+    , keyMenu : { normal : String, typeJ : String }
     , continueHint : String
     , footer : String
     , drawPictures : String
@@ -181,7 +181,7 @@ type alias LittleDoorTexts =
     , madInfo : String
     , hintFind : String
     , hintPin : String
-    , hintTurn : Maybe String -> String
+    , hintTurn : String
     , hintBound : String
     , linesRight : Int -> Int -> String
     , keySlipped : String
@@ -366,13 +366,12 @@ english =
     , soundOff = "Sound off"
     , fullscreen = "Fullscreen"
     , exitFullscreen = "Leave fullscreen"
-    , escapeKeys =
-        { title = "Your escape keys"
-        , explain = "In Helix, Esc takes you from Insert mode back to Normal mode. But in fullscreen the browser uses Esc to leave fullscreen. So choose two keys that do it instead, for example ;; or ,, and type them now."
-        , keep = \keys -> "Enter keeps " ++ keys
-        , chosen = \keys -> "Your escape keys: " ++ keys
+    , fullscreenHelp =
+        { title = "Fullscreen: j k instead of Esc"
+        , explain = "In fullscreen, Esc leaves fullscreen. To go from INSERT back to NORMAL, press j and then k. To type a j, press j twice."
+        , config = "It works like this Helix config.toml:"
         }
-    , escapeKeysWork = \keys -> "Your escape keys " ++ keys ++ " work like Esc."
+    , keyMenu = { normal = "NORMAL mode", typeJ = "type j" }
     , continueHint = "Enter ↵ to continue"
     , drawPictures = "Draw pictures for the game"
     , suggestChange = "Suggest a change to this screen"
@@ -567,15 +566,8 @@ english =
         , madInfo = "A long story, and the key slips out if you wait."
         , hintFind = "Find a lock: a gap or a wrong letter. Walk there with h j k l, then press i to put the key in."
         , hintPin = "An emoji! Press c to replace it with the right word."
-        , hintTurn =
-            \escapeKeys ->
-                case escapeKeys of
-                    Just keys ->
-                        "The key is in. Type the missing letters, then pull the key out again by pressing Esc or your own keys " ++ keys ++ "."
-
-                    Nothing ->
-                        "The key is in. Type the missing letters, then pull the key out again with Esc."
-        , hintBound = "The key is in the lock: h j k l type letters now. Pull it out with Esc to walk."
+        , hintTurn = "The key is in. Type the missing letters, then pull the key out again by pressing Esc or the keys j k."
+        , hintBound = "The key is in the lock: h k l type letters now. Pull it out with Esc or j k to walk."
         , linesRight = \right total -> "Lines right: " ++ String.fromInt right ++ " of " ++ String.fromInt total
         , keySlipped = "The key slipped out, and the letters fell out with it! Type the word in one go, then pull the key out in time."
         , slips = "Key slipped"
@@ -791,13 +783,12 @@ german =
     , soundOff = "Ton aus"
     , fullscreen = "Vollbild"
     , exitFullscreen = "Vollbild verlassen"
-    , escapeKeys =
-        { title = "Deine Escape-Tasten"
-        , explain = "In Helix bringt dich Esc vom Einfügemodus zurück in den Normalmodus. Im Vollbild verlässt der Browser mit Esc aber das Vollbild. Wähle darum zwei Tasten, die das stattdessen tun, zum Beispiel ;; oder ,, und tippe sie jetzt."
-        , keep = \keys -> "Enter behält " ++ keys
-        , chosen = \keys -> "Deine Escape-Tasten: " ++ keys
+    , fullscreenHelp =
+        { title = "Vollbild: j k statt Esc"
+        , explain = "Im Vollbild verlässt Esc das Vollbild. Um von INSERT zurück zu NORMAL zu kommen, drücke j und dann k. Für ein j drückst du zweimal j."
+        , config = "Das funktioniert wie diese Helix-config.toml:"
         }
-    , escapeKeysWork = \keys -> "Deine Escape-Tasten " ++ keys ++ " wirken wie Esc."
+    , keyMenu = { normal = "NORMAL-Modus", typeJ = "j tippen" }
     , continueHint = "Enter ↵ zum Weiterlesen"
     , drawPictures = "Bilder fürs Spiel zeichnen"
     , suggestChange = "Änderung für diese Seite vorschlagen"
@@ -992,15 +983,8 @@ german =
         , madInfo = "Eine lange Geschichte, und der Schlüssel rutscht heraus, wenn du wartest."
         , hintFind = "Such ein Schloss: eine Lücke oder einen falschen Buchstaben. Geh mit h j k l hin, dann steckt i den Schlüssel hinein."
         , hintPin = "Ein Emoji! Drücke c, um es durch das richtige Wort zu ersetzen."
-        , hintTurn =
-            \escapeKeys ->
-                case escapeKeys of
-                    Just keys ->
-                        "Der Schlüssel steckt. Tippe die fehlenden Buchstaben, dann ziehe den Schlüssel wieder heraus, indem du Esc oder deine alternative Tastenkombination " ++ keys ++ " drückst."
-
-                    Nothing ->
-                        "Der Schlüssel steckt. Tippe die fehlenden Buchstaben, dann ziehe den Schlüssel mit Esc wieder heraus."
-        , hintBound = "Der Schlüssel steckt im Schloss: h j k l tippen jetzt Buchstaben. Zieh ihn mit Esc heraus, um zu gehen."
+        , hintTurn = "Der Schlüssel steckt. Tippe die fehlenden Buchstaben, dann ziehe den Schlüssel wieder heraus, indem du Esc oder die Tastenkombination j k drückst."
+        , hintBound = "Der Schlüssel steckt im Schloss: h k l tippen jetzt Buchstaben. Zieh ihn mit Esc oder j k heraus, um zu gehen."
         , linesRight = \right total -> "Richtige Zeilen: " ++ String.fromInt right ++ " von " ++ String.fromInt total
         , keySlipped = "Der Schlüssel ist herausgerutscht, und die Buchstaben sind mit ihm herausgefallen! Tippe das Wort in einem Zug und zieh den Schlüssel rechtzeitig heraus."
         , slips = "Herausgerutscht"

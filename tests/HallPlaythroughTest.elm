@@ -20,7 +20,7 @@ import Texts
 
 context : Context
 context =
-    { texts = Texts.forLanguage German, layout = SwissQwertz, escapeKeys = Nothing }
+    { texts = Texts.forLanguage German, layout = SwissQwertz }
 
 
 press : String -> Run Hall.Model -> Run Hall.Model

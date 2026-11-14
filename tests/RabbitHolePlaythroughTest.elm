@@ -24,7 +24,7 @@ import Texts
 
 contextFor : Layout -> Context
 contextFor layout =
-    { texts = Texts.forLanguage German, layout = layout, escapeKeys = Nothing }
+    { texts = Texts.forLanguage German, layout = layout }
 
 
 start : Run RabbitHole.Model

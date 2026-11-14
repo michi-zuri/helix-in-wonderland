@@ -104,9 +104,12 @@ The local folder may be called `helix-wonderland`, but the repository is
 - Hidden sentences: chapter 4's word sequences and chapter 6's odd words form
   hidden sentences. The game never points them out; keep them secret in the UI.
 - No on-screen keyboard (removed in #53). Fullscreen mode (#57) shows only stage,
-  panel and status line; Esc leaves browser fullscreen, so on entering it the
-  player picks their own escape keys (like `;;`), which must come within 300 ms
-  of each other (#59, #61). `Context.escapeKeys` carries them to chapters.
+  panel and status line; Esc leaves browser fullscreen. `j k` leaves INSERT
+  everywhere, as this Helix config would (#110; the chosen escape keys with a
+  timeout of #59/#61 are gone): `j` waits with no timeout and shows a little
+  menu (k NORMAL, j a j), `j j` types one j, `j` + any other key types both.
+  It lives in `Editor.Session.press`; every time fullscreen starts, a card
+  explains it and shows the `config.toml`.
 
 **Keys, by chapter** (what's taught where; don't use untaught keys in hints or
 "Our best" routes)

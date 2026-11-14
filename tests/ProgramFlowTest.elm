@@ -216,36 +216,43 @@ suite =
                     |> press [ "Enter" ]
                     |> ProgramTest.expectViewHas [ text "04_drink_me.txt" ]
         , describe "fullscreen"
-            [ test "entering fullscreen asks the browser, then asks for the escape keys and saves them" <|
+            [ test "entering fullscreen asks the browser, then explains j k with the config (#110)" <|
                 \_ ->
                     newPlayer
                         |> ProgramTest.clickButton "⛶ Fullscreen"
-                        |> ProgramTest.ensureViewHas [ text "Your escape keys" ]
-                        |> press [ ";", ";" ]
                         |> Expect.all
                             [ portValues "setFullscreen" Decode.bool (Expect.equal [ True ])
-                            , portValues "saveSettings" (Decode.field "escapeKeys" Decode.string) (Expect.equal [ ";;" ])
-                            , ProgramTest.expectViewHas [ text "Your escape keys: ;;" ]
+                            , ProgramTest.expectViewHas [ text "Fullscreen: j k instead of Esc" ]
+                            , ProgramTest.expectViewHas [ text "[keys.insert.j]" ]
                             ]
+            , test "Enter closes the card; it comes again each time fullscreen starts" <|
+                \_ ->
+                    newPlayer
+                        |> ProgramTest.clickButton "⛶ Fullscreen"
+                        |> press [ "Enter" ]
+                        |> ProgramTest.ensureViewHasNot [ text "Fullscreen: j k instead of Esc" ]
+                        |> ProgramTest.simulateIncomingPort "fullscreenChanged" (Encode.bool False)
+                        |> ProgramTest.clickButton "⛶ Fullscreen"
+                        |> ProgramTest.expectViewHas [ text "Fullscreen: j k instead of Esc" ]
             , test "leaving the browser's fullscreen (holding Esc, F11) leaves the fullscreen layout" <|
                 \_ ->
                     newPlayer
                         |> ProgramTest.clickButton "⛶ Fullscreen"
-                        |> press [ ";", ";" ]
+                        |> press [ "Enter" ]
                         |> ProgramTest.ensureViewHas [ class "fullscreen" ]
                         |> ProgramTest.simulateIncomingPort "fullscreenChanged" (Encode.bool False)
                         |> ProgramTest.expectViewHasNot [ class "fullscreen" ]
-            , test "the escape keys work like Esc inside a chapter" <|
+            , test "j k works like Esc inside a chapter" <|
                 \_ ->
                     newPlayer
                         |> ProgramTest.clickButton "⛶ Fullscreen"
-                        |> press [ ";", ";" ]
+                        |> press [ "Enter" ]
                         |> ProgramTest.clickButton "Unlock all chapters (for grown-ups)"
                         |> press [ "k", "Enter" ]
                         |> readStory
                         |> press [ "1", "i", "y" ]
                         |> ProgramTest.ensureViewHas [ text "INSERT" ]
-                        |> press [ ";", ";" ]
+                        |> press [ "j", "k" ]
                         |> ProgramTest.expectViewHas [ text "NORMAL" ]
             ]
         , test "Ctrl+[ works as Esc" <|
