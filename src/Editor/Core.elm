@@ -259,19 +259,15 @@ in Normal mode, `w` in Insert mode) leave the buffer unchanged.
 apply : Command -> Buffer -> Buffer
 apply command ((Buffer b) as buffer) =
     case ( b.mode, command ) of
+        -- As in Helix, h and l go on across line ends: the line break is a
+        -- place of its own, then the next line (#119). Only the start and
+        -- the end of the text stop them.
         ( Normal, MoveLeft ) ->
-            moveTo (max (lineStart b.chars b.head) (b.head - 1)) buffer
+            moveTo (max 0 (b.head - 1)) buffer
                 |> rememberColumn
 
         ( Normal, MoveRight ) ->
-            moveTo
-                (if charAt b.chars b.head == Just '\n' then
-                    b.head
-
-                 else
-                    b.head + 1
-                )
-                buffer
+            moveTo (min (Array.length b.chars - 1) (b.head + 1)) buffer
                 |> rememberColumn
 
         ( Normal, MoveDown ) ->

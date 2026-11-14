@@ -55,12 +55,28 @@ suite =
             [ test "l moves right, h moves left" <|
                 \_ ->
                     Core.fromString "abc" |> press [ "l", "l", "h" ] |> Core.head |> Expect.equal 1
-            , test "h stops at the start of the line" <|
+            , test "l on the last character goes onto the line break, then to the next line, as in Helix (#119)" <|
                 \_ ->
-                    Core.fromString "ab\ncd" |> press [ "j", "h", "h", "h" ] |> Core.cursorLineColumn |> Expect.equal ( 2, 1 )
-            , test "l stops on the line's newline" <|
+                    Core.fromString "abc\ndef"
+                        |> press [ "l", "l" ]
+                        |> (\onC -> [ onC, press [ "l" ] onC, press [ "l", "l" ] onC ])
+                        |> List.map Core.cursorLineColumn
+                        |> Expect.equal [ ( 1, 3 ), ( 1, 4 ), ( 2, 1 ) ]
+            , test "h at the start of a line goes back onto the line break above, then its last character" <|
                 \_ ->
-                    Core.fromString "ab\ncd" |> press (List.repeat 5 "l") |> Core.cursorLineColumn |> Expect.equal ( 1, 3 )
+                    Core.fromString "abc\ndef"
+                        |> press [ "j" ]
+                        |> (\onD -> [ onD, press [ "h" ] onD, press [ "h", "h" ] onD ])
+                        |> List.map Core.cursorLineColumn
+                        |> Expect.equal [ ( 2, 1 ), ( 1, 4 ), ( 1, 3 ) ]
+            , test "five l from a go to e: across the line break" <|
+                \_ -> Core.fromString "abc\ndef" |> press (List.repeat 5 "l") |> Core.cursorLineColumn |> Expect.equal ( 2, 2 )
+            , test "h stops at the very start of the text, l at its very end" <|
+                \_ ->
+                    ( Core.fromString "ab\ncd" |> press [ "h" ] |> Core.cursorLineColumn
+                    , Core.fromString "ab\ncd" |> press (List.repeat 9 "l") |> Core.cursorLineColumn
+                    )
+                        |> Expect.equal ( ( 1, 1 ), ( 2, 3 ) )
             , test "j keeps the column when the next line is long enough" <|
                 \_ ->
                     Core.fromString "abcd\nefgh" |> press [ "l", "l", "j" ] |> Core.cursorLineColumn |> Expect.equal ( 2, 3 )

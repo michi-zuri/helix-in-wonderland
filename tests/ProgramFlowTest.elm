@@ -178,9 +178,9 @@ suite =
                     |> press [ "1" ]
                     |> typeIn "9liyou"
                     |> press [ "Escape" ]
-                    |> typeIn ("j" ++ String.repeat 40 "h" ++ "lllihardly")
+                    |> typeIn ("j" ++ String.repeat 9 "h" ++ "ihardly")
                     |> press [ "Escape" ]
-                    |> typeIn ("j" ++ String.repeat 40 "h" ++ String.repeat 11 "l" ++ "itemper")
+                    |> typeIn "jllitemper"
                     |> press [ "Escape" ]
                     -- The closing story has two lines: Enter shows each in full, Enter goes on.
                     |> press (List.repeat 4 "Enter")

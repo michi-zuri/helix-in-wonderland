@@ -82,6 +82,12 @@ suite =
                     |> Session.buffer
                     |> Core.cursorLineColumn
                     |> Expect.equal ( 1, 13 )
+        , test "a count goes on across the line end, as in Helix (#119)" <|
+            \_ ->
+                press [ "5", "l" ] (Session.start "abc\ndef\n")
+                    |> Session.buffer
+                    |> Core.cursorLineColumn
+                    |> Expect.equal ( 2, 2 )
         , test "a count can't start with 0" <|
             \_ ->
                 press [ "0" ] poem

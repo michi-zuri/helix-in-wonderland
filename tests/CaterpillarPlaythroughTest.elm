@@ -84,11 +84,6 @@ typeIn word =
     List.map String.fromChar (String.toList word)
 
 
-toLineStart : List String
-toLineStart =
-    List.repeat 40 "h"
-
-
 {-| Easy: walk to each gap, `i`, type the word. `leave` decides how Insert
 mode is left (normally Esc).
 -}
@@ -96,8 +91,8 @@ fillTheGaps : List String -> List String
 fillTheGaps leave =
     List.concat
         [ List.repeat 9 "l" ++ [ "i" ] ++ typeIn "you" ++ [ "Escape" ]
-        , "j" :: toLineStart ++ [ "l", "l", "l", "i" ] ++ typeIn "hardly" ++ [ "Escape" ]
-        , "j" :: toLineStart ++ List.repeat 11 "l" ++ [ "i" ] ++ typeIn "temper" ++ leave
+        , "j" :: List.repeat 9 "h" ++ [ "i" ] ++ typeIn "hardly" ++ [ "Escape" ]
+        , [ "j", "l", "l", "i" ] ++ typeIn "temper" ++ leave
         ]
 
 
