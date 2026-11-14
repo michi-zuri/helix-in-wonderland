@@ -20,7 +20,7 @@ import Texts exposing (Texts)
 
 contextIn : Language -> Context
 contextIn language =
-    { texts = Texts.forLanguage language, layout = SwissQwertz, escapeKeys = Nothing }
+    { texts = Texts.forLanguage language, layout = SwissQwertz }
 
 
 context : Context
@@ -234,43 +234,36 @@ suite =
                     |> List.filter (not << String.isEmpty)
                     |> List.length
                     |> Expect.equal 8
-        , test "the player's own escape keys work like Esc: ;; on mad earns three tarts too" <|
+        , test "j k works like Esc: on mad it earns three tarts too (#110)" <|
             \_ ->
-                let
-                    withEscapeKeys =
-                        { context | escapeKeys = Just ( ';', ';' ) }
-                in
-                startIn withEscapeKeys "3"
-                    |> pressIn withEscapeKeys
+                start "3"
+                    |> press
                         (List.concatMap
                             (\key ->
                                 if key == "Escape" then
-                                    [ ";", ";" ]
+                                    [ "j", "k" ]
 
                                 else
                                     [ key ]
                             )
                             (keys (madRoute English))
                         )
-                    |> pressIn withEscapeKeys (List.repeat 12 "Enter")
+                    |> press (List.repeat 12 "Enter")
                     |> Playthrough.finishedWith
                     |> Expect.equal (Just 3)
-        , test "too slow between the two escape keys, and they are just typed" <|
+        , test "no timeout: j waits however long, then k leaves INSERT" <|
             \_ ->
                 let
-                    withEscapeKeys =
-                        { context | escapeKeys = Just ( ';', ';' ) }
-
                     send =
-                        Playthrough.send (Caterpillar.update withEscapeKeys)
+                        Playthrough.send (Caterpillar.update context)
                 in
-                startIn withEscapeKeys "1"
+                start "1"
                     |> send (Caterpillar.KeyPressed "i")
-                    |> send (Caterpillar.KeyPressed ";")
-                    |> send (Caterpillar.Frame 400)
-                    |> send (Caterpillar.KeyPressed ";")
+                    |> send (Caterpillar.KeyPressed "j")
+                    |> send (Caterpillar.Frame 5000)
+                    |> send (Caterpillar.KeyPressed "k")
                     |> modeOf
-                    |> Expect.equal (Just Insert)
+                    |> Expect.equal (Just Normal)
         , test "the chapter waits until the player is back in Normal mode" <|
             \_ ->
                 start "1"

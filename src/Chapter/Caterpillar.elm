@@ -204,11 +204,7 @@ edit context key model =
             currentWork context.texts model
     in
     case
-        Session.pressWith
-            (Maybe.map (\keys -> { keys = keys, sinceLastKey = model.clock - model.lastKeyAt }) context.escapeKeys)
-            isUnlocked
-            key
-            work.session
+        Session.press isUnlocked key work.session
     of
         Session.Ran ran ->
             { model | work = Just { work | session = ran.session } }
@@ -340,6 +336,7 @@ scene context model =
         Html.div [ A.class "stage-scene" ]
             [ viewMushroom model.clock
             , Html.Lazy.lazy viewEditor work.session
+            , viewKeyMenu context.texts work.session
             , if model.difficulty == Nothing && Story.isPlaying model.story then
                 DifficultyChoice.view
                     { texts = context.texts
@@ -456,15 +453,7 @@ viewWorkPanel context difficulty instructions work =
         [ Html.span [ A.class "eyebrow" ] [ Html.text (Difficulty.name texts difficulty) ]
         , Html.div [ A.class "columns" ]
             [ Html.div [ A.class "column" ]
-                (instructions
-                    ++ (case context.escapeKeys of
-                            Just ( first, second ) ->
-                                [ Html.p [ A.class "tip" ] [ Html.text (texts.escapeKeysWork (String.fromList [ first, second ])) ] ]
-
-                            Nothing ->
-                                []
-                       )
-                )
+                instructions
             , Checklist.goal texts.caterpillar.goal work.puzzle.answer
             ]
         ]
@@ -562,3 +551,14 @@ changes (it is lazy on the session, which only changes on a key).
 viewEditor : Session -> Html msg
 viewEditor session =
     Editor.View.viewWith { labels = Session.jumpLabels session, marks = [] } (Session.buffer session)
+
+
+{-| While a `j` in INSERT waits, the little menu of what comes next (#110).
+-}
+viewKeyMenu : Texts -> Session -> Html msg
+viewKeyMenu texts session =
+    if Session.isAfterJ session then
+        Editor.View.keyMenu [ ( "k", texts.keyMenu.normal ), ( "j", texts.keyMenu.typeJ ) ]
+
+    else
+        Html.text ""

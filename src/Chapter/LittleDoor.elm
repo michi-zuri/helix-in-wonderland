@@ -270,11 +270,7 @@ edit context key model =
             currentWork context.texts model
     in
     case
-        Session.pressWith
-            (Maybe.map (\keys -> { keys = keys, sinceLastKey = model.clock - model.lastKeyAt }) context.escapeKeys)
-            isUnlocked
-            key
-            work.session
+        Session.press isUnlocked key work.session
     of
         Session.Ran ran ->
             { model
@@ -458,16 +454,11 @@ giveHints context ( model, effects ) =
                     ( tell KeyBinds [ Dialog.say Narrator (.littleDoor >> .hintBound) ] model, effects )
 
                 else
-                    let
-                        escapeKeys =
-                            Maybe.map (\( first, second ) -> String.fromList [ first, second ]) context.escapeKeys
-                    in
-                    -- The hint names the player's own escape keys (#97); without
-                    -- them, Ctrl+[ is the fallback for browsers that keep Esc,
-                    -- told only where [ is a plain key.
+                    -- The hint names Esc and j k (#110); Ctrl+[ is the fallback for
+                    -- browsers that keep Esc, told only where [ is a plain key.
                     ( tell KeyIsIn
-                        (Dialog.say Narrator (\texts -> texts.littleDoor.hintTurn escapeKeys)
-                            :: (if escapeKeys == Nothing && Layout.typesBracketEasily context.layout then
+                        (Dialog.say Narrator (.littleDoor >> .hintTurn)
+                            :: (if Layout.typesBracketEasily context.layout then
                                     [ Dialog.say Narrator (.caterpillar >> .escTip) ]
 
                                 else
@@ -582,6 +573,7 @@ scene context model =
                         Nothing
                 , open = model.doorOpen
                 }
+            , viewKeyMenu context.texts work.session
             , Html.div [ A.class "editor-with-goal" ]
                 [ Html.Lazy.lazy viewEditor work.session
                 , if model.difficulty == Nothing then
@@ -772,3 +764,14 @@ dropCount work session model =
 viewEditor : Session -> Html msg
 viewEditor session =
     Editor.View.viewWith { labels = [], marks = [] } (Session.buffer session)
+
+
+{-| While a `j` in INSERT waits, the little menu of what comes next (#110).
+-}
+viewKeyMenu : Texts -> Session -> Html msg
+viewKeyMenu texts session =
+    if Session.isAfterJ session then
+        Editor.View.keyMenu [ ( "k", texts.keyMenu.normal ), ( "j", texts.keyMenu.typeJ ) ]
+
+    else
+        Html.text ""

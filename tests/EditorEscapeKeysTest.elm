@@ -1,7 +1,13 @@
 module EditorEscapeKeysTest exposing (suite)
 
-{-| The player's own escape keys (`Editor.Session.pressWith`): two keys
-that leave Insert mode like Esc, in Insert mode only.
+{-| Leaving Insert mode with `j k`, as this Helix config sets up (#110):
+
+    [keys.insert.j]
+    k = "normal_mode"
+    j = [":insert-output printf j", "move_char_right"]
+
+No timeout: `j` waits for the next key, however long it takes.
+
 -}
 
 import Editor.Core as Core exposing (Mode(..))
@@ -10,13 +16,11 @@ import Expect
 import Test exposing (Test, describe, test)
 
 
-{-| Press keys with `pause` milliseconds between them.
--}
-pressPausing : Float -> List String -> Session -> Session
-pressPausing pause keys session =
+press : List String -> Session -> Session
+press keys session =
     List.foldl
         (\key current ->
-            case Session.pressWith (Just { keys = ( ';', ';' ), sinceLastKey = pause }) (always True) key current of
+            case Session.press (always True) key current of
                 Session.Ran ran ->
                     ran.session
 
@@ -33,13 +37,6 @@ pressPausing pause keys session =
         keys
 
 
-{-| Quick typing: 100 ms between keys.
--}
-press : List String -> Session -> Session
-press =
-    pressPausing 100
-
-
 start : Session
 start =
     Session.start "Who are ?\n"
@@ -52,34 +49,29 @@ textAndMode session =
 
 suite : Test
 suite =
-    describe "Escape keys"
-        [ test ";; in Insert mode goes back to Normal mode and leaves no ; behind" <|
-            \_ -> press [ "i", "y", "o", "u", ";", ";" ] start |> textAndMode |> Expect.equal ( "youWho are ?\n", Normal )
-        , test "one ; is typed as text" <|
-            \_ -> press [ "i", ";" ] start |> textAndMode |> Expect.equal ( ";Who are ?\n", Insert )
-        , test "; followed by another key types both" <|
-            \_ -> press [ "i", ";", "x" ] start |> textAndMode |> Expect.equal ( ";xWho are ?\n", Insert )
-        , test ";;; leaves Insert mode once; the third ; is a Normal-mode key" <|
-            \_ -> press [ "i", ";", ";", ";" ] start |> textAndMode |> Expect.equal ( "Who are ?\n", Normal )
-        , test "in Normal mode ;; does nothing to the text" <|
-            \_ -> press [ "l", ";", ";" ] start |> textAndMode |> Expect.equal ( "Who are ?\n", Normal )
-        , test "a pause longer than the timeout between the two keys types both" <|
-            \_ -> pressPausing (Session.escapeTimeout + 1) [ "i", ";", ";" ] start |> textAndMode |> Expect.equal ( ";;Who are ?\n", Insert )
-        , test "a pause of exactly the timeout still counts" <|
-            \_ -> pressPausing Session.escapeTimeout [ "i", ";", ";" ] start |> textAndMode |> Expect.equal ( "Who are ?\n", Normal )
-        , test "plain press has no escape keys" <|
+    describe "j k leaves Insert mode"
+        [ test "j k in Insert mode goes back to Normal mode and leaves no j behind" <|
+            \_ -> press [ "i", "y", "o", "u", "j", "k" ] start |> textAndMode |> Expect.equal ( "youWho are ?\n", Normal )
+        , test "j alone waits: nothing typed yet, still Insert mode, and the menu is open" <|
             \_ ->
-                List.foldl
-                    (\key current ->
-                        case Session.press (always True) key current of
-                            Session.Ran ran ->
-                                ran.session
-
-                            _ ->
-                                current
-                    )
-                    start
-                    [ "i", ";", ";" ]
-                    |> textAndMode
-                    |> Expect.equal ( ";;Who are ?\n", Insert )
+                press [ "i", "j" ] start
+                    |> (\session -> ( textAndMode session, Session.isAfterJ session ))
+                    |> Expect.equal ( ( "Who are ?\n", Insert ), True )
+        , test "j j types one j" <|
+            \_ -> press [ "i", "j", "j" ] start |> textAndMode |> Expect.equal ( "jWho are ?\n", Insert )
+        , test "j followed by another key types both" <|
+            \_ -> press [ "i", "j", "a" ] start |> textAndMode |> Expect.equal ( "jaWho are ?\n", Insert )
+        , test "after j, Esc types the j and leaves Insert mode" <|
+            \_ -> press [ "i", "j", "Escape" ] start |> textAndMode |> Expect.equal ( "jWho are ?\n", Normal )
+        , test "the menu closes after the next key" <|
+            \_ -> press [ "i", "j", "a" ] start |> Session.isAfterJ |> Expect.equal False
+        , test "in Normal mode j moves down as always" <|
+            \_ ->
+                Session.start "one\ntwo\n"
+                    |> press [ "j", "k", "j" ]
+                    |> Session.buffer
+                    |> Core.cursorLineColumn
+                    |> Expect.equal ( 2, 1 )
+        , test "j k counts two keystrokes" <|
+            \_ -> press [ "i", "j", "k" ] start |> Session.keystrokes |> Expect.equal 3
         ]

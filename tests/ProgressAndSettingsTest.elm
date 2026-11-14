@@ -59,11 +59,16 @@ suite =
                     Decode.decodeString (Settings.decoder (Settings.guess "de-CH")) """{ "layout": "dvorak", "soundOn": false }"""
                         |> Result.map (\s -> ( s.language, s.layout, s.soundOn ))
                         |> Expect.equal (Ok ( German, SwissQwertz, False ))
+            , test "escape keys saved before #110 are ignored" <|
+                \_ ->
+                    Decode.decodeString (Settings.decoder (Settings.guess "de-CH")) """{ "layout": "us", "escapeKeys": ";;" }"""
+                        |> Result.map .layout
+                        |> Expect.equal (Ok UsQwerty)
             , test "settings survive saving and loading" <|
                 \_ ->
                     let
                         settings =
-                            { language = English, layout = FrenchAzerty, soundOn = False, unlockAll = True, escapeKeys = Just ";;" }
+                            { language = English, layout = FrenchAzerty, soundOn = False, unlockAll = True }
                     in
                     Settings.encode settings
                         |> Decode.decodeValue (Settings.decoder (Settings.guess "de-CH"))

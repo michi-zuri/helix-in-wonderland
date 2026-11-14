@@ -21,7 +21,7 @@ import Texts
 
 context : Context
 context =
-    { texts = Texts.forLanguage English, layout = UsQwerty, escapeKeys = Nothing }
+    { texts = Texts.forLanguage English, layout = UsQwerty }
 
 
 press : List String -> Run Curiouser.Model -> Run Curiouser.Model

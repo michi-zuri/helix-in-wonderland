@@ -22,7 +22,7 @@ import Texts exposing (Texts)
 
 contextIn : Language -> Context
 contextIn language =
-    { texts = Texts.forLanguage language, layout = SwissQwertz, escapeKeys = Nothing }
+    { texts = Texts.forLanguage language, layout = SwissQwertz }
 
 
 english : Context
@@ -164,7 +164,7 @@ stageHas wanted run =
 
 hints : Texts -> List String
 hints texts =
-    [ texts.littleDoor.hintFind, texts.littleDoor.hintPin, texts.littleDoor.hintTurn Nothing, texts.littleDoor.hintTurn (Just ";;"), texts.littleDoor.hintBound ]
+    [ texts.littleDoor.hintFind, texts.littleDoor.hintPin, texts.littleDoor.hintTurn, texts.littleDoor.hintBound ]
 
 
 {-| A hint dialog is open (#93), it shows `wanted` once its letters have
@@ -206,7 +206,7 @@ dialogLines context run =
 
 allLines : Texts -> List String
 allLines texts =
-    hints texts ++ [ texts.caterpillar.escTip, texts.escapeKeysWork ";;", texts.littleDoor.keySlipped ]
+    hints texts ++ [ texts.caterpillar.escTip, texts.littleDoor.keySlipped ]
 
 
 unique : List String -> List String
@@ -332,13 +332,15 @@ suite =
         , describe "the key is Insert mode"
             [ test "i puts the key in: INSERT" <|
                 \_ -> start "1" |> pressIn english [ "i" ] |> modeOf |> Expect.equal (Just Insert)
-            , test "with the key in, h j k l type letters" <|
+            , test "with the key in, h k l type letters, and j j a j (#110)" <|
                 \_ ->
                     start "1"
-                        |> pressIn english [ "i", "j", "k" ]
+                        |> pressIn english [ "i", "h", "j", "j", "k", "l" ]
                         |> textOf
-                        |> String.startsWith "jkAlice"
+                        |> String.startsWith "hjklAlice"
                         |> Expect.equal True
+            , test "with the key in, j k pulls it out (#110)" <|
+                \_ -> start "1" |> pressIn english [ "i", "j", "k" ] |> modeOf |> Expect.equal (Just Normal)
             , test "Esc pulls it out: NORMAL" <|
                 \_ -> start "1" |> pressIn english [ "i", "Escape" ] |> modeOf |> Expect.equal (Just Normal)
             , test "c on an emoji lets it tumble out and puts the key in (#107)" <|
@@ -347,27 +349,32 @@ suite =
                         |> pressIn english (keys [ "j", "8l", "c" ])
                         |> (\run -> ( modeOf run, String.contains "She was  to see" (textOf run) ))
                         |> Expect.equal ( Just Insert, True )
-            , test "the player's own escape keys pull the key out too" <|
+            , test "j k pulls the key out too (#110)" <|
                 \_ ->
-                    let
-                        withEscapeKeys =
-                            { english | escapeKeys = Just ( ';', ';' ) }
-                    in
-                    startIn withEscapeKeys "1"
-                        |> pressIn withEscapeKeys
+                    start "1"
+                        |> pressIn english
                             (List.concatMap
                                 (\key ->
                                     if key == "Escape" then
-                                        [ ";", ";" ]
+                                        [ "j", "k" ]
 
                                     else
                                         [ key ]
                                 )
                                 (keys (route English "1"))
                             )
-                        |> readOutro withEscapeKeys
+                        |> readOutro english
                         |> Playthrough.finishedWith
                         |> Expect.equal (Just 1)
+            , test "while j waits, the little menu shows k and j (#110)" <|
+                \_ ->
+                    start "1"
+                        |> pressIn english (keys [ "6lihad" ])
+                        |> pressIn english [ "j" ]
+                        |> Expect.all
+                            [ stageHas english.texts.keyMenu.normal
+                            , stageHas english.texts.keyMenu.typeJ
+                            ]
             ]
         , describe "keys that come later stay locked"
             (List.map
@@ -479,9 +486,9 @@ suite =
             [ test "first: find a lock" <|
                 \_ -> start "1" |> onlyHint english.texts.littleDoor.hintFind
             , test "with the key in: type, then Esc" <|
-                \_ -> start "1" |> pressIn english (keys [ "6l", "i" ]) |> onlyHint (english.texts.littleDoor.hintTurn Nothing)
+                \_ -> start "1" |> pressIn english (keys [ "6l", "i" ]) |> onlyHint english.texts.littleDoor.hintTurn
             , test "typing h j k l with the key in, as if to walk: the key binds you" <|
-                \_ -> start "1" |> pressIn english (keys [ "6l", "ij" ]) |> onlyHint english.texts.littleDoor.hintBound
+                \_ -> start "1" |> pressIn english (keys [ "6l", "ihk" ]) |> onlyHint english.texts.littleDoor.hintBound
             , test "on an emoji: c (#107)" <|
                 \_ ->
                     start "1"
@@ -496,27 +503,13 @@ suite =
                     startIn qwerty "1"
                         |> pressIn qwerty (keys [ "6l", "i" ])
                         |> dialogLines qwerty
-                        |> Expect.equal [ english.texts.littleDoor.hintTurn Nothing, english.texts.caterpillar.escTip ]
+                        |> Expect.equal [ english.texts.littleDoor.hintTurn, english.texts.caterpillar.escTip ]
             , test "on QWERTZ, where [ needs AltGr, no word about Ctrl+[ (#97)" <|
                 \_ ->
                     start "1"
                         |> pressIn english (keys [ "6l", "i" ])
                         |> dialogLines english
-                        |> Expect.equal [ english.texts.littleDoor.hintTurn Nothing ]
-            , test "German, with escape keys: the sentence names them (#97)" <|
-                \_ ->
-                    (contextIn German).texts.littleDoor.hintTurn (Just ";;")
-                        |> Expect.equal "Der Schlüssel steckt. Tippe die fehlenden Buchstaben, dann ziehe den Schlüssel wieder heraus, indem du Esc oder deine alternative Tastenkombination ;; drückst."
-            , test "with escape keys, the key-in hint names them, in one line (#97)" <|
-                \_ ->
-                    let
-                        withEscapeKeys =
-                            { english | escapeKeys = Just ( ';', ';' ) }
-                    in
-                    startIn withEscapeKeys "1"
-                        |> pressIn withEscapeKeys (keys [ "6l", "i" ])
-                        |> dialogLines withEscapeKeys
-                        |> Expect.equal [ english.texts.littleDoor.hintTurn (Just ";;") ]
+                        |> Expect.equal [ english.texts.littleDoor.hintTurn ]
             , test "only once: the second time the key goes in, no dialog" <|
                 \_ ->
                     start "1"
