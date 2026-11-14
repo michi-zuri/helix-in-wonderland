@@ -114,22 +114,22 @@ route : Language -> String -> List String
 route language difficulty =
     case ( language, difficulty ) of
         ( English, "1" ) ->
-            [ "6lihad⎋", "jcglad⎋", "j2lihalf⎋", "j9lchall⎋" ]
+            [ "6lihad⎋", "jhcglad⎋", "jlihalf⎋", "j8lchall⎋" ]
 
         ( English, "2" ) ->
-            [ "6lihad⎋", "23lcglad⎋", "j17hchalf⎋", "2lias⎋", "7lias⎋", "j24hishall⎋", "2lcask⎋", "j4liall⎋", "12lihad⎋", "4lcflash⎋" ]
+            [ "6lihad⎋", "22lcglad⎋", "j17hchalf⎋", "lias⎋", "6lias⎋", "j25hishall⎋", "lcask⎋", "j3liall⎋", "11lihad⎋", "3lcflash⎋" ]
 
         ( English, _ ) ->
-            [ "6lihad⎋", "35lcglad⎋", "j6hihad⎋", "5lcask⎋", "j29hishall⎋", "11lcall⎋", "j3lchalf⎋", "2lias⎋", "j24hcalas⎋", "j32lias⎋", "6lihad⎋", "j18hia⎋", "2lchall⎋", "j15lihad⎋" ]
+            [ "6lihad⎋", "34lcglad⎋", "j6hihad⎋", "4lcask⎋", "j30hishall⎋", "10lcall⎋", "j2lchalf⎋", "lias⎋", "j25hcalas⎋", "j31lias⎋", "5lihad⎋", "j18hia⎋", "lchall⎋", "j14lihad⎋" ]
 
         ( German, "1" ) ->
-            [ "6lisah⎋", "j5hclag⎋", "j15lials⎋", "j18hcsah⎋" ]
+            [ "6lisah⎋", "j6hclag⎋", "j14lials⎋", "j19hcsah⎋" ]
 
         ( German, "2" ) ->
-            [ "6lisah⎋", "24lclag⎋", "j9hials⎋", "7lcdas⎋", "j30hilass⎋", "21lcja⎋", "j13hidass⎋", "5lcda⎋" ]
+            [ "6lisah⎋", "23lclag⎋", "j10hials⎋", "6lcdas⎋", "j31hilass⎋", "20lcja⎋", "j13hidass⎋", "4lcda⎋" ]
 
         ( German, _ ) ->
-            [ "6lisah⎋", "j5hilag⎋", "29lcsah⎋", "j8hida⎋", "j6lials⎋", "17lcdas⎋", "j36hilass⎋", "21lcja⎋", "jhidas⎋", "j5hida⎋", "j11lcsah⎋" ]
+            [ "6lisah⎋", "j6hilag⎋", "28lcsah⎋", "j8hida⎋", "j5lials⎋", "16lcdas⎋", "j36hilass⎋", "20lcja⎋", "j2hidas⎋", "j6hida⎋", "j10lcsah⎋" ]
 
 
 nameOf : Language -> String
@@ -497,7 +497,7 @@ suite =
             , test "on an emoji: c (#107)" <|
                 \_ ->
                     start "1"
-                        |> pressIn english (keys [ "6lihad⎋", "j" ])
+                        |> pressIn english (keys [ "6lihad⎋", "jh" ])
                         |> onlyHint english.texts.littleDoor.hintPin
             , test "without escape keys, on US QWERTY: the key-in hint names Esc, and Ctrl+[ follows" <|
                 \_ ->

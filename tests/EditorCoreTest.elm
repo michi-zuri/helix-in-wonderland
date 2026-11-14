@@ -130,9 +130,21 @@ suite =
                         |> press [ "i" ]
                         |> Core.mode
                         |> Expect.equal Insert
-            , test "after Escape the cursor rests on the last typed character" <|
+            , test "after Escape the cursor stays where it was, after the typed text, as in Helix (#115)" <|
                 \_ ->
-                    Core.fromString "ab" |> press ("i" :: typeIn "xy" ++ [ "Escape" ]) |> Core.head |> Expect.equal 1
+                    Core.fromString "ab" |> press ("i" :: typeIn "xy" ++ [ "Escape" ]) |> Core.head |> Expect.equal 2
+            , test "i, Escape, i: the cursor is still in the same place" <|
+                \_ ->
+                    Core.fromString "abcd"
+                        |> press [ "l", "l", "i" ]
+                        |> (\inserting -> ( Core.head inserting, inserting |> press [ "Escape", "i" ] |> Core.head ))
+                        |> Expect.equal ( 2, 2 )
+            , test "typing, Escape, i: typing goes on where it left off" <|
+                \_ ->
+                    Core.fromString "ad" |> press ("l" :: "i" :: typeIn "b" ++ [ "Escape", "i" ] ++ typeIn "c") |> Core.toString |> Expect.equal "abcd\n"
+            , test "c, Escape, i: the cursor is still after the new text" <|
+                \_ ->
+                    Core.fromString "a?d" |> press ("l" :: "c" :: typeIn "bc" ++ [ "Escape", "i" ] ++ typeIn "x") |> Core.toString |> Expect.equal "abcxd\n"
             , test "Backspace removes the character before the cursor" <|
                 \_ ->
                     Core.fromString "ab" |> press ("a" :: typeIn "xyz" ++ [ "Backspace", "Escape" ]) |> Core.toString |> Expect.equal "axyb\n"

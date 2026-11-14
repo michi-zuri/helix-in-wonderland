@@ -406,12 +406,10 @@ apply command ((Buffer b) as buffer) =
                 buffer
 
         ( Insert, ExitInsert ) ->
-            -- Like Helix, the cursor steps back onto the last typed character.
-            let
-                position =
-                    max (lineStart b.chars b.head) (b.head - 1)
-            in
-            Buffer { b | mode = Normal, head = position, anchor = position }
+            -- Like Helix (unlike Vim), the cursor stays where it is: on the
+            -- character after the typed text, so Esc then i types on where
+            -- it left off (#115).
+            Buffer { b | mode = Normal }
                 |> rememberColumn
 
         _ ->

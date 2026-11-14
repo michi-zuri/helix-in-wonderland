@@ -205,7 +205,9 @@ order above holds. Read old issues with that in mind.
   through the chapter and fails with a log of cursor, selection, keystrokes and
   current line after each step. Tune the route step by step, then turn it into
   a permanent test and put its keystroke count in `Texts`. Useful facts about
-  this Helix model: after Esc the cursor sits on the last typed character;
+  this Helix model: after Esc the cursor stays where it was, on the character
+  after the typed text, as in Helix (not Vim; #115), so Esc then `i` goes on
+  in the same place;
   `j` onto a shorter line lands past its end, where `i` appends; `w` selects the
   word plus its trailing space, so `c` needs the space typed back.
 - **Playthrough tests** (`tests/Playthrough.elm`: `start`, `send`, `sendAll`,

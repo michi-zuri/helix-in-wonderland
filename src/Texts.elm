@@ -558,7 +558,7 @@ english =
                 , "She looked along a hall to the far end."
                 , "It was the loveliest garden, and she had to go in."
                 ]
-        , madBest = 114
+        , madBest = 112
         , chooseTitle = "How hard should it be?"
         , chooseHint = "j / k to choose · Enter to start"
         , easyInfo = "Four easy locks."
@@ -975,7 +975,7 @@ german =
                 , "Dahinter war ein Gang, und da hinten ein Garten."
                 , "Es war der schönste Garten, den sie je sah."
                 ]
-        , madBest = 86
+        , madBest = 87
         , chooseTitle = "Wie schwierig darf es sein?"
         , chooseHint = "j / k zum Wählen · Enter zum Starten"
         , easyInfo = "Vier einfache Schlösser."
