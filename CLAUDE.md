@@ -207,7 +207,8 @@ order above holds. Read old issues with that in mind.
   a permanent test and put its keystroke count in `Texts`. Useful facts about
   this Helix model: after Esc the cursor stays where it was, on the character
   after the typed text, as in Helix (not Vim; #115), so Esc then `i` goes on
-  in the same place;
+  in the same place; `h`/`l` go on across line ends, the line break being a
+  place of its own (#119), so a big `h` count no longer stops at the line start;
   `j` onto a shorter line lands past its end, where `i` appends; `w` selects the
   word plus its trailing space, so `c` needs the space typed back.
 - **Playthrough tests** (`tests/Playthrough.elm`: `start`, `send`, `sendAll`,

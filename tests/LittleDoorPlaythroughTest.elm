@@ -594,12 +594,12 @@ suite =
                         |> Expect.equal [ True, False, False, False ]
              , test "two lines joined: three locks" <|
                 \_ ->
-                    locksAfter (keys [ "j", "20h", "i" ] ++ [ "Backspace" ])
+                    locksAfter (keys [ "j", "i" ] ++ [ "Backspace" ])
                         |> List.length
                         |> Expect.equal 3
              , test "joined and split again with Enter: four locks" <|
                 \_ ->
-                    locksAfter (keys [ "j", "20h", "i" ] ++ [ "Backspace", "Enter" ])
+                    locksAfter (keys [ "j", "i" ] ++ [ "Backspace", "Enter" ])
                         |> List.length
                         |> Expect.equal 4
              ]
