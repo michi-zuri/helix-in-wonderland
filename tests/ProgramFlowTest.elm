@@ -202,14 +202,14 @@ suite =
                     |> press [ "Enter", "Enter", "Enter", "Enter", "Enter", "Enter" ]
                     |> typeIn "had"
                     |> press [ "Escape" ]
-                    |> typeIn "j"
+                    |> typeIn "jh"
                     -- On the emoji: c replaces it with a word (#107).
                     |> press [ "Enter", "Enter" ]
                     |> typeIn "cglad"
                     |> press [ "Escape" ]
-                    |> typeIn "j2lihalf"
+                    |> typeIn "jlihalf"
                     |> press [ "Escape" ]
-                    |> typeIn "j9lchall"
+                    |> typeIn "j8lchall"
                     |> press [ "Escape" ]
                     |> press (List.repeat 4 "Enter")
                     |> ProgramTest.ensureViewHas [ text "Chapter complete!" ]

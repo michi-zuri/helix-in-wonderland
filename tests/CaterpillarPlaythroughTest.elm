@@ -121,10 +121,10 @@ madRoute : Language -> List String
 madRoute language =
     case language of
         English ->
-            [ "3w", "cold⎋", "6w", "cyoung ⎋", "j", "6h", "ivery ⎋", "j", "6h", "w", "cstand ⎋", "3w", "chead ⎋", "jjxd", "gla son,⎋", "j", "gh", "5w", "cinjure ⎋", "j", "7h", "iperfectly ⎋", "j", "i again.\"⎋" ]
+            [ "3w", "cold⎋", "6w", "cyoung ⎋", "j", "6h", "ivery ⎋", "j", "7h", "w", "cstand ⎋", "3w", "chead ⎋", "jjxd", "gla son,⎋", "j", "gh", "5w", "cinjure ⎋", "j", "8h", "iperfectly ⎋", "j", "i again.\"⎋" ]
 
         German ->
-            [ "3w", "calt⎋", "7w", "cjunge ⎋", "j", "15h", "ischon ⎋", "j", "16h", "w", "cstehst ⎋", "3w", "cKopf⎋", "jjxd", "gla Sohn,⎋", "j", "4h", "w", "cHirn⎋", "j", "11h", "i sicher⎋", "j", "w", "a Stirn.\"⎋" ]
+            [ "3w", "calt⎋", "7w", "cjunge ⎋", "j", "15h", "ischon ⎋", "j", "17h", "w", "cstehst ⎋", "3w", "cKopf⎋", "jjxd", "gla Sohn,⎋", "j", "4h", "w", "cHirn⎋", "j", "12h", "i sicher⎋", "j", "w", "a Stirn.\"⎋" ]
 
 
 nameOf : Language -> String
