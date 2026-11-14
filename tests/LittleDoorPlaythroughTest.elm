@@ -487,8 +487,13 @@ suite =
                 \_ -> start "1" |> onlyHint english.texts.littleDoor.hintFind
             , test "with the key in: type, then Esc" <|
                 \_ -> start "1" |> pressIn english (keys [ "6l", "i" ]) |> onlyHint english.texts.littleDoor.hintTurn
-            , test "typing h j k l with the key in, as if to walk: the key binds you" <|
-                \_ -> start "1" |> pressIn english (keys [ "6l", "ihk" ]) |> onlyHint english.texts.littleDoor.hintBound
+            , test "the first time the key goes in, the dialog also says h k l type letters now (#113)" <|
+                \_ ->
+                    start "1"
+                        |> pressIn english (keys [ "6l", "i" ])
+                        |> dialogLines english
+                        |> List.member english.texts.littleDoor.hintBound
+                        |> Expect.equal True
             , test "on an emoji: c (#107)" <|
                 \_ ->
                     start "1"
@@ -503,13 +508,13 @@ suite =
                     startIn qwerty "1"
                         |> pressIn qwerty (keys [ "6l", "i" ])
                         |> dialogLines qwerty
-                        |> Expect.equal [ english.texts.littleDoor.hintTurn, english.texts.caterpillar.escTip ]
+                        |> Expect.equal [ english.texts.littleDoor.hintTurn, english.texts.littleDoor.hintBound, english.texts.caterpillar.escTip ]
             , test "on QWERTZ, where [ needs AltGr, no word about Ctrl+[ (#97)" <|
                 \_ ->
                     start "1"
                         |> pressIn english (keys [ "6l", "i" ])
                         |> dialogLines english
-                        |> Expect.equal [ english.texts.littleDoor.hintTurn ]
+                        |> Expect.equal [ english.texts.littleDoor.hintTurn, english.texts.littleDoor.hintBound ]
             , test "only once: the second time the key goes in, no dialog" <|
                 \_ ->
                     start "1"
