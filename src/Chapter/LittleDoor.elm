@@ -445,12 +445,11 @@ giveHints context ( model, effects ) =
                 ( model, effects )
 
             else if isInsert work.session then
-                -- The hint names Esc and j k (#110), then that h k l type letters
-                -- now, right away (#113); Ctrl+[ is the fallback for browsers that
+                -- One line: type the letters (h k l too), out with Esc or j k
+                -- (#110, #113, #117); Ctrl+[ is the fallback for browsers that
                 -- keep Esc, told only where [ is a plain key.
                 ( tell KeyIsIn
                     (Dialog.say Narrator (.littleDoor >> .hintTurn)
-                        :: Dialog.say Narrator (.littleDoor >> .hintBound)
                         :: (if Layout.typesBracketEasily context.layout then
                                 [ Dialog.say Narrator (.caterpillar >> .escTip) ]
 
