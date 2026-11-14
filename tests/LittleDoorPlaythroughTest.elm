@@ -164,7 +164,7 @@ stageHas wanted run =
 
 hints : Texts -> List String
 hints texts =
-    [ texts.littleDoor.hintFind, texts.littleDoor.hintPin, texts.littleDoor.hintTurn, texts.littleDoor.hintBound ]
+    [ texts.littleDoor.hintFind, texts.littleDoor.hintPin, texts.littleDoor.hintTurn ]
 
 
 {-| A hint dialog is open (#93), it shows `wanted` once its letters have
@@ -487,13 +487,12 @@ suite =
                 \_ -> start "1" |> onlyHint english.texts.littleDoor.hintFind
             , test "with the key in: type, then Esc" <|
                 \_ -> start "1" |> pressIn english (keys [ "6l", "i" ]) |> onlyHint english.texts.littleDoor.hintTurn
-            , test "the first time the key goes in, the dialog also says h k l type letters now (#113)" <|
+            , test "the first time the key goes in, one line says h k l type letters too, and how to get out (#117)" <|
                 \_ ->
                     start "1"
                         |> pressIn english (keys [ "6l", "i" ])
                         |> dialogLines english
-                        |> List.member english.texts.littleDoor.hintBound
-                        |> Expect.equal True
+                        |> Expect.equal [ english.texts.littleDoor.hintTurn ]
             , test "on an emoji: c (#107)" <|
                 \_ ->
                     start "1"
@@ -508,13 +507,13 @@ suite =
                     startIn qwerty "1"
                         |> pressIn qwerty (keys [ "6l", "i" ])
                         |> dialogLines qwerty
-                        |> Expect.equal [ english.texts.littleDoor.hintTurn, english.texts.littleDoor.hintBound, english.texts.caterpillar.escTip ]
+                        |> Expect.equal [ english.texts.littleDoor.hintTurn, english.texts.caterpillar.escTip ]
             , test "on QWERTZ, where [ needs AltGr, no word about Ctrl+[ (#97)" <|
                 \_ ->
                     start "1"
                         |> pressIn english (keys [ "6l", "i" ])
                         |> dialogLines english
-                        |> Expect.equal [ english.texts.littleDoor.hintTurn, english.texts.littleDoor.hintBound ]
+                        |> Expect.equal [ english.texts.littleDoor.hintTurn ]
             , test "only once: the second time the key goes in, no dialog" <|
                 \_ ->
                     start "1"

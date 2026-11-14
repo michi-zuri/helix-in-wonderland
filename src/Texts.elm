@@ -182,7 +182,6 @@ type alias LittleDoorTexts =
     , hintFind : String
     , hintPin : String
     , hintTurn : String
-    , hintBound : String
     , linesRight : Int -> Int -> String
     , keySlipped : String
     , slips : String
@@ -566,8 +565,7 @@ english =
         , madInfo = "A long story, and the key slips out if you wait."
         , hintFind = "Find a lock: a gap or a wrong letter. Walk there with h j k l, then press i to put the key in."
         , hintPin = "An emoji! Press c to replace it with the right word."
-        , hintTurn = "The key is in. Type the missing letters, then pull the key out again by pressing Esc or the keys j k."
-        , hintBound = "The key is in the lock: h k l type letters now. Pull it out with Esc or j k to walk."
+        , hintTurn = "The key is in the lock: type the missing letters (h k l type letters now too), then pull the key out with Esc or j k."
         , linesRight = \right total -> "Lines right: " ++ String.fromInt right ++ " of " ++ String.fromInt total
         , keySlipped = "The key slipped out, and the letters fell out with it! Type the word in one go, then pull the key out in time."
         , slips = "Key slipped"
@@ -983,8 +981,7 @@ german =
         , madInfo = "Eine lange Geschichte, und der Schlüssel rutscht heraus, wenn du wartest."
         , hintFind = "Such ein Schloss: eine Lücke oder einen falschen Buchstaben. Geh mit h j k l hin, dann steckt i den Schlüssel hinein."
         , hintPin = "Ein Emoji! Drücke c, um es durch das richtige Wort zu ersetzen."
-        , hintTurn = "Der Schlüssel steckt. Tippe die fehlenden Buchstaben, dann ziehe den Schlüssel wieder heraus, indem du Esc oder die Tastenkombination j k drückst."
-        , hintBound = "Der Schlüssel steckt im Schloss: h k l tippen jetzt Buchstaben. Zieh ihn mit Esc oder j k heraus, um zu gehen."
+        , hintTurn = "Der Schlüssel steckt im Schloss: Tippe die fehlenden Buchstaben (auch h k l tippen jetzt Buchstaben), dann zieh ihn mit Esc oder j k heraus."
         , linesRight = \right total -> "Richtige Zeilen: " ++ String.fromInt right ++ " von " ++ String.fromInt total
         , keySlipped = "Der Schlüssel ist herausgerutscht, und die Buchstaben sind mit ihm herausgefallen! Tippe das Wort in einem Zug und zieh den Schlüssel rechtzeitig heraus."
         , slips = "Herausgerutscht"
