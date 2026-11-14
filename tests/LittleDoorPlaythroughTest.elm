@@ -382,7 +382,7 @@ suite =
                 [ "w d", "x d", "a", "g l", "u", "e", "b" ]
             )
         , describe "mad: the key slips out if you wait"
-            [ test "after more than two seconds with the key in, back to NORMAL; the first time a dialog says why" <|
+            [ test "after more than a second with the key in, back to NORMAL; the first time a dialog says why" <|
                 \_ ->
                     start "3"
                         |> pressIn english [ "6", "l", "i", "h" ]
@@ -411,22 +411,46 @@ suite =
                         |> wait (LittleDoor.slipMilliseconds - 200)
                         |> modeOf
                         |> Expect.equal (Just Insert)
-            , test "a little under two seconds is fine" <|
+            , test "a little under a second is fine" <|
                 \_ ->
                     start "3"
                         |> pressIn english [ "6", "l", "i", "h" ]
                         |> wait (LittleDoor.slipMilliseconds - 200)
                         |> modeOf
                         |> Expect.equal (Just Insert)
-            , test "every key typed starts the two seconds again" <|
+            , test "every key typed starts the clock again" <|
                 \_ ->
                     start "3"
                         |> pressIn english [ "6", "l", "i", "h" ]
-                        |> wait 1500
+                        |> wait (LittleDoor.slipMilliseconds * 0.8)
                         |> pressIn english [ "a" ]
-                        |> wait 1500
+                        |> wait (LittleDoor.slipMilliseconds * 0.8)
                         |> modeOf
                         |> Expect.equal (Just Insert)
+            , test "a slip throws away what was typed since the key went in (#109)" <|
+                \_ ->
+                    start "3"
+                        |> pressIn english [ "6", "l", "i", "h", "a" ]
+                        |> wait (LittleDoor.slipMilliseconds + 200)
+                        |> textOf
+                        |> Expect.equal (english.texts.littleDoor.madStart ++ "\n")
+            , test "after c, a slip brings the emoji back too" <|
+                \_ ->
+                    start "3"
+                        |> pressIn english (keys [ "6lihad⎋", "35l", "cgl" ])
+                        |> wait (LittleDoor.slipMilliseconds + 200)
+                        |> textOf
+                        |> String.lines
+                        |> List.head
+                        |> Expect.equal (Just "Alice had the tiny golden key, and she was 😊.")
+            , test "pulled out in time, the word stays" <|
+                \_ ->
+                    start "3"
+                        |> pressIn english (keys [ "6lihad⎋" ])
+                        |> wait (LittleDoor.slipMilliseconds + 200)
+                        |> textOf
+                        |> String.startsWith "Alice had the"
+                        |> Expect.equal True
             , test "on challenge the key never slips" <|
                 \_ ->
                     start "2"
