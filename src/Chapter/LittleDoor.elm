@@ -63,7 +63,6 @@ type alias Model =
     , choice : Choice
     , difficulty : Maybe Difficulty
     , work : Maybe Work
-    , typedThisVisit : String
     , beforeKeyIn : Maybe Buffer
     , hintsGiven : List Hint
     , backspaces : Int
@@ -88,7 +87,6 @@ type Hint
     = FindALock
     | KeyIsIn
     | OnEmoji
-    | KeyBinds
     | KeySlipped
 
 
@@ -111,7 +109,6 @@ init =
     , choice = DifficultyChoice.start 0
     , difficulty = Nothing
     , work = Nothing
-    , typedThisVisit = ""
     , beforeKeyIn = Nothing
     , hintsGiven = []
     , backspaces = 0
@@ -302,14 +299,14 @@ edit context key model =
 notice : Command -> Model -> ( Model, List Effect )
 notice command model =
     case command of
-        TypeChar char ->
-            ( { model | typedThisVisit = model.typedThisVisit ++ String.fromChar char }, [ PlaySound TickSound ] )
+        TypeChar _ ->
+            ( model, [ PlaySound TickSound ] )
 
         Backspace ->
-            ( { model | backspaces = model.backspaces + 1, typedThisVisit = String.dropRight 1 model.typedThisVisit }, [ PlaySound StepSound ] )
+            ( { model | backspaces = model.backspaces + 1 }, [ PlaySound StepSound ] )
 
         ExitInsert ->
-            ( { model | typedThisVisit = "" }, [ PlaySound CorrectSound ] )
+            ( model, [ PlaySound CorrectSound ] )
 
         InsertBefore ->
             putKeyIn model
@@ -323,7 +320,7 @@ notice command model =
 
 putKeyIn : Model -> ( Model, List Effect )
 putKeyIn model =
-    ( { model | typedThisVisit = "" }, [ PlaySound PickupSound ] )
+    ( model, [ PlaySound PickupSound ] )
 
 
 {-| On mad, a key left in the lock too long slips out: back to Normal mode,
@@ -348,7 +345,6 @@ slipIfWaiting model =
                         { model
                             | work = Just { work | session = session }
                             , slips = model.slips + 1
-                            , typedThisVisit = ""
                             , beforeKeyIn = Nothing
                         }
                 in
@@ -438,7 +434,6 @@ score texts model =
   - the key goes in for the first time: type, then Esc (and the ways to
     Esc when the browser keeps it);
   - Alice stands on an emoji: `c`;
-  - with the key in, `h j k l` typed as if to walk: the key binds you;
   - on mad, the key slips out (see `slipIfWaiting`).
 
 -}
@@ -450,24 +445,22 @@ giveHints context ( model, effects ) =
                 ( model, effects )
 
             else if isInsert work.session then
-                if walkedWithKeyIn model.typedThisVisit work.puzzle.answer then
-                    ( tell KeyBinds [ Dialog.say Narrator (.littleDoor >> .hintBound) ] model, effects )
+                -- The hint names Esc and j k (#110), then that h k l type letters
+                -- now, right away (#113); Ctrl+[ is the fallback for browsers that
+                -- keep Esc, told only where [ is a plain key.
+                ( tell KeyIsIn
+                    (Dialog.say Narrator (.littleDoor >> .hintTurn)
+                        :: Dialog.say Narrator (.littleDoor >> .hintBound)
+                        :: (if Layout.typesBracketEasily context.layout then
+                                [ Dialog.say Narrator (.caterpillar >> .escTip) ]
 
-                else
-                    -- The hint names Esc and j k (#110); Ctrl+[ is the fallback for
-                    -- browsers that keep Esc, told only where [ is a plain key.
-                    ( tell KeyIsIn
-                        (Dialog.say Narrator (.littleDoor >> .hintTurn)
-                            :: (if Layout.typesBracketEasily context.layout then
-                                    [ Dialog.say Narrator (.caterpillar >> .escTip) ]
-
-                                else
-                                    []
-                               )
-                        )
-                        model
-                    , effects
+                            else
+                                []
+                           )
                     )
+                    model
+                , effects
+                )
 
             else if onEmoji work then
                 ( tell OnEmoji [ Dialog.say Narrator (.littleDoor >> .hintPin) ] model, effects )
@@ -496,24 +489,6 @@ tell hint lines model =
 
         [] ->
             model
-
-
-{-| The letters typed with the key in end in `h j k l` and fit no word of
-the answer: the player tried to walk.
--}
-walkedWithKeyIn : String -> String -> Bool
-walkedWithKeyIn typed answer =
-    let
-        lastIsWalking =
-            String.right 1 typed |> (\last -> last /= "" && String.contains last "hjkl")
-
-        words =
-            String.words (String.toLower answer)
-
-        fitsAWord =
-            List.any (\word -> String.contains typed word) words
-    in
-    lastIsWalking && not fitsAWord
 
 
 {-| The cursor stands on an emoji: a stand-in for a word, which `c` replaces

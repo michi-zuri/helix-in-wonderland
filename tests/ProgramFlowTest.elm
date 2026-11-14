@@ -198,8 +198,8 @@ suite =
                     -- Each hint dialog line takes two Enters: one shows it in full, one goes on (#93).
                     |> press [ "Enter", "Enter" ]
                     |> typeIn "6li"
-                    -- The key is in, and the Esc fallback: two lines.
-                    |> press [ "Enter", "Enter", "Enter", "Enter" ]
+                    -- The key is in, h k l type letters, and the Esc fallback: three lines.
+                    |> press [ "Enter", "Enter", "Enter", "Enter", "Enter", "Enter" ]
                     |> typeIn "had"
                     |> press [ "Escape" ]
                     |> typeIn "j"
