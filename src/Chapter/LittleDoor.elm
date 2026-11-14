@@ -23,7 +23,7 @@ Everything the player types uses only the home row (see `Texts.LittleDoorTexts`)
 import Chapter.Contract as Contract exposing (Context, Effect(..), Sound(..))
 import Chapter.Story as Story exposing (Story)
 import Difficulty exposing (Difficulty(..))
-import Editor.Core as Core exposing (Command(..), Mode(..))
+import Editor.Core as Core exposing (Buffer, Command(..), Mode(..))
 import Editor.Session as Session exposing (Session)
 import Editor.View
 import Html exposing (Html)
@@ -47,11 +47,11 @@ file =
 
 
 {-| On mad, the key slips out of the lock after this long without a key, in
-ms.
+ms, and everything typed since it went in falls out with it (#109).
 -}
 slipMilliseconds : Float
 slipMilliseconds =
-    2000
+    1000
 
 
 
@@ -64,6 +64,7 @@ type alias Model =
     , difficulty : Maybe Difficulty
     , work : Maybe Work
     , typedThisVisit : String
+    , beforeKeyIn : Maybe Buffer
     , hintsGiven : List Hint
     , backspaces : Int
     , slips : Int
@@ -111,6 +112,7 @@ init =
     , difficulty = Nothing
     , work = Nothing
     , typedThisVisit = ""
+    , beforeKeyIn = Nothing
     , hintsGiven = []
     , backspaces = 0
     , slips = 0
@@ -275,7 +277,19 @@ edit context key model =
             work.session
     of
         Session.Ran ran ->
-            { model | work = Just { work | session = ran.session } }
+            { model
+                | work = Just { work | session = ran.session }
+                , beforeKeyIn =
+                    -- What the lines were before the key went in, for mad's slipping key.
+                    if ran.command == InsertBefore || ran.command == Change then
+                        Just ran.before
+
+                    else if ran.command == ExitInsert then
+                        Nothing
+
+                    else
+                        model.beforeKeyIn
+            }
                 |> notice ran.command
                 |> finishIfOpen work.puzzle ran.session
 
@@ -325,11 +339,21 @@ slipIfWaiting model =
         ( Just Mad, Just work ) ->
             if isInsert work.session && Story.isPlaying model.story && model.clock - model.lastKeyAt > slipMilliseconds then
                 let
+                    -- Everything typed since the key went in falls out with it (#109).
+                    session =
+                        case model.beforeKeyIn of
+                            Just before ->
+                                Session.withBuffer before work.session
+
+                            Nothing ->
+                                Session.apply ExitInsert work.session
+
                     slipped =
                         { model
-                            | work = Just { work | session = Session.apply ExitInsert work.session }
+                            | work = Just { work | session = session }
                             , slips = model.slips + 1
                             , typedThisVisit = ""
+                            , beforeKeyIn = Nothing
                         }
                 in
                 -- The first time it is told in a dialog, later only noted.

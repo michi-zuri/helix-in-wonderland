@@ -577,7 +577,7 @@ english =
                         "The key is in. Type the missing letters, then pull the key out again with Esc."
         , hintBound = "The key is in the lock: h j k l type letters now. Pull it out with Esc to walk."
         , linesRight = \right total -> "Lines right: " ++ String.fromInt right ++ " of " ++ String.fromInt total
-        , keySlipped = "The key slipped out! Look first, then type in one go."
+        , keySlipped = "The key slipped out, and the letters fell out with it! Type the word in one go, then pull the key out in time."
         , slips = "Key slipped"
         , ourBest = "Our best"
         , goal = "What the lines should say:"
@@ -1002,7 +1002,7 @@ german =
                         "Der Schlüssel steckt. Tippe die fehlenden Buchstaben, dann ziehe den Schlüssel mit Esc wieder heraus."
         , hintBound = "Der Schlüssel steckt im Schloss: h j k l tippen jetzt Buchstaben. Zieh ihn mit Esc heraus, um zu gehen."
         , linesRight = \right total -> "Richtige Zeilen: " ++ String.fromInt right ++ " von " ++ String.fromInt total
-        , keySlipped = "Der Schlüssel ist herausgerutscht! Zuerst schauen, dann in einem Zug tippen."
+        , keySlipped = "Der Schlüssel ist herausgerutscht, und die Buchstaben sind mit ihm herausgefallen! Tippe das Wort in einem Zug und zieh den Schlüssel rechtzeitig heraus."
         , slips = "Herausgerutscht"
         , ourBest = "Unser Rekord"
         , goal = "So sollen die Zeilen lauten:"

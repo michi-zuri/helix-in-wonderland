@@ -169,7 +169,8 @@ order above holds. Read old issues with that in mind.
   #107). Everything typed is lowercase home row. The puzzles and routes were
   generated from a notation (`{had}` gap, `{😊:glad}` emoji) by a throwaway
   script, then verified in the tests. On
-  mad the key slips out after 2 s without a key (#73). No panel (#93): each
+  mad the key slips out after 1 s without a key and throws away everything typed
+  since it went in (#73, #109). No panel (#93): each
   hint is a dialog told once, the first time it helps; closing a dialog
   counts as a key, so reading never makes the key slip; the goal stands in
   the editor box under the lines, so everything fits on one screen. The door

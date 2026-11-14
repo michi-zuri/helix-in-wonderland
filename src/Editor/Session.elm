@@ -1,6 +1,6 @@
 module Editor.Session exposing
     ( Session, start, fromBuffer, buffer, keystrokes, recentKeys, pendingCount, isWaiting, jumpLabels
-    , Outcome(..), press, pressWith, escapeTimeout, splash, replaceChar, apply, matches, matchesExactly, exactLines, matchingLines
+    , Outcome(..), press, pressWith, escapeTimeout, splash, replaceChar, apply, withBuffer, matches, matchesExactly, exactLines, matchingLines
     )
 
 {-| One player working on one text: the buffer plus what the status line
@@ -22,7 +22,7 @@ key after `g` cancels it.
 selects that word, as in Helix. Esc or a key that matches no label cancels.
 
 @docs Session, start, fromBuffer, buffer, keystrokes, recentKeys, pendingCount, isWaiting, jumpLabels
-@docs Outcome, press, pressWith, escapeTimeout, splash, replaceChar, apply, matches, matchesExactly, exactLines, matchingLines
+@docs Outcome, press, pressWith, escapeTimeout, splash, replaceChar, apply, withBuffer, matches, matchesExactly, exactLines, matchingLines
 
 -}
 
@@ -96,6 +96,14 @@ labelsFor current =
 buffer : Session -> Buffer
 buffer (Session s) =
     s.buffer
+
+
+{-| Put an earlier buffer back, keeping the keystrokes counted so far:
+chapter 3's key slipping out on mad throws away what was typed (#109).
+-}
+withBuffer : Buffer -> Session -> Session
+withBuffer earlier (Session s) =
+    Session { s | buffer = earlier, count = "", afterG = False, jump = Nothing }
 
 
 keystrokes : Session -> Int
