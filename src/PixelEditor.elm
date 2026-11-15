@@ -4,7 +4,8 @@ module PixelEditor exposing (main)
 
 It starts from the game's own pictures (`Pixel.Sprites.catalogue`), so it
 always shows what is really in the game. Paint with the mouse, change
-colours, then send the result as a GitHub issue with one click. The issue
+colours, make the picture bigger when an idea needs room (`Pixel.Canvas`,
+#134), then send the result as a GitHub issue with one click. The issue
 form lives in `.github/ISSUE_TEMPLATE/pixel-art.yml`; ART.md explains the
 whole process.
 
@@ -18,6 +19,7 @@ import Html exposing (Html)
 import Html.Attributes as A
 import Html.Events as E
 import Json.Decode as Decode
+import Pixel.Canvas as Canvas exposing (Side(..))
 import Pixel.Sprite as Sprite
 import Pixel.Sprites as Sprites
 import Project
@@ -56,6 +58,7 @@ type alias Model =
     { links : Project.Links
     , picture : String
     , pixels : Array (Array Char)
+    , added : Canvas.Added
     , palette : List ( Char, String )
     , brush : Char
     , painting : Bool
@@ -84,6 +87,7 @@ load links name =
     { links = links
     , picture = name
     , pixels = Sprite.rows sprite |> List.map (String.toList >> Array.fromList) |> Array.fromList
+    , added = Canvas.none
     , palette = palette
     , brush = palette |> List.head |> Maybe.map Tuple.first |> Maybe.withDefault transparent
     , painting = False
@@ -104,6 +108,7 @@ type Msg
     | ChangedColour Char String
     | AddedColour
     | ResetPicture
+    | Grew Side
 
 
 update : Msg -> Model -> Model
@@ -154,6 +159,13 @@ update msg model =
         ResetPicture ->
             load model.links model.picture
 
+        Grew side ->
+            let
+                bigger =
+                    Canvas.grow side { pixels = model.pixels, added = model.added }
+            in
+            { model | pixels = bigger.pixels, added = bigger.added, changed = True }
+
 
 paint : Int -> Int -> Model -> Model
 paint x y model =
@@ -178,11 +190,15 @@ freeLetter palette =
 -- TEXT FOR THE PROPOSAL
 
 
+{-| The picture as sent: added rows and columns that stayed empty are
+trimmed away.
+-}
 rowsText : Model -> String
 rowsText model =
     model.pixels
         |> Array.toList
         |> List.map (Array.toList >> String.fromList)
+        |> Canvas.trim model.added
         |> String.join "\n"
 
 
@@ -232,7 +248,7 @@ view model =
                 Sprites.catalogue
             )
         , Html.div [ A.class "workspace" ]
-            [ viewGrid model
+            [ Html.div [ A.class "canvas" ] [ viewGrow, viewGrid model ]
             , Html.div [ A.class "side" ]
                 [ Html.h2 [] [ Html.text "Colours · Farben" ]
                 , viewPalette model
@@ -252,6 +268,20 @@ view model =
             , Html.a [ A.href (Project.proposeEditUrl model.links "Pixel editor"), A.target "_blank", A.rel "noopener" ]
                 [ Html.text "Suggest a change to this page · Änderung für diese Seite vorschlagen" ]
             ]
+        ]
+
+
+{-| Room for bigger ideas: one empty row or column more on a side. What
+stays empty is trimmed when the picture is sent.
+-}
+viewGrow : Html Msg
+viewGrow =
+    Html.div [ A.class "grow" ]
+        [ Html.span [] [ Html.text "More room · Mehr Platz:" ]
+        , Html.button [ E.onClick (Grew Top) ] [ Html.text "↑ row on top · Zeile oben" ]
+        , Html.button [ E.onClick (Grew Bottom) ] [ Html.text "↓ row below · Zeile unten" ]
+        , Html.button [ E.onClick (Grew Left) ] [ Html.text "← column left · Spalte links" ]
+        , Html.button [ E.onClick (Grew Right) ] [ Html.text "→ column right · Spalte rechts" ]
         ]
 
 

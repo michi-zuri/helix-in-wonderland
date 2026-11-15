@@ -15,6 +15,9 @@ suggest new ones or improve the old ones.
    - The `.` button is the eraser: it makes a pixel see-through.
    - Click the little colour box next to a letter to change that colour everywhere.
    - "+ new colour" adds a colour with a new letter.
+   - Not enough room for your idea? The **More room** buttons add an empty
+     row or column on any side. Added rows and columns you leave empty are
+     cut off again when you send the picture.
 4. Watch the small preview: that's the size it will roughly have in the game.
 5. Click **Send as a proposal on GitHub**. A form opens with your picture
    already filled in. Write what you changed, then click "Submit new issue".
@@ -73,6 +76,9 @@ kannst neue vorschlagen oder alte verbessern.
    - Der Knopf `.` ist der Radierer: der Pixel wird durchsichtig.
    - Klick auf das kleine Farbfeld neben einem Buchstaben, um diese Farbe überall zu ändern.
    - "+ neue Farbe" fügt eine Farbe mit einem neuen Buchstaben hinzu.
+   - Zu wenig Platz für deine Idee? Die Knöpfe **Mehr Platz** fügen auf
+     jeder Seite eine leere Zeile oder Spalte hinzu. Was du davon leer
+     lässt, wird beim Schicken wieder abgeschnitten.
 4. Schau auf die kleine Vorschau: so gross ist das Bild ungefähr im Spiel.
 5. Klick auf **Als Vorschlag auf GitHub schicken**. Ein Formular geht auf,
    dein Bild ist schon eingetragen. Schreib, was du geändert hast, und klick
