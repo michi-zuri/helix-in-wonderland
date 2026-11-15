@@ -14,28 +14,44 @@ suite : Test
 suite =
     describe "pixel art"
         (List.concatMap
-            (\{ name, sprite } ->
-                let
-                    rows =
-                        Sprite.rows sprite
+            (\{ name, frames } ->
+                List.indexedMap
+                    (\index sprite ->
+                        let
+                            label =
+                                name ++ ", frame " ++ String.fromInt (index + 1)
 
-                    letters =
-                        List.map Tuple.first (Sprite.palette sprite)
-                in
-                [ test (name ++ ": every row is equally wide") <|
-                    \_ ->
-                        rows
-                            |> List.map String.length
-                            |> List.filter (\width -> width /= (Sprite.size sprite).width)
-                            |> Expect.equal []
-                , test (name ++ ": every letter in the picture has a colour") <|
-                    \_ ->
-                        rows
-                            |> String.concat
-                            |> String.toList
-                            |> List.filter (\char -> char /= '.' && not (List.member char letters))
-                            |> Expect.equal []
-                ]
+                            rows =
+                                Sprite.rows sprite
+
+                            letters =
+                                List.map Tuple.first (Sprite.palette sprite)
+                        in
+                        [ test (label ++ ": every row is equally wide") <|
+                            \_ ->
+                                rows
+                                    |> List.map String.length
+                                    |> List.filter (\width -> width /= (Sprite.size sprite).width)
+                                    |> Expect.equal []
+                        , test (label ++ ": every letter in the picture has a colour") <|
+                            \_ ->
+                                rows
+                                    |> String.concat
+                                    |> String.toList
+                                    |> List.filter (\char -> char /= '.' && not (List.member char letters))
+                                    |> Expect.equal []
+                        ]
+                    )
+                    frames
+                    |> List.concat
+                    |> (::)
+                        (test (name ++ ": all frames have the same size, so they take turns in place (#136)") <|
+                            \_ ->
+                                frames
+                                    |> List.map Sprite.size
+                                    |> List.filter (\size -> Just size /= Maybe.map Sprite.size (List.head frames))
+                                    |> Expect.equal []
+                        )
             )
             Sprites.catalogue
         )

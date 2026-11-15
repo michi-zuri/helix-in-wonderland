@@ -227,7 +227,10 @@ of the first line", or `5h e`; `2gg` works too but isn't mentioned).
   replace. When merging, pad them back to the size their frames share (all
   Alice pictures are 12 wide: the game places them by size, and a walking
   frame of another width would jump) or adjust where the game draws them,
-  and say which in the PR.
+  and say which in the PR. Several frames (#136) come with a blank line
+  between them and a frame rate; frames are trimmed together. The editor's
+  `alice` is two frames (standing, stepping) at `walkingFramesPerSecond`,
+  which chapter 4 also uses.
 
 ## Techniques that worked
 

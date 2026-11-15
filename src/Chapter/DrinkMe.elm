@@ -740,7 +740,7 @@ viewHall texts model =
             92 + (296 - 92) * walk
 
         walking =
-            model.walk /= Nothing && walk < 1 && modBy 2 (floor (model.clock / 125)) == 1
+            model.walk /= Nothing && walk < 1 && modBy 2 (floor (model.clock * Sprites.walkingFramesPerSecond / 1000)) == 1
 
         floor_ =
             72
