@@ -1178,8 +1178,16 @@ viewAliceAndHeap model =
 
                 Nothing ->
                     model.aliceY + sin (model.clock * 0.0022) * 3
+
+        -- The falling frames take turns (#138); centred where the
+        -- 12-pixel picture was, whatever their width.
+        falling =
+            Sprites.aliceFalling
+                |> List.drop (modBy (max 1 (List.length Sprites.aliceFalling)) (floor (model.clock * Sprites.fallingFramesPerSecond / 1000)))
+                |> List.head
+                |> Maybe.withDefault Sprites.alice
     in
-    Sprite.viewAt { x = aliceX + wobble, y = aliceY, pixelSize = 2 } Sprites.aliceFalling
+    Sprite.viewAt { x = aliceX + 12 - toFloat (Sprite.size falling).width + wobble, y = aliceY, pixelSize = 2 } falling
         :: (if heapInView > 0 then
                 [ Well.heap heapTop ]
 

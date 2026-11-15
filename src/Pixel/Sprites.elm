@@ -1,4 +1,4 @@
-module Pixel.Sprites exposing (Entry, alice, aliceFalling, aliceStepping, aliceSwimming, catalogue, caterpillar, cheshireCat, goldenKey, mouse, tart, walkingFramesPerSecond, whiteRabbit)
+module Pixel.Sprites exposing (Entry, alice, aliceFalling, aliceStepping, aliceSwimming, catalogue, caterpillar, cheshireCat, fallingFramesPerSecond, goldenKey, mouse, tart, walkingFramesPerSecond, whiteRabbit)
 
 {-| The game's characters and props. Original pixel art, in the spirit of the
 1865 book rather than any film.
@@ -68,28 +68,54 @@ aliceStepping =
         )
 
 
-{-| Falling down the rabbit hole: pigtails with their hair ties flying
-up, dress puffed out (#130).
+{-| Falling down the rabbit hole, two frames that take turns (#138): the
+pigtails and their hair ties fly up, the head sways, an arm waves on
+either side.
 -}
-aliceFalling : Sprite
+aliceFalling : List Sprite
 aliceFalling =
-    Sprite.fromRows alicePalette
-        [ "yy..kkkk...y"
-        , ".yayyyyy.ayy"
-        , ".ayyyyyyyya."
-        , ".yssssssssy."
-        , "..ysksskys.."
-        , "..yssssssy.."
-        , "bbyYsppsYy.."
-        , ".bbbbwwbbbbb"
-        , "..bbbwwbb..."
-        , ".bbbwwwwbb.."
-        , "bbbbwwwwbbb."
-        , "BBBBBBBBBBB."
-        , "...s...s...."
-        , "..s.....s..."
-        , ".kk.....kk.."
+    [ Sprite.fromRows alicePalette
+        [ ".yy..kkkk...y"
+        , "..yayyyyy.ayy"
+        , "..ayyyyyyyya."
+        , "..yssssssssy."
+        , "...ysksskys.."
+        , "bb.yssssssy.."
+        , ".bbyYsppsYy.."
+        , "..bbbbwbbbbbb"
+        , "...bbbwbbb..."
+        , "..bbbwwwbbb.."
+        , ".bbbbwwwbbbb."
+        , ".BBBBBBBBBBB."
+        , "....s...s...."
+        , "...s.....s..."
+        , "..kk.....kk.."
         ]
+    , Sprite.fromRows alicePalette
+        [ "y....kkk..yy."
+        , "yya.yyyyyay.."
+        , ".ayyyyyyyya.."
+        , ".yssssssssy.."
+        , "..sykssksy..."
+        , "..yssssssy.bb"
+        , "..yYsppsYybb."
+        , "bbbbbbwbbbb.."
+        , "...bbbwbbb..."
+        , "..bbbwwwbbb.."
+        , ".bbbbwwwbbbb."
+        , ".BBBBBBBBBBB."
+        , "....s...s...."
+        , "...s.....s..."
+        , "..kk.....kk.."
+        ]
+    ]
+
+
+{-| How fast the falling frames take turns.
+-}
+fallingFramesPerSecond : Float
+fallingFramesPerSecond =
+    1
 
 
 {-| Just the head and shoulders, for swimming in the pool of tears.
@@ -253,7 +279,7 @@ catalogue =
             { name = name, frames = [ sprite ], framesPerSecond = 4 }
     in
     [ { name = "alice", frames = [ alice, aliceStepping ], framesPerSecond = walkingFramesPerSecond }
-    , still "aliceFalling" aliceFalling
+    , { name = "aliceFalling", frames = aliceFalling, framesPerSecond = fallingFramesPerSecond }
     , still "aliceSwimming" aliceSwimming
     , still "whiteRabbit" whiteRabbit
     , still "caterpillar" caterpillar
