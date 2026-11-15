@@ -7,6 +7,7 @@ module DrinkMePlaythroughTest exposing (suite)
 import Chapter.Contract exposing (Context)
 import Chapter.DrinkMe as DrinkMe
 import Chapter.Story as Story
+import Difficulty exposing (Difficulty(..))
 import Editor.Core as Core exposing (Mode(..))
 import Editor.Session as Session
 import Expect
@@ -253,26 +254,38 @@ suite =
                 )
                     |> Expect.equal ( True, True )
         , describe "a change has to be quick"
-            [ test "the time is 300 ms a letter of the word, plus 600 ms for j k" <|
-                \_ -> DrinkMe.timeLimit "alas" |> Expect.equal 1800
+            [ test "the time is 300 ms a letter of the word, plus 600 ms for j k; twice that on easy (#140)" <|
+                \_ ->
+                    [ Easy, Challenge, Mad ]
+                        |> List.map (\difficulty -> DrinkMe.timeLimit difficulty "alas")
+                        |> Expect.equal [ 3600, 1800, 1800 ]
             , test "too slow: the change is undone, back to the stars in Normal mode" <|
                 \_ ->
                     start "1"
                         |> play [ "e", "c", "a", "l" ]
-                        |> pause 2000
+                        |> pause 4000
                         |> (\run -> ( List.take 1 (lines run), mode run, run.model.tooSlow ))
                         |> Expect.equal ( [ "***" ], Just Normal, 1 )
-            , test "just in time is fine" <|
+            , test "easy, just in time is fine" <|
                 \_ ->
-                    -- 1800 ms for alas: a wait of 750 ms after c, then a l a s j
-                    -- k with 200 ms between the keys: k comes after 1750 ms.
+                    -- 3600 ms for alas on easy: a wait of 2550 ms after c, then a l
+                    -- a s j k with 200 ms between the keys: k comes after 3550 ms.
                     start "1"
                         |> play [ "e" ]
                         |> send (DrinkMe.KeyPressed "c")
-                        |> pause 750
+                        |> pause 2550
                         |> play (letters "alas" ++ [ "j", "k" ])
                         |> (\run -> ( List.take 1 (lines run), run.model.tooSlow ))
                         |> Expect.equal ( [ "alas" ], 0 )
+            , test "challenge keeps the shorter time: the same wait for alice is too slow" <|
+                \_ ->
+                    -- 2100 ms for alice on challenge (4200 on easy): 2550 ms is too long.
+                    start "2"
+                        |> play [ "e" ]
+                        |> send (DrinkMe.KeyPressed "c")
+                        |> pause 2550
+                        |> (\run -> ( List.take 1 (lines run), run.model.tooSlow ))
+                        |> Expect.equal ( [ "***" ], 1 )
             , test "the time doesn't run while a dialog is read" <|
                 \_ ->
                     -- The first i shows a dialog (e c . are quicker); reading it takes a while.
@@ -376,9 +389,9 @@ suite =
                 \_ ->
                     start "1"
                         |> play [ "e", "c" ]
-                        |> pause 2000
+                        |> pause 4000
                         |> play [ "c" ]
-                        |> pause 2000
+                        |> pause 4000
                         |> Playthrough.toastCount
                         |> Expect.equal 2
             ]

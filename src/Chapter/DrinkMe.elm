@@ -7,7 +7,8 @@ on the glass table stays where it is, until it is far out of her reach.
 The lines start as stars (`***`), one line a word, with the word to write
 next to each line. `e` selects the next stars, `c` changes them: the word,
 then `j k` back to Normal mode. A change has to be done in time,
-`timeLimit`: 300 ms a letter of the word plus 600 ms for `j k`; a change too
+`timeLimit`: 300 ms a letter of the word plus 600 ms for `j k`, twice that
+on Easy (#140); a change too
 slow is undone. When the same word comes again, `e .` repeats the change.
 `h j k l` and `i` work too, but a dialog says once that `e c .` are the
 quicker way. A wrong word that was escaped in time just stays: the player
@@ -54,11 +55,20 @@ placeholder =
 
 
 {-| How long a change may take, from `c` (or `i`) to the `k` of `j k`, in
-ms: 300 a letter of the line's word, and 600 for `j k`.
+ms: 300 a letter of the line's word, and 600 for `j k`. Easy allows twice
+as much (#140).
 -}
-timeLimit : String -> Float
-timeLimit word =
-    300 * toFloat (String.length word) + 600
+timeLimit : Difficulty -> String -> Float
+timeLimit difficulty word =
+    let
+        normal =
+            300 * toFloat (String.length word) + 600
+    in
+    if difficulty == Easy then
+        2 * normal
+
+    else
+        normal
 
 
 {-| Alice's size in screen pixels per sprite pixel, before the first sip and
@@ -381,7 +391,7 @@ startSip work before model =
                 , limit =
                     wordOfLine work (cursorLine work)
                         |> Maybe.withDefault (String.repeat longest "*")
-                        |> timeLimit
+                        |> timeLimit (Maybe.withDefault Easy model.difficulty)
                 }
     }
 
