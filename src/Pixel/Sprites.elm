@@ -1,4 +1,4 @@
-module Pixel.Sprites exposing (alice, aliceFalling, aliceStepping, aliceSwimming, catalogue, caterpillar, cheshireCat, goldenKey, mouse, tart, whiteRabbit)
+module Pixel.Sprites exposing (Entry, alice, aliceFalling, aliceStepping, aliceSwimming, catalogue, caterpillar, cheshireCat, goldenKey, mouse, tart, walkingFramesPerSecond, whiteRabbit)
 
 {-| The game's characters and props. Original pixel art, in the spirit of the
 1865 book rather than any film.
@@ -226,19 +226,39 @@ tart =
         ]
 
 
-{-| Every picture, by the name used in this file. The pixel editor
-(`src/PixelEditor.elm`) shows these, so it always matches the game.
+{-| A picture in the pixel editor: one frame, or several that take turns,
+like Alice walking (#136).
 -}
-catalogue : List { name : String, sprite : Sprite }
+type alias Entry =
+    { name : String
+    , frames : List Sprite
+    , framesPerSecond : Float
+    }
+
+
+{-| How fast Alice's walking frames take turns, as chapter 4 shows them.
+-}
+walkingFramesPerSecond : Float
+walkingFramesPerSecond =
+    8
+
+
+{-| Every picture the pixel editor offers. Alice standing and stepping are
+the two frames of `alice`.
+-}
+catalogue : List Entry
 catalogue =
-    [ { name = "alice", sprite = alice }
-    , { name = "aliceStepping", sprite = aliceStepping }
-    , { name = "aliceFalling", sprite = aliceFalling }
-    , { name = "aliceSwimming", sprite = aliceSwimming }
-    , { name = "whiteRabbit", sprite = whiteRabbit }
-    , { name = "caterpillar", sprite = caterpillar }
-    , { name = "mouse", sprite = mouse }
-    , { name = "cheshireCat", sprite = cheshireCat }
-    , { name = "goldenKey", sprite = goldenKey }
-    , { name = "tart", sprite = tart }
+    let
+        still name sprite =
+            { name = name, frames = [ sprite ], framesPerSecond = 4 }
+    in
+    [ { name = "alice", frames = [ alice, aliceStepping ], framesPerSecond = walkingFramesPerSecond }
+    , still "aliceFalling" aliceFalling
+    , still "aliceSwimming" aliceSwimming
+    , still "whiteRabbit" whiteRabbit
+    , still "caterpillar" caterpillar
+    , still "mouse" mouse
+    , still "cheshireCat" cheshireCat
+    , still "goldenKey" goldenKey
+    , still "tart" tart
     ]

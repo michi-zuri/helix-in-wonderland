@@ -21,10 +21,15 @@ body:
     id: rows
     attributes:
       label: The picture · Das Bild
-      description: One line per row of pixels, one letter per pixel, "." for empty.
+      description: One line per row of pixels, one letter per pixel, "." for empty. Several frames have a blank line between them.
       render: text
     validations:
       required: true
+  - type: input
+    id: fps
+    attributes:
+      label: Frames per second · Bilder pro Sekunde
+      description: Only for pictures with several frames, like Alice walking. · Nur für Bilder mit mehreren Bildern, wie Alice beim Gehen.
   - type: textarea
     id: colours
     attributes:

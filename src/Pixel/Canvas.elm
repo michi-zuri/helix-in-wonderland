@@ -1,4 +1,4 @@
-module Pixel.Canvas exposing (Side(..), grow, trim)
+module Pixel.Canvas exposing (Side(..), grow, trim, trimFrames)
 
 {-| Making a picture bigger in the pixel editor, and trimming it when it is
 sent (#134).
@@ -82,6 +82,75 @@ trim rows =
 
     else
         List.map (String.dropLeft fromLeft >> String.dropRight fromRight) keptRows
+
+
+{-| Trim several frames of one picture together: an edge is cut only where
+every frame is empty there, so the frames stay the same size and keep
+their places (#136).
+-}
+trimFrames : List (List String) -> List (List String)
+trimFrames frames =
+    let
+        -- One picture with paint wherever any frame has paint.
+        together =
+            List.foldl
+                (\frame combined ->
+                    List.map2 (\a b -> String.fromList (List.map2 overlay (String.toList a) (String.toList b))) frame combined
+                )
+                (List.head frames |> Maybe.withDefault [])
+                frames
+
+        overlay a b =
+            if a /= empty then
+                a
+
+            else
+                b
+
+        kept =
+            trim together
+
+        rowsCut =
+            margins together kept
+    in
+    if kept == together then
+        frames
+
+    else
+        List.map (cut rowsCut) frames
+
+
+{-| How much `trim` cut from each side, found by where the kept rows sit
+in the whole picture.
+-}
+margins : List String -> List String -> { top : Int, left : Int, width : Int, height : Int }
+margins whole kept =
+    let
+        isEmpty line =
+            String.all ((==) empty) line
+
+        top =
+            List.length (takeWhileTrue (List.map isEmpty whole))
+
+        columns =
+            List.map isEmpty (transpose whole)
+
+        left =
+            List.length (takeWhileTrue columns)
+    in
+    { top = top
+    , left = left
+    , width = List.head kept |> Maybe.map String.length |> Maybe.withDefault 0
+    , height = List.length kept
+    }
+
+
+cut : { top : Int, left : Int, width : Int, height : Int } -> List String -> List String
+cut area frame =
+    frame
+        |> List.drop area.top
+        |> List.take area.height
+        |> List.map (String.slice area.left (area.left + area.width))
 
 
 takeWhileTrue : List Bool -> List Bool

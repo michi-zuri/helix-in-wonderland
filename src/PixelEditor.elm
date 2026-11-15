@@ -1,11 +1,12 @@
-module PixelEditor exposing (main)
+module PixelEditor exposing (Model, Msg(..), main, rowsText, start, update)
 
 {-| A small pixel editor for proposing new art for the game.
 
 It starts from the game's own pictures (`Pixel.Sprites.catalogue`), so it
 always shows what is really in the game. Paint with the mouse, change
-colours, make the picture bigger when an idea needs room (`Pixel.Canvas`,
-#134), then send the result as a GitHub issue with one click. The issue
+colours and their letters, make the picture bigger when an idea needs room
+(`Pixel.Canvas`, #134), give it several frames that loop in the preview
+(#136), then send the result as a GitHub issue with one click. The issue
 form lives in `.github/ISSUE_TEMPLATE/pixel-art.yml`; ART.md explains the
 whole process.
 
@@ -15,9 +16,11 @@ Built into `dist/site/pixel-editor.html` by `npm run build`.
 
 import Array exposing (Array)
 import Browser
+import Browser.Events
 import Html exposing (Html)
 import Html.Attributes as A
 import Html.Events as E
+import Html.Keyed
 import Json.Decode as Decode
 import Pixel.Canvas as Canvas exposing (Side(..))
 import Pixel.Sprite as Sprite
@@ -36,12 +39,12 @@ main =
     Browser.element
         { init =
             \flags ->
-                ( load (Decode.decodeValue (Decode.field "links" Project.decoder) flags |> Result.withDefault Project.fallback) firstPicture
+                ( start (Decode.decodeValue (Decode.field "links" Project.decoder) flags |> Result.withDefault Project.fallback)
                 , Cmd.none
                 )
         , update = \msg model -> ( update msg model, Cmd.none )
         , view = view
-        , subscriptions = \_ -> Sub.none
+        , subscriptions = subscriptions
         }
 
 
@@ -50,18 +53,41 @@ transparent =
     '.'
 
 
+{-| The preview's frame rate can be set between these, in frames per second.
+-}
+slowest : Float
+slowest =
+    1
+
+
+fastest : Float
+fastest =
+    12
+
+
 
 -- MODEL
 
 
+type alias Picture =
+    Array (Array Char)
+
+
+{-| `frames` all have the same size and share the palette; `frame` is the
+one being painted. `letterEdits` counts attempts to change a letter, so the
+letter fields are drawn afresh even when a change is refused.
+-}
 type alias Model =
     { links : Project.Links
     , picture : String
-    , pixels : Array (Array Char)
+    , frames : Array Picture
+    , frame : Int
+    , framesPerSecond : Float
     , palette : List ( Char, String )
     , brush : Char
     , painting : Bool
-    , changed : Bool
+    , clock : Float
+    , letterEdits : Int
     }
 
 
@@ -70,27 +96,57 @@ firstPicture =
     "tart"
 
 
+start : Project.Links -> Model
+start links =
+    load links firstPicture
+
+
 load : Project.Links -> String -> Model
 load links name =
     let
-        sprite =
+        entry =
             Sprites.catalogue
-                |> List.filter (\entry -> entry.name == name)
+                |> List.filter (\candidate -> candidate.name == name)
                 |> List.head
-                |> Maybe.map .sprite
-                |> Maybe.withDefault Sprites.tart
+                |> Maybe.withDefault { name = name, frames = [ Sprites.tart ], framesPerSecond = 4 }
 
         palette =
-            Sprite.palette sprite
+            entry.frames
+                |> List.concatMap Sprite.palette
+                |> List.foldl
+                    (\( letter, colour ) found ->
+                        if List.any (\( known, _ ) -> known == letter) found then
+                            found
+
+                        else
+                            found ++ [ ( letter, colour ) ]
+                    )
+                    []
+
+        toPicture sprite =
+            Sprite.rows sprite |> List.map (String.toList >> Array.fromList) |> Array.fromList
     in
     { links = links
     , picture = name
-    , pixels = Sprite.rows sprite |> List.map (String.toList >> Array.fromList) |> Array.fromList
+    , frames = Array.fromList (List.map toPicture entry.frames)
+    , frame = 0
+    , framesPerSecond = entry.framesPerSecond
     , palette = palette
     , brush = palette |> List.head |> Maybe.map Tuple.first |> Maybe.withDefault transparent
     , painting = False
-    , changed = False
+    , clock = 0
+    , letterEdits = 0
     }
+
+
+currentPicture : Model -> Picture
+currentPicture model =
+    Array.get model.frame model.frames |> Maybe.withDefault Array.empty
+
+
+frameRows : Picture -> List String
+frameRows picture =
+    picture |> Array.toList |> List.map (Array.toList >> String.fromList)
 
 
 
@@ -104,9 +160,15 @@ type Msg
     | EnteredPixel Int Int
     | Released
     | ChangedColour Char String
+    | ChangedLetter Char String
     | AddedColour
     | ResetPicture
     | Grew Side
+    | ChoseFrame Int
+    | AddedFrame
+    | RemovedFrame
+    | ChangedSpeed String
+    | Ticked Float
 
 
 update : Msg -> Model -> Model
@@ -143,13 +205,15 @@ update msg model =
                                 ( l, c )
                         )
                         model.palette
-                , changed = True
             }
+
+        ChangedLetter old typed ->
+            renameLetter old typed { model | letterEdits = model.letterEdits + 1 }
 
         AddedColour ->
             case freeLetter model.palette of
                 Just letter ->
-                    { model | palette = model.palette ++ [ ( letter, "#ffffff" ) ], brush = letter, changed = True }
+                    { model | palette = model.palette ++ [ ( letter, "#ffffff" ) ], brush = letter }
 
                 Nothing ->
                     model
@@ -158,14 +222,96 @@ update msg model =
             load model.links model.picture
 
         Grew side ->
-            { model | pixels = Canvas.grow side model.pixels, changed = True }
+            { model | frames = Array.map (Canvas.grow side) model.frames }
+
+        ChoseFrame index ->
+            { model | frame = clamp 0 (Array.length model.frames - 1) index }
+
+        AddedFrame ->
+            -- A copy of the frame being painted, right after it.
+            let
+                at =
+                    model.frame + 1
+            in
+            { model
+                | frames =
+                    Array.append
+                        (Array.push (currentPicture model) (Array.slice 0 at model.frames))
+                        (Array.slice at (Array.length model.frames) model.frames)
+                , frame = at
+            }
+
+        RemovedFrame ->
+            if Array.length model.frames <= 1 then
+                model
+
+            else
+                { model
+                    | frames =
+                        Array.append
+                            (Array.slice 0 model.frame model.frames)
+                            (Array.slice (model.frame + 1) (Array.length model.frames) model.frames)
+                    , frame = max 0 (model.frame - 1)
+                }
+
+        ChangedSpeed text ->
+            case String.toFloat text of
+                Just speed ->
+                    { model | framesPerSecond = clamp slowest fastest speed }
+
+                Nothing ->
+                    model
+
+        Ticked milliseconds ->
+            { model | clock = model.clock + milliseconds }
 
 
 paint : Int -> Int -> Model -> Model
 paint x y model =
-    case Array.get y model.pixels of
+    let
+        picture =
+            currentPicture model
+    in
+    case Array.get y picture of
         Just row ->
-            { model | pixels = Array.set y (Array.set x model.brush row) model.pixels, changed = True }
+            { model | frames = Array.set model.frame (Array.set y (Array.set x model.brush row) picture) model.frames }
+
+        Nothing ->
+            model
+
+
+{-| A colour gets a new letter, everywhere in every frame. Only a letter or
+digit not used yet is taken; anything else is ignored. The field still
+holds the old letter while typing, so the new one is the character that
+isn't the old one.
+-}
+renameLetter : Char -> String -> Model -> Model
+renameLetter old typed model =
+    let
+        new =
+            String.toList typed |> List.filter ((/=) old) |> List.reverse |> List.head
+
+        isUsed letter =
+            List.any (\( known, _ ) -> known == letter) model.palette
+
+        swap letter =
+            if letter == old then
+                Maybe.withDefault old new
+
+            else
+                letter
+    in
+    case new of
+        Just letter ->
+            if Char.isAlphaNum letter && not (isUsed letter) then
+                { model
+                    | palette = List.map (\( l, c ) -> ( swap l, c )) model.palette
+                    , frames = Array.map (Array.map (Array.map swap)) model.frames
+                    , brush = swap model.brush
+                }
+
+            else
+                model
 
         Nothing ->
             model
@@ -180,20 +326,32 @@ freeLetter palette =
         |> List.head
 
 
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    if Array.length model.frames > 1 then
+        Browser.Events.onAnimationFrameDelta Ticked
+
+    else
+        Sub.none
+
+
 
 -- TEXT FOR THE PROPOSAL
 
 
-{-| The picture as sent: empty rows and columns at its edges are trimmed
-away, so it shows exactly what was drawn.
+{-| The frames as sent: trimmed together, so empty edges go only where
+every frame is empty (#134, #136).
+-}
+sentFrames : Model -> List (List String)
+sentFrames model =
+    model.frames |> Array.toList |> List.map frameRows |> Canvas.trimFrames
+
+
+{-| The picture as sent: each frame's rows, a blank line between frames.
 -}
 rowsText : Model -> String
 rowsText model =
-    model.pixels
-        |> Array.toList
-        |> List.map (Array.toList >> String.fromList)
-        |> Canvas.trim
-        |> String.join "\n"
+    sentFrames model |> List.map (String.join "\n") |> String.join "\n\n"
 
 
 coloursText : Model -> String
@@ -201,6 +359,11 @@ coloursText model =
     model.palette
         |> List.map (\( letter, colour ) -> String.fromChar letter ++ " " ++ colour)
         |> String.join "\n"
+
+
+speedText : Model -> String
+speedText model =
+    String.fromFloat model.framesPerSecond
 
 
 {-| Opens GitHub's "new issue" page with the pixel-art form already filled
@@ -218,6 +381,12 @@ proposalLink model =
         ++ Url.percentEncode (rowsText model)
         ++ "&colours="
         ++ Url.percentEncode (coloursText model)
+        ++ (if Array.length model.frames > 1 then
+                "&fps=" ++ Url.percentEncode (speedText model)
+
+            else
+                ""
+           )
 
 
 
@@ -242,10 +411,12 @@ view model =
                 Sprites.catalogue
             )
         , Html.div [ A.class "workspace" ]
-            [ Html.div [ A.class "canvas" ] [ viewGrow, viewGrid model ]
+            [ viewCanvas model
             , Html.div [ A.class "side" ]
                 [ Html.h2 [] [ Html.text "Colours · Farben" ]
                 , viewPalette model
+                , Html.h2 [] [ Html.text "Frames · Bilder" ]
+                , viewFrames model
                 , Html.h2 [] [ Html.text "Preview · Vorschau" ]
                 , viewPreview model
                 ]
@@ -256,7 +427,19 @@ view model =
             , Html.button [ E.onClick ResetPicture ] [ Html.text "Start over · Neu anfangen" ]
             ]
         , Html.h2 [] [ Html.text "Your picture as text · Dein Bild als Text" ]
-        , Html.pre [ A.class "text" ] [ Html.text (coloursText model ++ "\n\n" ++ rowsText model) ]
+        , Html.pre [ A.class "text" ]
+            [ Html.text
+                (coloursText model
+                    ++ "\n\n"
+                    ++ rowsText model
+                    ++ (if Array.length model.frames > 1 then
+                            "\n\nframes per second · Bilder pro Sekunde: " ++ speedText model
+
+                        else
+                            ""
+                       )
+                )
+            ]
         , Html.nav [ A.class "links" ]
             [ Html.a [ A.href (Project.gameUrl model.links) ] [ Html.text "← Back to the game · Zurück zum Spiel" ]
             , Html.a [ A.href (Project.proposeEditUrl model.links "Pixel editor"), A.target "_blank", A.rel "noopener" ]
@@ -265,32 +448,50 @@ view model =
         ]
 
 
-{-| Room for bigger ideas: one empty row or column more on a side. Empty
-edges are trimmed when the picture is sent.
+{-| The grid with a bar on each side, shaped like the row or column it adds
+(#136). The sizes come from the CSS variables `--cols` and `--rows`, which
+`Html.Attributes.style` can't set, so they go in the style attribute.
 -}
-viewGrow : Html Msg
-viewGrow =
-    Html.div [ A.class "grow" ]
-        [ Html.span [] [ Html.text "More room · Mehr Platz:" ]
-        , Html.button [ E.onClick (Grew Top) ] [ Html.text "↑ row on top · Zeile oben" ]
-        , Html.button [ E.onClick (Grew Bottom) ] [ Html.text "↓ row below · Zeile unten" ]
-        , Html.button [ E.onClick (Grew Left) ] [ Html.text "← column left · Spalte links" ]
-        , Html.button [ E.onClick (Grew Right) ] [ Html.text "→ column right · Spalte rechts" ]
+viewCanvas : Model -> Html Msg
+viewCanvas model =
+    let
+        picture =
+            currentPicture model
+
+        width =
+            Array.get 0 picture |> Maybe.map Array.length |> Maybe.withDefault 0
+
+        bar side name label =
+            Html.button
+                [ A.class ("grow-bar " ++ name)
+                , E.onClick (Grew side)
+                , A.title label
+                , A.attribute "aria-label" label
+                ]
+                [ Html.text "+" ]
+    in
+    Html.div [ A.class "canvas-room" ]
+        [ Html.div
+            [ A.class "canvas"
+            , A.attribute "style" ("--cols:" ++ String.fromInt width ++ ";--rows:" ++ String.fromInt (Array.length picture))
+            ]
+            [ bar Top "top" "Add a row on top · Zeile oben dazu"
+            , bar Left "left" "Add a column on the left · Spalte links dazu"
+            , viewGrid width picture model
+            , bar Right "right" "Add a column on the right · Spalte rechts dazu"
+            , bar Bottom "bottom" "Add a row below · Zeile unten dazu"
+            ]
         ]
 
 
-viewGrid : Model -> Html Msg
-viewGrid model =
-    let
-        width =
-            Array.get 0 model.pixels |> Maybe.map Array.length |> Maybe.withDefault 0
-    in
+viewGrid : Int -> Picture -> Model -> Html Msg
+viewGrid width picture model =
     Html.div
         [ A.class "grid"
         , A.style "grid-template-columns" ("repeat(" ++ String.fromInt width ++ ", 1fr)")
-        , A.style "aspect-ratio" (String.fromInt width ++ " / " ++ String.fromInt (Array.length model.pixels))
+        , A.style "grid-template-rows" ("repeat(" ++ String.fromInt (Array.length picture) ++ ", 1fr)")
         ]
-        (model.pixels
+        (picture
             |> Array.toIndexedList
             |> List.concatMap
                 (\( y, row ) ->
@@ -312,31 +513,100 @@ viewPixel model x y letter =
         []
 
 
+{-| Each colour: a button to paint with it, its letter (which can be
+changed), and its colour.
+-}
 viewPalette : Model -> Html Msg
 viewPalette model =
-    Html.div [ A.class "palette" ]
+    Html.Keyed.node "div"
+        [ A.class "palette" ]
         (List.map
             (\( letter, colour ) ->
-                Html.div [ A.classList [ ( "swatch", True ), ( "chosen", letter == model.brush ) ] ]
-                    [ Html.button [ E.onClick (ChoseBrush letter), A.style "background" colour ] [ Html.text (String.fromChar letter) ]
+                ( String.fromChar letter ++ String.fromInt model.letterEdits
+                , Html.div [ A.classList [ ( "swatch", True ), ( "chosen", letter == model.brush ) ] ]
+                    [ Html.button [ E.onClick (ChoseBrush letter), A.style "background" colour, A.attribute "aria-label" ("Paint with " ++ String.fromChar letter) ] []
+                    , Html.input
+                        [ A.class "letter"
+                        , A.value (String.fromChar letter)
+                        , E.onInput (ChangedLetter letter)
+                        , A.title "Letter · Buchstabe"
+                        , A.attribute "aria-label" "Letter · Buchstabe"
+                        , A.attribute "autocomplete" "off"
+                        , A.spellcheck False
+                        ]
+                        []
                     , Html.input [ A.type_ "color", A.value colour, E.onInput (ChangedColour letter) ] []
                     ]
+                )
             )
             model.palette
-            ++ [ Html.div [ A.classList [ ( "swatch", True ), ( "chosen", model.brush == transparent ) ] ]
+            ++ [ ( "eraser"
+                 , Html.div [ A.classList [ ( "swatch", True ), ( "chosen", model.brush == transparent ) ] ]
                     [ Html.button [ A.class "eraser", E.onClick (ChoseBrush transparent) ] [ Html.text "." ]
                     , Html.span [] [ Html.text "eraser · Radierer" ]
                     ]
-               , Html.button [ A.class "add", E.onClick AddedColour ] [ Html.text "+ new colour · neue Farbe" ]
+                 )
+               , ( "add", Html.button [ A.class "add", E.onClick AddedColour ] [ Html.text "+ new colour · neue Farbe" ] )
                ]
         )
 
 
+{-| Which frame is painted, a frame more or less, and how fast they loop.
+-}
+viewFrames : Model -> Html Msg
+viewFrames model =
+    let
+        count =
+            Array.length model.frames
+    in
+    Html.div [ A.class "frames" ]
+        [ Html.div [ A.class "frame-buttons" ]
+            (List.map
+                (\index ->
+                    Html.button
+                        [ A.classList [ ( "frame", True ), ( "chosen", index == model.frame ) ]
+                        , E.onClick (ChoseFrame index)
+                        ]
+                        [ Html.text (String.fromInt (index + 1)) ]
+                )
+                (List.range 0 (count - 1))
+                ++ [ Html.button [ E.onClick AddedFrame, A.title "Add a frame (a copy of this one) · Bild dazu (eine Kopie von diesem)" ] [ Html.text "+" ]
+                   , Html.button [ E.onClick RemovedFrame, A.disabled (count <= 1), A.title "Remove this frame · Dieses Bild entfernen" ] [ Html.text "×" ]
+                   ]
+            )
+        , if count > 1 then
+            Html.label [ A.class "speed" ]
+                [ Html.input
+                    [ A.type_ "range"
+                    , A.min (String.fromFloat slowest)
+                    , A.max (String.fromFloat fastest)
+                    , A.step "1"
+                    , A.value (speedText model)
+                    , E.onInput ChangedSpeed
+                    ]
+                    []
+                , Html.span [] [ Html.text (speedText model ++ " per second · pro Sekunde") ]
+                ]
+
+          else
+            Html.text ""
+        ]
+
+
+{-| The picture about as big as in the game, as it will be sent; several
+frames take turns.
+-}
 viewPreview : Model -> Html Msg
 viewPreview model =
     let
+        frames =
+            sentFrames model
+
+        shown =
+            modBy (max 1 (List.length frames)) (floor (model.clock * model.framesPerSecond / 1000))
+
         sprite =
-            Sprite.fromRows model.palette (String.lines (rowsText model))
+            Sprite.fromRows model.palette (List.drop shown frames |> List.head |> Maybe.withDefault [])
 
         { width, height } =
             Sprite.size sprite
