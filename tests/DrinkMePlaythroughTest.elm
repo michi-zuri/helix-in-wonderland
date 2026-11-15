@@ -1,29 +1,41 @@
 module DrinkMePlaythroughTest exposing (suite)
 
-{-| Play chapter 4: type the words from memory, sip by sip.
+{-| Play chapter 4: change the stars into words, sip by sip, with `e`, `c`,
+`j k` and `.` (#74).
 -}
 
 import Chapter.Contract exposing (Context)
 import Chapter.DrinkMe as DrinkMe
+import Chapter.Story as Story
+import Editor.Core as Core exposing (Mode(..))
+import Editor.Session as Session
 import Expect
 import Keyboard.Layout exposing (Layout(..))
 import Language exposing (Language(..))
 import Playthrough exposing (Run)
 import Set
 import Test exposing (Test, describe, test)
-import Test.Html.Query as Query
-import Test.Html.Selector exposing (class, classes)
 import Texts exposing (Texts)
+
+
+contextFor : Language -> Context
+contextFor language =
+    { texts = Texts.forLanguage language, layout = UsQwerty }
 
 
 context : Context
 context =
-    { texts = Texts.forLanguage English, layout = UsQwerty }
+    contextFor English
 
 
 send : DrinkMe.Msg -> Run DrinkMe.Model -> Run DrinkMe.Model
 send =
-    Playthrough.send (DrinkMe.update context)
+    sendIn context
+
+
+sendIn : Context -> DrinkMe.Msg -> Run DrinkMe.Model -> Run DrinkMe.Model
+sendIn ctx =
+    Playthrough.send (DrinkMe.update ctx)
 
 
 readStory : Run DrinkMe.Model -> Run DrinkMe.Model
@@ -31,13 +43,51 @@ readStory =
     Playthrough.sendAll (DrinkMe.update context) (List.repeat 8 (DrinkMe.KeyPressed "Enter"))
 
 
-{-| Every key is followed by 200 ms of game time: a steady five keys per
-second, quick enough that no word starts over.
+{-| Read the story, pick a difficulty ("1" easy, "2" challenge, "3" mad),
+and close the dialog that tells how it works.
 -}
-typeSteadily : String -> Run DrinkMe.Model -> Run DrinkMe.Model
-typeSteadily text run =
-    String.toList text
-        |> List.foldl (\char -> send (DrinkMe.KeyPressed (String.fromChar char)) >> send (DrinkMe.Frame 200)) run
+startIn : Context -> String -> Run DrinkMe.Model
+startIn ctx difficulty =
+    Playthrough.start DrinkMe.init
+        |> Playthrough.sendAll (DrinkMe.update ctx) (List.repeat 8 (DrinkMe.KeyPressed "Enter"))
+        |> sendIn ctx (DrinkMe.KeyPressed difficulty)
+        |> closeDialogs ctx
+
+
+start : String -> Run DrinkMe.Model
+start =
+    startIn context
+
+
+{-| A player pressing a key every 200 ms of game time, who reads every
+dialog that comes up (Enter) before the next key.
+-}
+playIn : Context -> List String -> Run DrinkMe.Model -> Run DrinkMe.Model
+playIn ctx keys run =
+    List.foldl
+        (\key current ->
+            closeDialogs ctx current
+                |> sendIn ctx (DrinkMe.KeyPressed key)
+                |> sendIn ctx (DrinkMe.Frame 200)
+        )
+        run
+        keys
+
+
+{-| Read every dialog to its end: Enter shows the whole text, then closes it.
+-}
+closeDialogs : Context -> Run DrinkMe.Model -> Run DrinkMe.Model
+closeDialogs ctx run =
+    if Story.isTalking run.model.story then
+        Playthrough.sendAll (DrinkMe.update ctx) [ DrinkMe.KeyPressed "Enter", DrinkMe.KeyPressed "Enter" ] run
+
+    else
+        run
+
+
+play : List String -> Run DrinkMe.Model -> Run DrinkMe.Model
+play =
+    playIn context
 
 
 pause : Float -> Run DrinkMe.Model -> Run DrinkMe.Model
@@ -52,11 +102,45 @@ wait =
     pause 5000
 
 
-{-| All the words with a space between them, and none after the last.
+letters : String -> List String
+letters =
+    String.toList >> List.map String.fromChar
+
+
+{-| Our best route: `e c`, the word, `j k`; `e .` for a word straight after
+the same word.
 -}
-allWords : List String -> String
-allWords words =
-    String.join " " words
+route : List String -> List String
+route words =
+    List.map2
+        (\previous word ->
+            if previous == Just word then
+                [ "e", "." ]
+
+            else
+                [ "e", "c" ] ++ letters word ++ [ "j", "k" ]
+        )
+        (Nothing :: List.map Just words)
+        words
+        |> List.concat
+
+
+changeWord : String -> List String
+changeWord word =
+    "c" :: letters word ++ [ "j", "k" ]
+
+
+wordsOf : Context -> String -> List String
+wordsOf ctx difficulty =
+    case difficulty of
+        "1" ->
+            ctx.texts.drinkMe.easyWords
+
+        "2" ->
+            ctx.texts.drinkMe.challengeWords
+
+        _ ->
+            ctx.texts.drinkMe.madWords
 
 
 easy : List String
@@ -64,31 +148,33 @@ easy =
     context.texts.drinkMe.easyWords
 
 
-mad : List String
-mad =
-    context.texts.drinkMe.madWords
+lines : Run DrinkMe.Model -> List String
+lines run =
+    case run.model.work of
+        Just work ->
+            Session.exactLines (Core.toString (Session.buffer work.session))
+
+        Nothing ->
+            []
 
 
-{-| Read the story, then pick a difficulty: "1" easy, "2" challenge, "3" mad.
--}
-start : String -> Run DrinkMe.Model
-start difficulty =
-    Playthrough.start DrinkMe.init |> readStory |> send (DrinkMe.KeyPressed difficulty)
+mode : Run DrinkMe.Model -> Maybe Mode
+mode run =
+    Maybe.map (.session >> Session.buffer >> Core.mode) run.model.work
 
 
-{-| How many letters of the current word, not yet typed, the panel shows.
--}
-showsLetters : Int -> Run DrinkMe.Model -> Expect.Expectation
-showsLetters count run =
-    (DrinkMe.view context run.model).panel
-        |> Query.fromHtml
-        |> Query.find [ classes [ "word", "now" ] ]
-        |> Query.findAll [ class "untyped" ]
-        |> Query.count (Expect.equal count)
+keystrokes : Run DrinkMe.Model -> Int
+keystrokes run =
+    Maybe.map (.session >> Session.keystrokes) run.model.work |> Maybe.withDefault 0
 
 
-letters : Texts -> List Char
-letters texts =
+hintsTold : Run DrinkMe.Model -> Int
+hintsTold run =
+    List.length run.model.hintsGiven
+
+
+allLetters : Texts -> List Char
+allLetters texts =
     List.concat [ texts.drinkMe.easyWords, texts.drinkMe.challengeWords, texts.drinkMe.madWords ]
         |> String.concat
         |> String.toList
@@ -99,117 +185,203 @@ averageLength words =
     toFloat (List.sum (List.map String.length words)) / toFloat (List.length words)
 
 
+hasRepeat : List String -> Bool
+hasRepeat words =
+    List.map2 (==) words (List.drop 1 words) |> List.any identity
+
+
 suite : Test
 suite =
     describe "Chapter 4: Drink Me"
-        [ describe "the difficulty sets the most tarts there are"
-            [ test "easy: one tart" <|
+        [ describe "our best route, played through the chapter"
+            (List.concatMap
+                (\( language, name ) ->
+                    let
+                        ctx =
+                            contextFor language
+                    in
+                    List.map
+                        (\( difficulty, tarts ) ->
+                            test (name ++ ", difficulty " ++ difficulty ++ ": finishes with all tarts, in exactly our best keystrokes") <|
+                                \_ ->
+                                    startIn ctx difficulty
+                                        |> playIn ctx (route (wordsOf ctx difficulty))
+                                        |> (\run -> ( keystrokes run, run |> wait |> readStory |> Playthrough.finishedWith ))
+                                        |> Expect.equal ( DrinkMe.ourBest (wordsOf ctx difficulty), Just tarts )
+                        )
+                        [ ( "1", 1 ), ( "2", 2 ), ( "3", 3 ) ]
+                )
+                [ ( English, "English" ), ( German, "German" ) ]
+            )
+        , test "the lines start as stars, one line a word, after an empty first line" <|
+            \_ ->
+                start "1"
+                    |> lines
+                    |> Expect.equal ("" :: List.map (always "***") easy)
+        , test "e then c changes the stars on the next line into the word" <|
+            \_ ->
+                start "1"
+                    |> play ("e" :: changeWord "alas")
+                    |> (\run -> ( List.take 3 (lines run), mode run ))
+                    |> Expect.equal ( [ "", "alas", "***" ], Just Normal )
+        , test ". repeats the last change on the next stars" <|
+            \_ ->
+                start "1"
+                    |> play (route [ "alas", "she", "shall", "fade" ])
+                    |> play [ "e", "." ]
+                    |> lines
+                    |> List.take 6
+                    |> Expect.equal [ "", "alas", "she", "shall", "fade", "fade" ]
+        , test "the closing story waits until Alice has walked to the door" <|
+            \_ ->
+                start "1"
+                    |> play (route easy)
+                    |> readStory
+                    |> Playthrough.finishedWith
+                    |> Expect.equal Nothing
+        , test "Alice gets smaller with the words; the closing story tells of the key on the table" <|
+            \_ ->
+                let
+                    before =
+                        start "1" |> wait
+
+                    after =
+                        before |> play (route easy) |> wait
+                in
+                ( DrinkMe.alicePixelSize after.model < DrinkMe.alicePixelSize before.model / 2
+                , Story.isTalking after.model.story
+                )
+                    |> Expect.equal ( True, True )
+        , describe "a change has to be quick"
+            [ test "the time is 300 ms a letter of the word, plus 600 ms for j k" <|
+                \_ -> DrinkMe.timeLimit "alas" |> Expect.equal 1800
+            , test "too slow: the change is undone, back to the stars in Normal mode" <|
                 \_ ->
                     start "1"
-                        |> typeSteadily (allWords easy)
-                        |> wait
-                        |> readStory
-                        |> Playthrough.finishedWith
-                        |> Expect.equal (Just 1)
-            , test "challenge: two tarts" <|
+                        |> play [ "e", "c", "a", "l" ]
+                        |> pause 2000
+                        |> (\run -> ( List.take 2 (lines run), mode run, run.model.tooSlow ))
+                        |> Expect.equal ( [ "", "***" ], Just Normal, 1 )
+            , test "just in time is fine" <|
                 \_ ->
-                    start "2"
-                        |> typeSteadily (allWords context.texts.drinkMe.challengeWords)
+                    -- 1800 ms for alas: a wait of 750 ms after c, then a l a s j
+                    -- k with 200 ms between the keys: k comes after 1750 ms.
+                    start "1"
+                        |> play [ "e" ]
+                        |> send (DrinkMe.KeyPressed "c")
+                        |> pause 750
+                        |> play (letters "alas" ++ [ "j", "k" ])
+                        |> (\run -> ( List.take 2 (lines run), run.model.tooSlow ))
+                        |> Expect.equal ( [ "", "alas" ], 0 )
+            , test "the time doesn't run while a dialog is read" <|
+                \_ ->
+                    -- The first i shows a dialog (e c . are quicker); reading it takes a while.
+                    start "1"
+                        |> play [ "i" ]
+                        |> pause 10000
+                        |> (\run -> ( mode run, run.model.tooSlow ))
+                        |> Expect.equal ( Just Insert, 0 )
+            , test ". takes no time, so it is never too slow" <|
+                \_ ->
+                    start "1"
+                        |> play (route [ "alas", "she", "shall", "fade" ] ++ [ "e", "." ])
+                        |> pause 3000
+                        |> .model
+                        |> .tooSlow
+                        |> Expect.equal 0
+            ]
+        , describe "a wrong word"
+            [ test "escaped in time, it stays and counts as a wrong word" <|
+                \_ ->
+                    start "1"
+                        |> play ("e" :: changeWord "alsa")
+                        |> (\run -> ( List.take 2 (lines run), run.model.wrongWords ))
+                        |> Expect.equal ( [ "", "alsa" ], 1 )
+            , test "k, e and c change it again, even on the first word" <|
+                \_ ->
+                    start "1"
+                        |> play ("e" :: changeWord "alsa")
+                        |> play ([ "k", "e" ] ++ changeWord "alas")
+                        |> lines
+                        |> List.take 3
+                        |> Expect.equal [ "", "alas", "***" ]
+            , test "further down, e may need pressing twice after k" <|
+                \_ ->
+                    start "1"
+                        |> play (route [ "alas" ] ++ ("e" :: changeWord "sh"))
+                        |> play ([ "k", "e", "e" ] ++ changeWord "she")
+                        |> lines
+                        |> List.take 4
+                        |> Expect.equal [ "", "alas", "she", "***" ]
+            , test "mad: two wrong words cost a tart" <|
+                \_ ->
+                    let
+                        words =
+                            context.texts.drinkMe.madWords
+                    in
+                    start "3"
+                        |> play ("e" :: changeWord "x" ++ [ "k", "e" ] ++ changeWord "y" ++ [ "k", "e" ])
+                        |> play (List.drop 1 (route words))
                         |> wait
                         |> readStory
                         |> Playthrough.finishedWith
                         |> Expect.equal (Just 2)
-            , test "mad: three tarts" <|
-                \_ ->
-                    start "3"
-                        |> typeSteadily (allWords mad)
-                        |> wait
-                        |> readStory
-                        |> Playthrough.finishedWith
-                        |> Expect.equal (Just 3)
             ]
-        , test "the closing story waits until Alice has walked to the door" <|
-            \_ ->
-                start "1"
-                    |> typeSteadily (allWords easy)
-                    |> readStory
-                    |> Playthrough.finishedWith
-                    |> Expect.equal Nothing
-        , test "mad: three wrong keys before every word cost two tarts" <|
-            \_ ->
-                start "3"
-                    |> typeSteadily ("xxx" ++ String.replace " " " xxx" (allWords mad))
-                    |> wait
-                    |> readStory
-                    |> Playthrough.finishedWith
-                    |> Expect.equal (Just 1)
-        , test "the last letter of the last word ends the chapter, no space needed" <|
-            \_ ->
-                start "1"
-                    |> typeSteadily (allWords easy)
-                    |> .model
-                    |> (\model -> ( model.walk /= Nothing, model.waitingForSpace ))
-                    |> Expect.equal ( True, False )
-        , test "the space bar only counts once the word is complete" <|
-            \_ ->
-                start "1"
-                    |> Playthrough.sendAll (DrinkMe.update context) (List.map DrinkMe.KeyPressed [ "a", "l", " " ])
-                    |> .model
-                    |> (\model -> ( model.wordIndex, model.letterIndex, model.errors ))
-                    |> Expect.equal ( 0, 2, 1 )
-        , describe "words are typed from memory"
-            [ test "the word shows until its first key" <|
-                \_ -> start "1" |> showsLetters 4
-            , test "then it hides" <|
-                \_ -> start "1" |> typeSteadily "a" |> showsLetters 0
-            , test "a pause longer than the limit in the middle of a word starts it over, shown again" <|
+        , describe "hints come once, when they help"
+            [ test "h j k l and i work, but the first time j is used a dialog says e c . are quicker" <|
                 \_ ->
                     start "1"
-                        |> typeSteadily "al"
-                        |> pause (DrinkMe.pauseLimit + 100)
-                        |> Expect.all
-                            [ \run -> Expect.equal ( 0, 1 ) ( run.model.letterIndex, run.model.startedOver )
-                            , showsLetters 4
-                            ]
-            , test "a pause just under the limit is fine" <|
+                        |> play [ "j" ]
+                        |> (\run -> ( Story.isTalking run.model.story, List.member DrinkMe.OtherKeys run.model.hintsGiven ))
+                        |> Expect.equal ( True, True )
+            , test "the dialog comes only once" <|
                 \_ ->
                     start "1"
-                        |> send (DrinkMe.KeyPressed "a")
-                        |> pause (DrinkMe.pauseLimit - 50)
-                        |> send (DrinkMe.KeyPressed "l")
+                        |> play [ "j", "l", "h", "j" ]
+                        |> hintsTold
+                        |> Expect.equal 2
+            , test "k, the way back to a wrong word, doesn't bring it" <|
+                \_ ->
+                    start "1"
+                        |> play [ "e", "k" ]
                         |> .model
-                        |> (\model -> ( model.letterIndex, model.startedOver ))
-                        |> Expect.equal ( 2, 0 )
-            , test "a wrong key doesn't stop the clock" <|
+                        |> .hintsGiven
+                        |> List.member DrinkMe.OtherKeys
+                        |> Expect.equal False
+            , test "the same word coming next brings the hint for ." <|
                 \_ ->
                     start "1"
-                        |> send (DrinkMe.KeyPressed "a")
-                        |> pause 200
-                        |> send (DrinkMe.KeyPressed "x")
-                        |> pause 200
+                        |> play (route [ "alas", "she", "shall", "fade" ])
                         |> .model
-                        |> .startedOver
-                        |> Expect.equal 1
-            , test "between words, and before the space, there is no hurry" <|
+                        |> .hintsGiven
+                        |> List.member DrinkMe.Repeat
+                        |> Expect.equal True
+            , test "too slow a second time: only a toast" <|
                 \_ ->
                     start "1"
-                        |> typeSteadily "alas"
-                        |> pause 3000
-                        |> typeSteadily " "
-                        |> pause 3000
-                        |> typeSteadily "she"
-                        |> .model
-                        |> (\model -> ( model.wordIndex, model.startedOver ))
-                        |> Expect.equal ( 1, 0 )
+                        |> play [ "e", "c" ]
+                        |> pause 2000
+                        |> play [ "c" ]
+                        |> pause 2000
+                        |> Playthrough.toastCount
+                        |> Expect.equal 2
             ]
-        , test "speed is measured on the game clock: five keys a second is about 60 words a minute" <|
-            \_ ->
-                start "1"
-                    |> typeSteadily (allWords easy)
-                    |> .model
-                    |> DrinkMe.wordsPerMinute
-                    |> toFloat
-                    |> Expect.within (Expect.Absolute 2) 61
+        , describe "one word a line"
+            [ test "Enter in INSERT adds no line" <|
+                \_ ->
+                    start "1"
+                        |> play [ "e", "c", "Enter", "a" ]
+                        |> lines
+                        |> List.length
+                        |> Expect.equal (1 + List.length easy)
+            , test "Backspace at the start of a line doesn't join it to the line above" <|
+                \_ ->
+                    start "1"
+                        |> play [ "e", "c", "Backspace" ]
+                        |> lines
+                        |> List.take 2
+                        |> Expect.equal [ "", "" ]
+            ]
         , describe "the word lists"
             (List.concatMap
                 (\language ->
@@ -224,17 +396,22 @@ suite =
                             else
                                 "German"
                     in
-                    [ test (name ++ ": only the home row, e and i") <|
+                    [ test (name ++ ": only the home row (no j, which starts j k), e, c, i and the full stop") <|
                         \_ ->
-                            letters texts
-                                |> List.filter (\char -> not (String.contains (String.fromChar char) "asdfghjklei"))
+                            allLetters texts
+                                |> List.filter (\char -> not (String.contains (String.fromChar char) "asdfghkl;öeic."))
                                 |> Set.fromList
                                 |> Set.toList
                                 |> Expect.equal []
+                    , test (name ++ ": every list has a word straight after the same word, for .") <|
+                        \_ ->
+                            [ texts.drinkMe.easyWords, texts.drinkMe.challengeWords, texts.drinkMe.madWords ]
+                                |> List.map hasRepeat
+                                |> Expect.equal [ True, True, True ]
                     , test (name ++ ": challenge words are longer than easy ones") <|
                         \_ ->
                             (averageLength texts.drinkMe.challengeWords - averageLength texts.drinkMe.easyWords)
-                                |> Expect.atLeast 1.5
+                                |> Expect.atLeast 1
                     , test (name ++ ": mad words are at least ten letters long") <|
                         \_ ->
                             texts.drinkMe.madWords

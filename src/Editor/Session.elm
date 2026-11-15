@@ -21,6 +21,9 @@ key after `g` cancels it.
 `gw` puts a two-letter label on every word (`jumpLabels`); typing a label
 selects that word, as in Helix. Esc or a key that matches no label cancels.
 
+`.` repeats the last change, as in Helix (#74): a `c`, `i` or `a` with
+everything typed until Insert mode ended, or a `d`.
+
 @docs Session, start, fromBuffer, buffer, keystrokes, recentKeys, pendingCount, isWaiting, jumpLabels
 @docs Outcome, press, isAfterJ, escapeConfig, splash, replaceChar, apply, withBuffer, matches, matchesExactly, exactLines, matchingLines
 
@@ -39,6 +42,8 @@ type Session
         , afterG : Bool
         , jump : Maybe Jump
         , afterJ : Bool
+        , recording : Maybe (List Command)
+        , lastChange : Maybe (List Command)
         }
 
 
@@ -59,7 +64,7 @@ start text =
 -}
 fromBuffer : Buffer -> Session
 fromBuffer startingBuffer =
-    Session { buffer = startingBuffer, keystrokes = 0, recentKeys = [], count = "", afterG = False, jump = Nothing, afterJ = False }
+    Session { buffer = startingBuffer, keystrokes = 0, recentKeys = [], count = "", afterG = False, jump = Nothing, afterJ = False, recording = Nothing, lastChange = Nothing }
 
 
 {-| The labels `gw` shows, at the start of each word they belong to. Once
@@ -103,7 +108,7 @@ chapter 3's key slipping out on mad throws away what was typed (#109).
 -}
 withBuffer : Buffer -> Session -> Session
 withBuffer earlier (Session s) =
-    Session { s | buffer = earlier, count = "", afterG = False, jump = Nothing, afterJ = False }
+    Session { s | buffer = earlier, count = "", afterG = False, jump = Nothing, afterJ = False, recording = Nothing }
 
 
 keystrokes : Session -> Int
@@ -169,14 +174,30 @@ press isUnlocked key ((Session s) as session) =
                 { command = ExitInsert
                 , count = 1
                 , before = s.buffer
-                , session = Session { s | afterJ = False, buffer = Core.apply ExitInsert s.buffer, keystrokes = s.keystrokes + 1 }
+                , session =
+                    Session
+                        { s
+                            | afterJ = False
+                            , buffer = Core.apply ExitInsert s.buffer
+                            , keystrokes = s.keystrokes + 1
+                            , recording = Nothing
+                            , lastChange = finishRecording s
+                        }
                 }
 
         else if key == "j" then
             pressNormally isUnlocked "j" settled
 
         else
-            pressNormally isUnlocked key (Session { s | afterJ = False, buffer = Core.apply (TypeChar 'j') s.buffer })
+            pressNormally isUnlocked
+                key
+                (Session
+                    { s
+                        | afterJ = False
+                        , buffer = Core.apply (TypeChar 'j') s.buffer
+                        , recording = Maybe.map ((::) (TypeChar 'j')) s.recording
+                    }
+                )
 
     else if Core.mode s.buffer == Insert && key == "j" && isUnlocked (TypeChar 'j') then
         Waiting (Session { s | afterJ = True, keystrokes = s.keystrokes + 1 })
@@ -314,14 +335,21 @@ run isUnlocked key (Session s) maybeCommand =
                     , before = s.buffer
                     , session =
                         Session
-                            { buffer = Core.applyTimes count command s.buffer
-                            , keystrokes = s.keystrokes + 1
-                            , recentKeys = remember mode key s.recentKeys
-                            , count = ""
-                            , afterG = False
-                            , jump = Nothing
-                            , afterJ = False
+                            { s
+                                | buffer =
+                                    if command == RepeatLastChange then
+                                        repeatChange s.lastChange s.buffer
+
+                                    else
+                                        Core.applyTimes count command s.buffer
+                                , keystrokes = s.keystrokes + 1
+                                , recentKeys = remember mode key s.recentKeys
+                                , count = ""
+                                , afterG = False
+                                , jump = Nothing
+                                , afterJ = False
                             }
+                            |> record mode command
                     }
 
             else
@@ -329,6 +357,61 @@ run isUnlocked key (Session s) maybeCommand =
 
         Nothing ->
             Ignored withoutCount
+
+
+{-| Remember the change being made, for `.` (Helix's repeat): a `c`, `i`
+or `a` with everything typed until Insert mode ends, or a `d`. While Insert
+mode lasts, `recording` holds it, newest command first.
+-}
+record : Mode -> Command -> Session -> Session
+record mode command (Session s) =
+    case ( mode, command ) of
+        ( Normal, Delete ) ->
+            Session { s | lastChange = Just [ Delete ] }
+
+        ( Normal, _ ) ->
+            if List.member command [ Change, InsertBefore, InsertAfter ] then
+                Session { s | recording = Just [ command ] }
+
+            else
+                Session s
+
+        ( Insert, ExitInsert ) ->
+            Session { s | recording = Nothing, lastChange = finishRecording s }
+
+        ( Insert, _ ) ->
+            Session { s | recording = Maybe.map ((::) command) s.recording }
+
+
+finishRecording : { a | recording : Maybe (List Command), lastChange : Maybe (List Command) } -> Maybe (List Command)
+finishRecording s =
+    case s.recording of
+        Just commands ->
+            Just (List.reverse commands)
+
+        Nothing ->
+            s.lastChange
+
+
+{-| `.` does the last change again, where the cursor is now: `e .` changes
+the next word into the word typed last. It ends back in Normal mode.
+-}
+repeatChange : Maybe (List Command) -> Buffer -> Buffer
+repeatChange change current =
+    case change of
+        Just commands ->
+            let
+                changed =
+                    List.foldl Core.apply current commands
+            in
+            if Core.mode changed == Insert then
+                Core.apply ExitInsert changed
+
+            else
+                changed
+
+        Nothing ->
+            current
 
 
 {-| A word put in from outside, not typed (see `Core.splash`).
@@ -412,7 +495,7 @@ out of the lock is `apply ExitInsert`.
 -}
 apply : Command -> Session -> Session
 apply command (Session s) =
-    Session { s | buffer = Core.apply command s.buffer, count = "", afterG = False, jump = Nothing }
+    Session { s | buffer = Core.apply command s.buffer, count = "", afterG = False, jump = Nothing, recording = Nothing }
 
 
 {-| How many lines of the target already read right, line by line.

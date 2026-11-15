@@ -117,7 +117,8 @@ The local folder may be called `helix-wonderland`, but the repository is
 right hand, then `g h`, then both hands (#72). 2. `h j k l`, counts like `5j`,
 which also jump over dropped things (#89).
 3. Insert mode with the golden key: `i`, Esc, `c` on emojis that stand for
-words (#73, #107); typed letters are lowercase home row only. 4. Typing words, `e`, `i`, space (#74 will add `o` and `.`).
+words (#73, #107); typed letters are lowercase home row only. 4. `e`, `c` and `.` (repeat the last change) on words; typed letters
+add `e c i` and the full stop, no `o` (#74).
 5. `gh gl gg ge gj gk g.` (`gw` works but is deliberately not taught;
 finishing chapter 5 with only `gw` jumps and no mistake brings out the
 Cheshire Cat, an easter egg nothing announces).
@@ -182,8 +183,18 @@ order above holds. Read old issues with that in mind.
   fewer lines show fewer locks; it opens on exactly the goal's locks, all
   gold (#101, #103). Enter inserts new lines (blocking it made a deleted
   line break impossible to restore).
-- Chapter 4: typing from memory; a word hides after its first key and starts
-  over after a pause over 300 ms between correct keys (#35).
+- Chapter 4 (#74, replacing the typing from memory of #35): one `***` a
+  line after an empty first line (so `k` from any word has a line to go
+  to), each line's word in a column next to it. Normal mode; `e c`, the
+  word, `j k`; `e .` for a word straight after the same word. A change
+  (from `c` or `i` to `j k`) has 300 ms a letter of the line's word plus
+  600 ms, counted only while no dialog shows; too slow undoes it. A wrong
+  word escaped in time stays (back with `k`, `e` until selected, `c`).
+  `h j l` and `i` bring one dialog saying `e c .` are quicker; `k` doesn't,
+  it is the way back. Enter and Backspace at a line start do nothing in
+  INSERT. "Our best" is computed (`DrinkMe.ourBest`) and played in a test.
+  The key lies on the glass table and stays there while Alice shrinks.
+  Word lists avoid `j` (it starts `j k`).
 - Chapter 5: lines without indents (#55); cheeky currants (`g.`) are shy and run
   off once the cursor shares their line, screen row or column (#47).
 - Chapter 7: Mad is Alice's garbled "You are old, Father William" (#65). A
