@@ -202,6 +202,8 @@ order above holds. Read old issues with that in mind.
   word escaped in time stays (back with `k`, `e` until selected, `c`; on
   the first line `gg`, unlocked here and named in that hint as "the start
 of the first line", or `5h e`; `2gg` works too but isn't mentioned).
+  On the first line, a wrong word and `k` (which can't go higher) bring a
+  dialog about `gg` every time (#142).
   `h j l` and `i` bring one dialog saying `e c .` are quicker; `k` doesn't,
   it is the way back. Enter and Backspace work in INSERT as everywhere:
   line breaks can be deleted, so they must be typable again (#122, as in

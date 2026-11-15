@@ -16,6 +16,8 @@ import Language exposing (Language(..))
 import Playthrough exposing (Run)
 import Set
 import Test exposing (Test, describe, test)
+import Test.Html.Query as Query
+import Test.Html.Selector as Selector
 import Texts exposing (Texts)
 
 
@@ -101,6 +103,19 @@ pause milliseconds =
 wait : Run DrinkMe.Model -> Run DrinkMe.Model
 wait =
     pause 5000
+
+
+{-| The dialog says `text`: after a while (it appears letter by letter),
+the stage shows it.
+-}
+says : (Texts -> String) -> Run DrinkMe.Model -> Expect.Expectation
+says text run =
+    pause 15000 run
+        |> .model
+        |> DrinkMe.view context
+        |> .stage
+        |> Query.fromHtml
+        |> Query.has [ Selector.text (text context.texts) ]
 
 
 letters : String -> List String
@@ -369,6 +384,39 @@ suite =
                         |> play [ "j", "l", "h", "j" ]
                         |> hintsTold
                         |> Expect.equal 2
+            , describe "on the first line, gg is told every time it helps (#142)"
+                [ test "a wrong word on the first line" <|
+                    \_ ->
+                        start "1"
+                            |> play ("e" :: changeWord "alsa")
+                            |> says (.drinkMe >> .firstLineWrong)
+                , test "and again for the next wrong word there" <|
+                    \_ ->
+                        start "1"
+                            |> play ("e" :: changeWord "alsa")
+                            |> play ([ "g", "g", "e" ] ++ changeWord "alsx")
+                            |> says (.drinkMe >> .firstLineWrong)
+                , test "k pressed on the first line, every time" <|
+                    \_ ->
+                        start "1"
+                            |> play [ "k" ]
+                            |> pause 15000
+                            |> play [ "k" ]
+                            |> says (.drinkMe >> .firstLineUp)
+                , test "k on another line brings no dialog" <|
+                    \_ ->
+                        start "1"
+                            |> play (route [ "alas" ] ++ [ "e", "k" ])
+                            |> .model
+                            |> .story
+                            |> Story.isTalking
+                            |> Expect.equal False
+                , test "a wrong word on another line still brings the general hint" <|
+                    \_ ->
+                        start "1"
+                            |> play (route [ "alas" ] ++ ("e" :: changeWord "sh"))
+                            |> says (.drinkMe >> .wrongWord)
+                ]
             , test "k, the way back to a wrong word, doesn't bring it" <|
                 \_ ->
                     start "1"
