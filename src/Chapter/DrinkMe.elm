@@ -373,6 +373,14 @@ notice command before model =
         ( MoveDown, _ ) ->
             ( tell OtherKeys (.drinkMe >> .hintOtherKeys) model, [] )
 
+        ( MoveUp, _ ) ->
+            -- On the first line k can't go higher: every time, gg is the way (#142).
+            if Tuple.first (Core.cursorLineColumn before) == 1 then
+                ( tellAgain (.drinkMe >> .firstLineUp) model, [ PlaySound BumpSound ] )
+
+            else
+                ( model, [] )
+
         _ ->
             ( model, [] )
 
@@ -435,7 +443,11 @@ sipped work model =
                         counted =
                             { model | wrongWords = model.wrongWords + 1 }
                     in
-                    if List.member WrongWord model.hintsGiven then
+                    if line == 1 then
+                        -- k can't get back to the first word: gg can, said every time (#142).
+                        ( tellAgain (.drinkMe >> .firstLineWrong) counted, [ PlaySound ErrorSound ] )
+
+                    else if List.member WrongWord model.hintsGiven then
                         ( counted, [ PlaySound ErrorSound, ShowToast (.drinkMe >> .wrongWordShort) ] )
 
                     else
@@ -528,6 +540,13 @@ tooSlow work sip model =
 
     else
         ( tell TooSlow (.drinkMe >> .tooSlow) undone, [ PlaySound BumpSound ] )
+
+
+{-| Tell a hint in a dialog, however often it was told before.
+-}
+tellAgain : (Texts -> String) -> Model -> Model
+tellAgain text model =
+    { model | story = Story.tell (Dialog.say Narrator text) [] model.story }
 
 
 {-| Tell a hint in a dialog, unless it was told before.

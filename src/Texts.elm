@@ -220,6 +220,8 @@ type alias DrinkMeTexts =
     , tooSlowShort : String
     , wrongWord : String
     , wrongWordShort : String
+    , firstLineWrong : String
+    , firstLineUp : String
     , tooSlowCount : String
     , wrongWords : String
     , ourBest : String
@@ -608,6 +610,8 @@ english =
         , tooSlowShort = "Too slow! The stars are back."
         , wrongWord = "That isn't the word yet. Go back up with k, press e until the word is selected, and change it with c. g g jumps to the start of the first line."
         , wrongWordShort = "Not the word yet. Back up with k."
+        , firstLineWrong = "That isn't the word yet. g g jumps to the start of the first line; then press e and change the word with c."
+        , firstLineUp = "This is the first line, k can't go higher. g g jumps to the start of the first line; then e selects the word."
         , tooSlowCount = "Too slow"
         , wrongWords = "Wrong words"
         , ourBest = "Our best"
@@ -1034,6 +1038,8 @@ german =
         , tooSlowShort = "Zu langsam! Die Sterne sind zurück."
         , wrongWord = "Das ist noch nicht das Wort. Geh mit k zurück nach oben, drücke e, bis das Wort ausgewählt ist, und ändere es mit c. g g springt an den Anfang der ersten Zeile."
         , wrongWordShort = "Noch nicht das Wort. Mit k zurück."
+        , firstLineWrong = "Das ist noch nicht das Wort. g g springt an den Anfang der ersten Zeile; dann drücke e und ändere das Wort mit c."
+        , firstLineUp = "Das ist die erste Zeile, höher geht k nicht. g g springt an den Anfang der ersten Zeile; dann wählt e das Wort aus."
         , tooSlowCount = "Zu langsam"
         , wrongWords = "Falsche Wörter"
         , ourBest = "Unser Rekord"
