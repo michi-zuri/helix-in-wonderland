@@ -198,7 +198,7 @@ order above holds. Read old issues with that in mind.
   line, each line's word in a column next to it. Normal mode; `e c`, the
   word, `j k`; `e .` for a word straight after the same word. A change
   (from `c` or `i` to `j k`) has 300 ms a letter of the line's word plus
-  600 ms, counted only while no dialog shows; too slow undoes it. A wrong
+  600 ms, twice that on Easy (#140), counted only while no dialog shows; too slow undoes it. A wrong
   word escaped in time stays (back with `k`, `e` until selected, `c`; on
   the first line `gg`, unlocked here and named in that hint as "the start
 of the first line", or `5h e`; `2gg` works too but isn't mentioned).
