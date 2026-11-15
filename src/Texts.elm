@@ -190,15 +190,18 @@ type alias LittleDoorTexts =
     }
 
 
-{-| Each word list is one hidden sentence. Mad's made-up words sound like a
-sentence when read aloud. Words may only use the letters learned so far:
-the home row, plus `e` and `i` (a test checks this).
+{-| Each word list is one hidden sentence, one word a line. Mad's made-up
+words sound like a sentence when read aloud. Words may only use the letters
+learned so far: the home row, plus `e`, `c`, `i` and the full stop, never
+`j`, which starts `j k` in INSERT (a test checks this). A word straight
+after the same word can be repeated with `.` (#74).
 -}
 type alias DrinkMeTexts =
     { intro1 : String
     , intro2 : String
     , intro3 : String
-    , finale : String
+    , finale1 : String
+    , finale2 : String
     , easyWords : List String
     , challengeWords : List String
     , madWords : List String
@@ -207,10 +210,16 @@ type alias DrinkMeTexts =
     , easyInfo : String
     , challengeInfo : String
     , madInfo : String
-    , fromMemory : String
+    , hintHowTo : String
+    , hintOtherKeys : String
+    , hintRepeat : String
     , tooSlow : String
-    , startedOver : String
-    , sips : String
+    , tooSlowShort : String
+    , wrongWord : String
+    , wrongWordShort : String
+    , tooSlowCount : String
+    , wrongWords : String
+    , ourBest : String
     , newKeys : String
     , bottle : String
     }
@@ -574,22 +583,29 @@ english =
         }
     , drinkMe =
         { intro1 = "On the table stood a little bottle. Round its neck was a paper label with the words DRINK ME printed in large letters."
-        , intro2 = "Each word you type is one sip. Look at the word, then type it from memory, and tap the space bar with your thumb."
-        , intro3 = "Two new keys: e is your left middle finger reaching up one row, i is your right middle finger reaching up. Always come back home afterwards."
-        , finale = "What a curious feeling! Alice was now only ten inches high, the right size for going through the little door."
-        , easyWords = [ "alas", "she", "feels", "as", "if", "she", "shall", "fade", "like", "a", "sad", "leaf" ]
-        , challengeWords = [ "she", "glided", "aside", "as", "seashells", "salads", "ladles", "flasks", "giggled", "sighed", "faded" ]
-        , madWords = [ "alaasaleesiss", "ashaiashaleef", "sheesaighsshee", "shallhaidasafish", "afishalaas", "fishesfeelsaad" ]
+        , intro2 = "Alice put the golden key back on the glass table. Each word you write is one sip, and with every sip she gets smaller."
+        , intro3 = "New letters: e and c with your left middle finger, up and down. i with your right middle finger, up. The full stop with your right ring finger, down. Always come back home afterwards."
+        , finale1 = "What a curious feeling! Alice was now only ten inches high, the right size for going through the little door."
+        , finale2 = "But when she got to the door, she found she had forgotten the little golden key. It was still up on the glass table, and she could not possibly reach it!"
+        , easyWords = [ "alas", "she", "shall", "fade", "fade", "fade", "like", "a", "leaf." ]
+        , challengeWords = [ "alice", "sighed", "sighed", "glided", "aside", "aside", "like", "seashells." ]
+        , madWords = [ "alicesighedalas", "alicesighedalas", "ifeellikealeaf", "ifeellikealeaf", "shallifadeaside", "shallifadeaside", "alicesighedalas." ]
         , chooseTitle = "How big a sip?"
         , chooseHint = "j / k to choose · Enter to drink"
         , easyInfo = "Short words."
         , challengeInfo = "Longer words."
         , madInfo = "Very long made-up words."
-        , fromMemory = "Read the word first. It hides as soon as you start typing, and a pause in the middle of a word starts it over. Between words, take all the time you need."
-        , tooSlow = "Too slow! The word starts over."
-        , startedOver = "Started over"
-        , sips = "Sips"
-        , newKeys = "New keys: e and i. Middle fingers reach up."
+        , hintHowTo = "e selects the stars on the next line. c changes them: type the word next to them, then j k. Quick, a sip doesn't last long!"
+        , hintOtherKeys = "h j k l and i work too, but here e, c and . are quicker: e jumps straight to the next stars."
+        , hintRepeat = "The same word again! . does your last change once more: press e, then ."
+        , tooSlow = "Too slow! The stars are back. Type the word in one go, then j k straight away."
+        , tooSlowShort = "Too slow! The stars are back."
+        , wrongWord = "That isn't the word yet. Go back up with k, press e until the word is selected, and change it with c."
+        , wrongWordShort = "Not the word yet. Back up with k."
+        , tooSlowCount = "Too slow"
+        , wrongWords = "Wrong words"
+        , ourBest = "Our best"
+        , newKeys = "New letters: e, c, i and the full stop."
         , bottle = "DRINK ME"
         }
     , curiouser =
@@ -990,22 +1006,29 @@ german =
         }
     , drinkMe =
         { intro1 = "Auf dem Tisch stand ein Fläschchen. Um seinen Hals hing ein Zettel mit grossen Buchstaben: TRINK MICH."
-        , intro2 = "Jedes Wort, das du tippst, ist ein Schluck. Schau dir das Wort an, tippe es aus dem Gedächtnis und drücke dann mit dem Daumen die Leertaste."
-        , intro3 = "Zwei neue Tasten: e ist der linke Mittelfinger, eine Reihe nach oben. i ist der rechte Mittelfinger, eine Reihe nach oben. Danach immer zurück nach Hause."
-        , finale = "Was für ein seltsames Gefühl! Alice war nur noch fünfundzwanzig Zentimeter gross, genau richtig für die kleine Tür."
-        , easyWords = [ "ja", "das", "glas", "half", "alles", "fiel", "sie", "sass", "leise", "als", "elfe", "da" ]
-        , challengeWords = [ "eilige", "elfe", "liesel", "sah", "seidige", "igel", "kegel", "segel", "alles", "gefiel", "liesel" ]
-        , madWords = [ "haialiissaadaas", "glaasjadaasglaas", "halfaliissass", "alselfedaaaha", "siiliiflaise", "ailighfiilsii" ]
+        , intro2 = "Alice legte den goldenen Schlüssel zurück auf den Glastisch. Jedes Wort, das du schreibst, ist ein Schluck, und mit jedem Schluck wird sie kleiner."
+        , intro3 = "Neue Buchstaben: e und c mit dem linken Mittelfinger, nach oben und nach unten. i mit dem rechten Mittelfinger, nach oben. Den Punkt mit dem rechten Ringfinger, nach unten. Danach immer zurück nach Hause."
+        , finale1 = "Was für ein seltsames Gefühl! Alice war nur noch fünfundzwanzig Zentimeter gross, genau richtig für die kleine Tür."
+        , finale2 = "Doch als sie zur Tür kam, merkte sie, dass sie den goldenen Schlüssel vergessen hatte. Er lag noch oben auf dem Glastisch, und sie kam unmöglich hinauf!"
+        , easyWords = [ "ach", "alice", "sass", "leise", "leise", "leise", "als", "elfe", "da." ]
+        , challengeWords = [ "alice", "schlich", "schlich", "leise", "leise", "als", "seidige", "eilige", "elfe." ]
+        , madWords = [ "achaliceschlich", "achaliceschlich", "leiseleiseleise", "leiseleiseleise", "alsseidigeelfe", "alsseidigeelfe", "achaliceschlich." ]
         , chooseTitle = "Wie gross soll der Schluck sein?"
         , chooseHint = "j / k zum Wählen · Enter zum Trinken"
         , easyInfo = "Kurze Wörter."
         , challengeInfo = "Längere Wörter."
         , madInfo = "Sehr lange, erfundene Wörter."
-        , fromMemory = "Lies zuerst das Wort. Sobald du tippst, verschwindet es, und eine Pause mitten im Wort fängt es von vorne an. Zwischen den Wörtern hast du alle Zeit der Welt."
-        , tooSlow = "Zu langsam! Das Wort fängt von vorne an."
-        , startedOver = "Neu angefangen"
-        , sips = "Schlucke"
-        , newKeys = "Neue Tasten: e und i. Die Mittelfinger greifen nach oben."
+        , hintHowTo = "e wählt die Sterne auf der nächsten Zeile aus. c ändert sie: Tippe das Wort daneben, dann j k. Schnell, ein Schluck dauert nicht lange!"
+        , hintOtherKeys = "h j k l und i gehen auch, aber hier sind e, c und . schneller: e springt direkt zu den nächsten Sternen."
+        , hintRepeat = "Nochmals dasselbe Wort! . macht deine letzte Änderung noch einmal: Drücke e, dann ."
+        , tooSlow = "Zu langsam! Die Sterne sind zurück. Tippe das Wort in einem Zug, dann sofort j k."
+        , tooSlowShort = "Zu langsam! Die Sterne sind zurück."
+        , wrongWord = "Das ist noch nicht das Wort. Geh mit k zurück nach oben, drücke e, bis das Wort ausgewählt ist, und ändere es mit c."
+        , wrongWordShort = "Noch nicht das Wort. Mit k zurück."
+        , tooSlowCount = "Zu langsam"
+        , wrongWords = "Falsche Wörter"
+        , ourBest = "Unser Rekord"
+        , newKeys = "Neue Buchstaben: e, c, i und der Punkt."
         , bottle = "TRINK MICH"
         }
     , curiouser =

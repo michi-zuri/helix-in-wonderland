@@ -65,6 +65,9 @@ normalCommand key =
         "u" ->
             Just Undo
 
+        "." ->
+            Just RepeatLastChange
+
         "i" ->
             Just InsertBefore
 

@@ -10,7 +10,7 @@ Keyboards: German and Swiss QWERTZ, US QWERTY, French AZERTY.
 | 1 | Down the Rabbit Hole | the home row in one long fall: the left hand finger by finger, then the right hand, then `g` and `h`, then both hands (catch jars by their letter) |
 | 2 | The Hall of Doors | Helix movement with `h j k l`, and counts like `5j` |
 | 3 | The Little Door | Insert mode with the golden key: `i` puts the key into a lock, Esc pulls it out, `c` changes a wrong letter |
-| 4 | Drink Me | typing whole words from memory, the keys `e` and `i`, the space bar |
+| 4 | Drink Me | changing words quickly with `e`, `c` and `.` (repeat), the letters `e`, `c`, `i` and the full stop |
 | 5 | Curiouser and Curiouser | Helix's jumps: `gh gl gg ge gj gk g.` (squash the currants) |
 | 6 | The Pool of Tears | select first, then act: `w x`, then `d`; `u` undoes; counts like `3w`, `2x`; `gh` to the line start |
 | 7 | Advice from a Caterpillar | more Insert mode: `a` after the cursor; challenge adds wrong words and line endings (`gl a`), mad a whole garbled poem with a line to delete (`x d`) |

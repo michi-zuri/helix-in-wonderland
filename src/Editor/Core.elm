@@ -95,6 +95,7 @@ type Command
     | Delete
     | Change
     | Undo
+    | RepeatLastChange
     | InsertBefore
     | InsertAfter
     | ExitInsert

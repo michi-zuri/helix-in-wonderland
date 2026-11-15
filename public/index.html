@@ -120,6 +120,15 @@ h2{margin:0;font-family:var(--display);font-weight:400;font-size:22px}
 .editor-with-goal{background:var(--revolver);min-height:300px;display:flex;flex-direction:column}
 .editor-with-goal>.editor{min-height:0}
 .editor-with-goal>.goal{padding:4px 16px 14px}
+.hall-banner{aspect-ratio:320/80}
+.editor-with-words{background:var(--revolver);min-height:300px;display:flex;align-items:flex-start}
+.lines-box{flex:none;max-width:62%;font-family:var(--mono);font-size:22px}
+.lines-box>.editor{min-height:0}
+.line-words{flex:1 1 auto;min-width:0;font-family:var(--mono);font-size:22px;line-height:1.3;padding:12px 16px 12px 0;color:var(--lavender)}
+.line-word{position:relative;white-space:pre;width:max-content}
+.line-word.label{color:var(--plum)}
+.line-word.right{color:#8fd694}
+.time-left{position:absolute;left:0;bottom:0;height:3px;background:var(--honey)}
 .key-menu{position:absolute;right:16px;bottom:16px;z-index:2;background:var(--midnight);border:2px solid var(--lavender);padding:8px 12px;font-family:var(--mono);font-size:18px;line-height:1.4}
 .key-menu-row b{color:var(--honey);margin-right:1.2ch}
 .card pre.config{font-family:var(--mono);font-size:13px;background:var(--midnight);padding:8px 10px;margin:0;white-space:pre;overflow-x:auto;text-align:left}
@@ -159,6 +168,7 @@ h2{margin:0;font-family:var(--display);font-weight:400;font-size:22px}
 .app.fullscreen .editor{flex:1 1 auto;min-height:0;overflow:auto}
 .app.fullscreen .editor-with-goal{flex:1 1 auto;min-height:0;overflow:auto}
 .app.fullscreen .editor-with-goal>.editor{flex:none}
+.app.fullscreen .editor-with-words{flex:1 1 auto;min-height:0;overflow:auto}
 .app.fullscreen .panel{max-height:38vh;overflow:auto}
 .status-keys{color:var(--honey)}
 
