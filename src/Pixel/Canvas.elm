@@ -1,13 +1,14 @@
-module Pixel.Canvas exposing (Added, Side(..), grow, none, trim)
+module Pixel.Canvas exposing (Side(..), grow, trim)
 
-{-| Making a picture bigger in the pixel editor, and trimming it again
-(#134).
+{-| Making a picture bigger in the pixel editor, and trimming it when it is
+sent (#134).
 
 The grid can grow by an empty row or column on any side. When the picture
-is sent, the rows and columns that were added and stayed empty are trimmed
-away. The picture's own rows and columns are never trimmed, even empty
-ones: some pictures have empty edges on purpose (Alice's first and last
-columns), and the game places pictures by their size.
+is sent, every empty row and column at its edges is trimmed away, so the
+proposal shows exactly what was drawn: a picture can grow and shrink.
+Pictures that take turns in the game (Alice's frames) share one size; when
+a proposal is merged, it is padded back to that size or its place in the
+game is adjusted.
 
 -}
 
@@ -21,21 +22,6 @@ type Side
     | Right
 
 
-{-| How many rows and columns were added on each side.
--}
-type alias Added =
-    { top : Int
-    , bottom : Int
-    , left : Int
-    , right : Int
-    }
-
-
-none : Added
-none =
-    { top = 0, bottom = 0, left = 0, right = 0 }
-
-
 empty : Char
 empty =
     '.'
@@ -43,8 +29,8 @@ empty =
 
 {-| One empty row or column more on `side`.
 -}
-grow : Side -> { pixels : Array (Array Char), added : Added } -> { pixels : Array (Array Char), added : Added }
-grow side { pixels, added } =
+grow : Side -> Array (Array Char) -> Array (Array Char)
+grow side pixels =
     let
         width =
             Array.get 0 pixels |> Maybe.map Array.length |> Maybe.withDefault 0
@@ -54,48 +40,48 @@ grow side { pixels, added } =
     in
     case side of
         Top ->
-            { pixels = Array.append (Array.fromList [ emptyRow ]) pixels, added = { added | top = added.top + 1 } }
+            Array.append (Array.fromList [ emptyRow ]) pixels
 
         Bottom ->
-            { pixels = Array.push emptyRow pixels, added = { added | bottom = added.bottom + 1 } }
+            Array.push emptyRow pixels
 
         Left ->
-            { pixels = Array.map (Array.append (Array.fromList [ empty ])) pixels, added = { added | left = added.left + 1 } }
+            Array.map (Array.append (Array.fromList [ empty ])) pixels
 
         Right ->
-            { pixels = Array.map (Array.push empty) pixels, added = { added | right = added.right + 1 } }
+            Array.map (Array.push empty) pixels
 
 
-{-| The rows of the picture without the added rows and columns that stayed
-empty. An added row or column with paint on it stays, and so does
-everything between it and the picture.
+{-| The rows of the picture without the empty rows and columns at its
+edges. A picture with nothing drawn stays as it is.
 -}
-trim : Added -> List String -> List String
-trim added rows =
+trim : List String -> List String
+trim rows =
     let
         isEmpty line =
             String.all ((==) empty) line
 
-        columns =
-            transpose rows
-
-        dropEmpty most lines =
-            dropWhileAtMost most isEmpty lines
-
         keptRows =
             rows
-                |> dropEmpty added.top
+                |> dropWhile isEmpty
                 |> List.reverse
-                |> dropEmpty added.bottom
+                |> dropWhile isEmpty
                 |> List.reverse
+
+        columns =
+            List.map isEmpty (transpose keptRows)
 
         fromLeft =
-            List.length (List.take added.left (takeWhileTrue (List.map isEmpty columns)))
+            List.length (takeWhileTrue columns)
 
         fromRight =
-            List.length (List.take added.right (takeWhileTrue (List.map isEmpty (List.reverse columns))))
+            List.length (takeWhileTrue (List.reverse columns))
     in
-    List.map (String.dropLeft fromLeft >> String.dropRight fromRight) keptRows
+    if List.isEmpty keptRows then
+        rows
+
+    else
+        List.map (String.dropLeft fromLeft >> String.dropRight fromRight) keptRows
 
 
 takeWhileTrue : List Bool -> List Bool
@@ -108,12 +94,12 @@ takeWhileTrue bools =
             []
 
 
-dropWhileAtMost : Int -> (a -> Bool) -> List a -> List a
-dropWhileAtMost most isDropped items =
+dropWhile : (a -> Bool) -> List a -> List a
+dropWhile isDropped items =
     case items of
         first :: rest ->
-            if most > 0 && isDropped first then
-                dropWhileAtMost (most - 1) isDropped rest
+            if isDropped first then
+                dropWhile isDropped rest
 
             else
                 items

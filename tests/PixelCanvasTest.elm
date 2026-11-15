@@ -17,14 +17,11 @@ picture =
     ]
 
 
-grown : List Side -> { pixels : Array.Array (Array.Array Char), added : Canvas.Added }
+grown : List Side -> List String
 grown sides =
-    List.foldl Canvas.grow { pixels = picture |> List.map (String.toList >> Array.fromList) |> Array.fromList, added = Canvas.none } sides
-
-
-rows : { a | pixels : Array.Array (Array.Array Char) } -> List String
-rows canvas =
-    canvas.pixels |> Array.toList |> List.map (Array.toList >> String.fromList)
+    List.foldl Canvas.grow (picture |> List.map (String.toList >> Array.fromList) |> Array.fromList) sides
+        |> Array.toList
+        |> List.map (Array.toList >> String.fromList)
 
 
 paint : Int -> Int -> Char -> List String -> List String
@@ -45,24 +42,31 @@ suite =
         [ test "a row on top, a row below, a column on each side: empty pixels" <|
             \_ ->
                 grown [ Top, Bottom, Left, Right ]
-                    |> rows
                     |> Expect.equal [ "......", "..ab..", "..cd..", "......" ]
-        , test "added rows and columns that stayed empty are trimmed" <|
+        , test "every empty row and column at the edges is trimmed, the picture's own too: pictures can shrink" <|
             \_ ->
                 grown [ Top, Top, Bottom, Left, Right, Right ]
-                    |> (\canvas -> Canvas.trim canvas.added (rows canvas))
-                    |> Expect.equal picture
-        , test "the picture's own empty edges stay" <|
+                    |> Canvas.trim
+                    |> Expect.equal [ "ab", "cd" ]
+        , test "an erased edge is trimmed too" <|
             \_ ->
-                Canvas.trim Canvas.none picture |> Expect.equal picture
-        , test "an added column with paint on it stays, and so does the empty one between it and the picture" <|
+                picture
+                    |> paint 1 0 '.'
+                    |> paint 1 1 '.'
+                    |> Canvas.trim
+                    |> Expect.equal [ "b", "d" ]
+        , test "empty rows and columns inside the picture stay" <|
             \_ ->
                 grown [ Left, Left, Right ]
-                    |> (\canvas -> Canvas.trim canvas.added (paint 0 1 'x' (rows canvas)))
-                    |> Expect.equal [ "...ab.", "x..cd." ]
+                    |> paint 0 1 'x'
+                    |> Canvas.trim
+                    |> Expect.equal [ "...ab", "x..cd" ]
         , test "an added row with paint on it stays" <|
             \_ ->
                 grown [ Top, Bottom, Bottom ]
-                    |> (\canvas -> Canvas.trim canvas.added (paint 2 4 'x' (rows canvas)))
-                    |> Expect.equal [ ".ab.", ".cd.", "....", "..x." ]
+                    |> paint 2 4 'x'
+                    |> Canvas.trim
+                    |> Expect.equal [ "ab", "cd", "..", ".x" ]
+        , test "a picture with nothing drawn stays as it is" <|
+            \_ -> Canvas.trim [ "..", ".." ] |> Expect.equal [ "..", ".." ]
         ]

@@ -222,6 +222,12 @@ of the first line", or `5h e`; `2gg` works too but isn't mentioned).
 - Story text is from the 1865 book or newly written; characters are drawn from
   the book, never from films.
 - Time only through `Frame` messages, randomness only through seeds.
+- Pixel-art proposals come from the pixel editor trimmed of every empty
+  edge (#134), so they can be bigger or smaller than the picture they
+  replace. When merging, pad them back to the size their frames share (all
+  Alice pictures are 12 wide: the game places them by size, and a walking
+  frame of another width would jump) or adjust where the game draws them,
+  and say which in the PR.
 
 ## Techniques that worked
 

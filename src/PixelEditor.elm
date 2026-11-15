@@ -58,7 +58,6 @@ type alias Model =
     { links : Project.Links
     , picture : String
     , pixels : Array (Array Char)
-    , added : Canvas.Added
     , palette : List ( Char, String )
     , brush : Char
     , painting : Bool
@@ -87,7 +86,6 @@ load links name =
     { links = links
     , picture = name
     , pixels = Sprite.rows sprite |> List.map (String.toList >> Array.fromList) |> Array.fromList
-    , added = Canvas.none
     , palette = palette
     , brush = palette |> List.head |> Maybe.map Tuple.first |> Maybe.withDefault transparent
     , painting = False
@@ -160,11 +158,7 @@ update msg model =
             load model.links model.picture
 
         Grew side ->
-            let
-                bigger =
-                    Canvas.grow side { pixels = model.pixels, added = model.added }
-            in
-            { model | pixels = bigger.pixels, added = bigger.added, changed = True }
+            { model | pixels = Canvas.grow side model.pixels, changed = True }
 
 
 paint : Int -> Int -> Model -> Model
@@ -190,15 +184,15 @@ freeLetter palette =
 -- TEXT FOR THE PROPOSAL
 
 
-{-| The picture as sent: added rows and columns that stayed empty are
-trimmed away.
+{-| The picture as sent: empty rows and columns at its edges are trimmed
+away, so it shows exactly what was drawn.
 -}
 rowsText : Model -> String
 rowsText model =
     model.pixels
         |> Array.toList
         |> List.map (Array.toList >> String.fromList)
-        |> Canvas.trim model.added
+        |> Canvas.trim
         |> String.join "\n"
 
 
@@ -271,8 +265,8 @@ view model =
         ]
 
 
-{-| Room for bigger ideas: one empty row or column more on a side. What
-stays empty is trimmed when the picture is sent.
+{-| Room for bigger ideas: one empty row or column more on a side. Empty
+edges are trimmed when the picture is sent.
 -}
 viewGrow : Html Msg
 viewGrow =
