@@ -392,6 +392,7 @@ type alias Model =
     , spawnIn : Float
     , seed : Random.Seed
     , bag : List Char
+    , waiting : List Dialog.Line
     , wobble : Float
     , aliceY : Float
     , landing : Maybe Landing
@@ -456,6 +457,7 @@ init seed =
     , spawnIn = 400
     , seed = seed
     , bag = []
+    , waiting = []
     , wobble = 0
     , aliceY = topAliceY
     , landing = Nothing
@@ -593,6 +595,10 @@ fallingKey layout difficulty key model =
     if key == "Escape" then
         startLanding model
 
+    else if not (List.isEmpty model.waiting) then
+        -- A dialog is about to come: there is no jar to catch, so a key is no mistake.
+        ( model, [] )
+
     else
         case String.toList (String.toLower key) of
             [ letter ] ->
@@ -700,14 +706,27 @@ newStage layout model effects =
                 , inLastStage = 0
             }
     in
-    ( { advanced | story = Story.tell (Dialog.say Narrator (currentStage layout advanced).describe) [] advanced.story }
+    ( { advanced | waiting = [ Dialog.say Narrator (currentStage layout advanced).describe ] }
     , effects ++ [ PlaySound PickupSound ]
     )
 
 
+{-| A stage's dialog waits until the jars caught last have flown into
+Alice's hands (#128): then everything stops for it.
+-}
+tellWhenCaught : Model -> Model
+tellWhenCaught model =
+    case ( model.waiting, model.flying ) of
+        ( first :: rest, [] ) ->
+            { model | waiting = [], story = Story.tell first rest model.story }
+
+        _ ->
+            model
+
+
 startLanding : Model -> ( Model, List Effect )
 startLanding model =
-    ( { model | jars = [], landing = Just { depth = model.depth, fromY = model.aliceY, age = 0 } }
+    ( { model | jars = [], waiting = [], landing = Just { depth = model.depth, fromY = model.aliceY, age = 0 } }
     , []
     )
 
@@ -746,7 +765,10 @@ moving layout milliseconds model =
             animateLanding milliseconds landing advanced
 
         ( Nothing, Just difficulty ) ->
-            if Story.isPlaying advanced.story then
+            if not (List.isEmpty advanced.waiting) then
+                ( tellWhenCaught advanced, [] )
+
+            else if Story.isPlaying advanced.story then
                 advanced
                     |> spawnJar layout difficulty milliseconds
                     |> floatJars milliseconds
@@ -783,10 +805,10 @@ watchForStuck layout difficulty milliseconds ( model, effects ) =
                     , bag = []
                     , goingRound = True
                     , inLastStage = 0
-                    , story =
-                        Story.tell (Dialog.say Narrator (.rabbitHole >> .goRound))
-                            [ Dialog.say Narrator (currentStage layout { model | stage = nextRoundStage layout 0 }).describe ]
-                            model.story
+                    , waiting =
+                        [ Dialog.say Narrator (.rabbitHole >> .goRound)
+                        , Dialog.say Narrator (currentStage layout { model | stage = nextRoundStage layout 0 }).describe
+                        ]
                 }
         in
         ( again
