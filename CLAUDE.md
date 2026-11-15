@@ -164,7 +164,9 @@ order above holds. Read old issues with that in mind.
   shuffle (missed jars, the endless last stage). On Easy, a player who stays in the last stage
   for 80 s without reaching the ground goes round again, skipping only the
   8 single-finger stages (#72, #83, #124). While any dialog shows,
-  everything stands still but the dialog's text (#124).
+  everything stands still but the dialog's text (#124); a stage's dialog
+  waits until the last caught jar has flown to Alice, and keys meanwhile
+  do nothing (#128). Mistakes "slow her down", never "lift her up".
   No panel: test players missed instructions there, so each stage opens with
   a dialog that pauses the fall, the first one saying to press a jar's letter
   as soon as it shows; the status line keeps the stage's keys and the depth

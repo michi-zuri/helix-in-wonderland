@@ -489,7 +489,7 @@ english =
         , easyInfo = "A gentle fall. You land after the basic jars."
         , challengeInfo = "Quicker jars, and a few seconds more."
         , madInfo = "We're all mad here: nearly 30 seconds of fast jars, no mistakes."
-        , catchRule = "Jars float up from below. Press a jar's letter as soon as you see it! Don't wait for it to reach Alice. A wrong key, or a jar that floats away, lifts her up again."
+        , catchRule = "Jars float up from below. Press a jar's letter as soon as you see it! Don't wait for it to reach Alice. A wrong key, or a jar that floats away, slows her down again."
         , landing1 = "Thump! Thump! Down Alice came upon a heap of sticks and dry leaves, and the fall was over."
         , landing2 = "Your fingers know the home row now. The keys h j k l live there too, and you will need them in the next chapter."
         }
@@ -915,7 +915,7 @@ german =
         , easyInfo = "Gemütlich fallen. Nach den Grundgläsern bist du unten."
         , challengeInfo = "Flottere Gläser und ein paar Sekunden länger."
         , madInfo = "Wir sind hier alle verrückt: fast 30 Sekunden schnelle Gläser ohne Fehler."
-        , catchRule = "Gläser schweben von unten herauf. Drück den Buchstaben eines Glases, sobald du es siehst! Warte nicht, bis es bei Alice ist. Eine falsche Taste oder ein Glas, das davonschwebt, hebt sie wieder hoch."
+        , catchRule = "Gläser schweben von unten herauf. Drück den Buchstaben eines Glases, sobald du es siehst! Warte nicht, bis es bei Alice ist. Eine falsche Taste oder ein Glas, das davonschwebt, bremst sie wieder ab."
         , landing1 = "Plumps! Plumps! Alice landete auf einem Haufen Zweige und trockener Blätter, und der Fall war vorbei."
         , landing2 = "Deine Finger kennen jetzt die Grundreihe. Auch h j k l wohnen dort, und die brauchst du im nächsten Kapitel."
         }

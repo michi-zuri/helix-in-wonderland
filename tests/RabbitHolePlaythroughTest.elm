@@ -222,7 +222,7 @@ instruction, then stops.
 stuckInTheLastStage : Run RabbitHole.Model
 stuckInTheLastStage =
     chosen Easy
-        |> playUntil (\run -> run.model.stage >= RabbitHole.lastStage && not (Story.isTalking run.model.story)) (player Easy) 20000
+        |> playUntil (\run -> run.model.stage >= RabbitHole.lastStage && List.isEmpty run.model.waiting && not (Story.isTalking run.model.story)) (player Easy) 20000
 
 
 {-| The stages a player goes through until the last one, in order.
@@ -419,7 +419,7 @@ fallTests =
                         |> List.map
                             (\difficulty ->
                                 chosen difficulty
-                                    |> playUntil (\run -> run.model.stage >= RabbitHole.lastStage && not (Story.isTalking run.model.story)) (player difficulty) 20000
+                                    |> playUntil (\run -> run.model.stage >= RabbitHole.lastStage && List.isEmpty run.model.waiting && not (Story.isTalking run.model.story)) (player difficulty) 20000
                                     |> idle (RabbitHole.stuckMilliseconds + 1000)
                                     |> (\run -> ( run.model.stage, Story.isTalking run.model.story ))
                             )
@@ -454,6 +454,25 @@ readingTests =
                     |> idle 2000
                     |> (\run -> List.isEmpty run.model.jars)
                     |> Expect.equal False
+        , test "a new stage's dialog waits until the last jar caught has flown to Alice (#128)" <|
+            \_ ->
+                let
+                    justCaught =
+                        chosen Easy
+                            |> playUntil (\run -> run.model.stage == 1) (player Easy) 20000
+                in
+                ( ( Story.isTalking justCaught.model.story, List.isEmpty justCaught.model.flying )
+                , justCaught |> idle 400 |> (\run -> ( Story.isTalking run.model.story, List.isEmpty run.model.flying ))
+                )
+                    |> Expect.equal ( ( False, False ), ( True, True ) )
+        , test "a key pressed while the dialog is about to come is no mistake" <|
+            \_ ->
+                chosen Easy
+                    |> playUntil (\run -> run.model.stage == 1) (player Easy) 20000
+                    |> (\run -> ( run.model.errors, Playthrough.send (RabbitHole.update (contextFor UsQwerty)) (RabbitHole.KeyPressed "f") run ))
+                    |> (\( before, run ) -> ( run.model.errors, run.model.depth ) |> Tuple.mapFirst (\after -> after - before))
+                    |> Tuple.first
+                    |> Expect.equal 0
         , test "every new stage opens with its instruction, and the fall waits for it" <|
             \_ ->
                 chosen Easy
@@ -467,6 +486,8 @@ readingTests =
                     reading =
                         chosen Easy
                             |> playUntil (\run -> run.model.stage == 1) (player Easy) 20000
+                            -- The caught jar flies to Alice, then the dialog comes (#128).
+                            |> idle 400
 
                     later =
                         idle 5000 reading
