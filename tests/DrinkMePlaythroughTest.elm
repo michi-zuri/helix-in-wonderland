@@ -213,25 +213,25 @@ suite =
                 )
                 [ ( English, "English" ), ( German, "German" ) ]
             )
-        , test "the lines start as stars, one line a word, after an empty first line" <|
+        , test "the lines start as stars, one line a word" <|
             \_ ->
                 start "1"
                     |> lines
-                    |> Expect.equal ("" :: List.map (always "***") easy)
-        , test "e then c changes the stars on the next line into the word" <|
+                    |> Expect.equal (List.map (always "***") easy)
+        , test "e then c changes the first stars into the word" <|
             \_ ->
                 start "1"
                     |> play ("e" :: changeWord "alas")
-                    |> (\run -> ( List.take 3 (lines run), mode run ))
-                    |> Expect.equal ( [ "", "alas", "***" ], Just Normal )
+                    |> (\run -> ( List.take 2 (lines run), mode run ))
+                    |> Expect.equal ( [ "alas", "***" ], Just Normal )
         , test ". repeats the last change on the next stars" <|
             \_ ->
                 start "1"
                     |> play (route [ "alas", "she", "shall", "fade" ])
                     |> play [ "e", "." ]
                     |> lines
-                    |> List.take 6
-                    |> Expect.equal [ "", "alas", "she", "shall", "fade", "fade" ]
+                    |> List.take 5
+                    |> Expect.equal [ "alas", "she", "shall", "fade", "fade" ]
         , test "the closing story waits until Alice has walked to the door" <|
             \_ ->
                 start "1"
@@ -260,8 +260,8 @@ suite =
                     start "1"
                         |> play [ "e", "c", "a", "l" ]
                         |> pause 2000
-                        |> (\run -> ( List.take 2 (lines run), mode run, run.model.tooSlow ))
-                        |> Expect.equal ( [ "", "***" ], Just Normal, 1 )
+                        |> (\run -> ( List.take 1 (lines run), mode run, run.model.tooSlow ))
+                        |> Expect.equal ( [ "***" ], Just Normal, 1 )
             , test "just in time is fine" <|
                 \_ ->
                     -- 1800 ms for alas: a wait of 750 ms after c, then a l a s j
@@ -271,8 +271,8 @@ suite =
                         |> send (DrinkMe.KeyPressed "c")
                         |> pause 750
                         |> play (letters "alas" ++ [ "j", "k" ])
-                        |> (\run -> ( List.take 2 (lines run), run.model.tooSlow ))
-                        |> Expect.equal ( [ "", "alas" ], 0 )
+                        |> (\run -> ( List.take 1 (lines run), run.model.tooSlow ))
+                        |> Expect.equal ( [ "alas" ], 0 )
             , test "the time doesn't run while a dialog is read" <|
                 \_ ->
                     -- The first i shows a dialog (e c . are quicker); reading it takes a while.
@@ -295,24 +295,40 @@ suite =
                 \_ ->
                     start "1"
                         |> play ("e" :: changeWord "alsa")
-                        |> (\run -> ( List.take 2 (lines run), run.model.wrongWords ))
-                        |> Expect.equal ( [ "", "alsa" ], 1 )
-            , test "k, e and c change it again, even on the first word" <|
+                        |> (\run -> ( List.take 1 (lines run), run.model.wrongWords ))
+                        |> Expect.equal ( [ "alsa" ], 1 )
+            , test "on the first line, g g goes to its start, then e and c change it again" <|
                 \_ ->
                     start "1"
                         |> play ("e" :: changeWord "alsa")
-                        |> play ([ "k", "e" ] ++ changeWord "alas")
+                        |> play ([ "g", "g", "e" ] ++ changeWord "alas")
+                        |> lines
+                        |> List.take 2
+                        |> Expect.equal [ "alas", "***" ]
+            , test "a count before g g goes to that line: 2 g g, then e and c (works, not told)" <|
+                \_ ->
+                    start "1"
+                        |> play (route [ "alas" ] ++ ("e" :: changeWord "sh"))
+                        |> play ([ "2", "g", "g", "e" ] ++ changeWord "she")
                         |> lines
                         |> List.take 3
-                        |> Expect.equal [ "", "alas", "***" ]
+                        |> Expect.equal [ "alas", "she", "***" ]
+            , test "a count back, like 5h, then e, works too" <|
+                \_ ->
+                    start "1"
+                        |> play ("e" :: changeWord "alsa")
+                        |> play ([ "5", "h", "e" ] ++ changeWord "alas")
+                        |> lines
+                        |> List.take 2
+                        |> Expect.equal [ "alas", "***" ]
             , test "further down, e may need pressing twice after k" <|
                 \_ ->
                     start "1"
                         |> play (route [ "alas" ] ++ ("e" :: changeWord "sh"))
                         |> play ([ "k", "e", "e" ] ++ changeWord "she")
                         |> lines
-                        |> List.take 4
-                        |> Expect.equal [ "", "alas", "she", "***" ]
+                        |> List.take 3
+                        |> Expect.equal [ "alas", "she", "***" ]
             , test "mad: two wrong words cost a tart" <|
                 \_ ->
                     let
@@ -320,7 +336,7 @@ suite =
                             context.texts.drinkMe.madWords
                     in
                     start "3"
-                        |> play ("e" :: changeWord "x" ++ [ "k", "e" ] ++ changeWord "y" ++ [ "k", "e" ])
+                        |> play ("e" :: changeWord "xx" ++ [ "g", "g", "e" ] ++ changeWord "yy" ++ [ "g", "g", "e" ])
                         |> play (List.drop 1 (route words))
                         |> wait
                         |> readStory
@@ -366,21 +382,20 @@ suite =
                         |> Playthrough.toastCount
                         |> Expect.equal 2
             ]
-        , describe "one word a line"
-            [ test "Enter in INSERT adds no line" <|
+        , describe "Enter and Backspace work in INSERT, as anywhere (#122)"
+            [ test "Enter splits a line" <|
                 \_ ->
                     start "1"
-                        |> play [ "e", "c", "Enter", "a" ]
-                        |> lines
-                        |> List.length
-                        |> Expect.equal (1 + List.length easy)
-            , test "Backspace at the start of a line doesn't join it to the line above" <|
-                \_ ->
-                    start "1"
-                        |> play [ "e", "c", "Backspace" ]
+                        |> play [ "e", "c", "a", "Enter" ]
                         |> lines
                         |> List.take 2
-                        |> Expect.equal [ "", "" ]
+                        |> Expect.equal [ "a", "" ]
+            , test "Backspace at the start of a line joins it to the line above" <|
+                \_ ->
+                    start "1"
+                        |> play [ "e", "c", "a", "Enter", "Backspace" ]
+                        |> lines
+                        |> Expect.equal ("a" :: List.map (always "***") (List.drop 1 easy))
             ]
         , describe "the word lists"
             (List.concatMap

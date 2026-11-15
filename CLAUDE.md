@@ -184,15 +184,17 @@ order above holds. Read old issues with that in mind.
   gold (#101, #103). Enter inserts new lines (blocking it made a deleted
   line break impossible to restore).
 - Chapter 4 (#74, replacing the typing from memory of #35): one `***` a
-  line after an empty first line (so `k` from any word has a line to go
-  to), each line's word in a column next to it. Normal mode; `e c`, the
+  line, each line's word in a column next to it. Normal mode; `e c`, the
   word, `j k`; `e .` for a word straight after the same word. A change
   (from `c` or `i` to `j k`) has 300 ms a letter of the line's word plus
   600 ms, counted only while no dialog shows; too slow undoes it. A wrong
-  word escaped in time stays (back with `k`, `e` until selected, `c`).
+  word escaped in time stays (back with `k`, `e` until selected, `c`; on
+  the first line `gg`, unlocked here and named in that hint as "the start
+of the first line", or `5h e`; `2gg` works too but isn't mentioned).
   `h j l` and `i` bring one dialog saying `e c .` are quicker; `k` doesn't,
-  it is the way back. Enter and Backspace at a line start do nothing in
-  INSERT. "Our best" is computed (`DrinkMe.ourBest`) and played in a test.
+  it is the way back. Enter and Backspace work in INSERT as everywhere:
+  line breaks can be deleted, so they must be typable again (#122, as in
+  chapter 3). "Our best" is computed (`DrinkMe.ourBest`) and played in a test.
   The key lies on the glass table and stays there while Alice shrinks.
   Word lists avoid `j` (it starts `j k`).
 - Chapter 5: lines without indents (#55); cheeky currants (`g.`) are shy and run
