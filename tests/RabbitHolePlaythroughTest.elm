@@ -170,6 +170,47 @@ lettersByStage layout =
     collect 20000 start (List.repeat (RabbitHole.lastStage + 1) [])
 
 
+{-| Every jar's letter as it appears, stage by stage, for a perfect player
+on mad (who never misses, so each stage gets exactly its bag).
+-}
+spawnedByStage : List (List Char)
+spawnedByStage =
+    let
+        who =
+            player Mad
+
+        collect fuel run nextId seen =
+            if fuel <= 0 || run.model.landing /= Nothing then
+                List.map List.reverse seen
+
+            else
+                let
+                    new =
+                        List.filter (\jar -> jar.id >= nextId) run.model.jars
+
+                    added =
+                        List.indexedMap
+                            (\index found ->
+                                if index == run.model.stage then
+                                    List.foldl (\jar acc -> jar.letter :: acc) found new
+
+                                else
+                                    found
+                            )
+                            seen
+                in
+                collect (fuel - 1) (step who fuel run) run.model.nextJarId added
+    in
+    collect 20000 start 0 (List.repeat (RabbitHole.lastStage + 1) [])
+
+
+{-| How often each letter comes, sorted by letter.
+-}
+counts : List Char -> List ( Char, Int )
+counts letters =
+    distinct letters |> List.map (\letter -> ( letter, List.length (List.filter ((==) letter) letters) ))
+
+
 lettersSeenInStages : Layout -> List Char
 lettersSeenInStages layout =
     List.concat (lettersByStage layout)
@@ -267,12 +308,48 @@ fallTests =
     describe "one long fall"
         [ test "small steps (#124): each finger, pairs, the whole hand; the right hand the same; G H, the index fingers, the others" <|
             \_ ->
-                -- Jars get random letters, so a key can be missing from a stage:
-                -- every letter seen must belong to the stage's keys.
+                -- Every letter seen belongs to the stage's keys.
                 lettersByStage SwissQwertz
                     |> List.take RabbitHole.lastStage
                     |> List.map2 (\keys seen -> not (List.isEmpty seen) && List.all (\letter -> List.member letter keys) seen) expectedStages
                     |> Expect.equal (List.repeat RabbitHole.lastStage True)
+        , test "a shuffle bag (#126): every stage brings each of its keys equally often, all of them" <|
+            \_ ->
+                spawnedByStage
+                    |> List.take RabbitHole.lastStage
+                    |> List.map counts
+                    |> Expect.equal
+                        [ [ ( 'f', 3 ) ]
+                        , [ ( 'd', 3 ) ]
+                        , [ ( 'd', 3 ), ( 'f', 3 ) ]
+                        , [ ( 's', 3 ) ]
+                        , [ ( 'a', 3 ) ]
+                        , [ ( 'a', 3 ), ( 's', 3 ) ]
+                        , [ ( 'd', 3 ), ( 's', 3 ) ]
+                        , [ ( 'a', 3 ), ( 'd', 3 ), ( 'f', 3 ), ( 's', 3 ) ]
+                        , [ ( 'j', 3 ) ]
+                        , [ ( 'k', 3 ) ]
+                        , [ ( 'j', 3 ), ( 'k', 3 ) ]
+                        , [ ( 'l', 3 ) ]
+                        , [ ( ';', 3 ) ]
+                        , [ ( ';', 3 ), ( 'l', 3 ) ]
+                        , [ ( 'k', 3 ), ( 'l', 3 ) ]
+                        , [ ( ';', 3 ), ( 'j', 3 ), ( 'k', 3 ), ( 'l', 3 ) ]
+                        , [ ( 'g', 3 ), ( 'h', 3 ) ]
+                        , [ ( 'f', 3 ), ( 'g', 3 ), ( 'h', 3 ), ( 'j', 3 ) ]
+                        , [ ( ';', 2 ), ( 'a', 2 ), ( 'd', 2 ), ( 'k', 2 ), ( 'l', 2 ), ( 's', 2 ) ]
+                        ]
+        , test "the last stage: bags of 30, each home-row key three times, freshly shuffled each time" <|
+            \_ ->
+                spawnedByStage
+                    |> List.drop RabbitHole.lastStage
+                    |> List.concat
+                    |> (\letters -> ( counts (List.take 30 letters), counts (List.take 30 (List.drop 30 letters)), List.take 30 letters /= List.take 30 (List.drop 30 letters) ))
+                    |> Expect.equal
+                        ( List.map (\letter -> ( letter, 3 )) (List.sort (String.toList "asdfghjkl;"))
+                        , List.map (\letter -> ( letter, 3 )) (List.sort (String.toList "asdfghjkl;"))
+                        , True
+                        )
         , test "a stage of one or two keys shows them all" <|
             \_ ->
                 lettersByStage SwissQwertz
