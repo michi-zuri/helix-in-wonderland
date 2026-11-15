@@ -15,6 +15,9 @@ suggest new ones or improve the old ones.
    - The `.` button is the eraser: it makes a pixel see-through.
    - Click the little colour box next to a letter to change that colour everywhere.
    - "+ new colour" adds a colour with a new letter.
+   - Not enough room for your idea? The **More room** buttons add an empty
+     row or column on any side. When you send the picture, empty rows and
+     columns at its edges are cut off, so it can get bigger or smaller.
 4. Watch the small preview: that's the size it will roughly have in the game.
 5. Click **Send as a proposal on GitHub**. A form opens with your picture
    already filled in. Write what you changed, then click "Submit new issue".
@@ -52,7 +55,8 @@ editor as a new picture, or describe it in an issue.
 
 ## Rules for game pictures
 
-- Keep the size the same as the old picture, unless you're making something new.
+- Draw as big as your idea needs. Empty edges are cut off when you send it;
+  making it fit next to the other pictures is done when it goes into the game.
 - Draw from the book, *Alice's Adventures in Wonderland* (1865), not from films.
 - Letters must be the same in both lists: every letter in the picture needs a colour.
 
@@ -73,6 +77,10 @@ kannst neue vorschlagen oder alte verbessern.
    - Der Knopf `.` ist der Radierer: der Pixel wird durchsichtig.
    - Klick auf das kleine Farbfeld neben einem Buchstaben, um diese Farbe überall zu ändern.
    - "+ neue Farbe" fügt eine Farbe mit einem neuen Buchstaben hinzu.
+   - Zu wenig Platz für deine Idee? Die Knöpfe **Mehr Platz** fügen auf
+     jeder Seite eine leere Zeile oder Spalte hinzu. Beim Schicken werden
+     leere Zeilen und Spalten am Rand abgeschnitten, so kann dein Bild
+     grösser oder kleiner werden.
 4. Schau auf die kleine Vorschau: so gross ist das Bild ungefähr im Spiel.
 5. Klick auf **Als Vorschlag auf GitHub schicken**. Ein Formular geht auf,
    dein Bild ist schon eingetragen. Schreib, was du geändert hast, und klick
@@ -96,6 +104,8 @@ Editor als neues Bild oder beschreibst sie in einem Issue.
 
 ## Regeln für Spielbilder
 
-- Lass die Grösse gleich wie beim alten Bild, ausser du machst etwas Neues.
+- Zeichne so gross, wie deine Idee es braucht. Leere Ränder werden beim
+  Schicken abgeschnitten; passend zu den anderen Bildern gemacht wird es,
+  wenn es ins Spiel kommt.
 - Zeichne nach dem Buch *Alice im Wunderland* (1865), nicht nach Filmen.
 - Jeder Buchstabe im Bild braucht eine Farbe in der ersten Liste.
