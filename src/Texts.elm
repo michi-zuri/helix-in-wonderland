@@ -115,7 +115,10 @@ type alias RabbitHoleTexts =
     , rightRing : String -> String
     , rightLittle : String -> String
     , allFourRight : String -> String
+    , pair : String -> String
     , stretch : String -> String -> String
+    , indexFingers : String -> String
+    , otherFingers : String -> String
     , bothHands : String -> String
     , goRound : String
     , chooseTitle : String
@@ -475,9 +478,12 @@ english =
         , rightRing = \a -> a ++ ": your right ring finger."
         , rightLittle = \a -> a ++ ": your right little finger."
         , allFourRight = \keys -> keys ++ ": all four together. This is where your right hand lives."
+        , pair = \keys -> keys ++ ": the two fingers take turns. Each one stays on its own key."
         , stretch = \a b -> a ++ " and " ++ b ++ ": your index fingers stretch one key inward, then come home."
+        , indexFingers = \keys -> keys ++ ": your index fingers, at home and stretching inward."
+        , otherFingers = \keys -> keys ++ ": all the other fingers. Your index fingers rest."
         , bothHands = \keys -> keys ++ ": both hands together, with the stretch. The whole home row!"
-        , goRound = "Once more round: left hand, right hand, then both."
+        , goRound = "Once more round! This time without the single fingers."
         , chooseTitle = "How fast do you want to fall?"
         , chooseHint = "j / k to choose · Enter to jump"
         , easyInfo = "A gentle fall. You land after the basic jars."
@@ -898,9 +904,12 @@ german =
         , rightRing = \a -> a ++ ": dein rechter Ringfinger."
         , rightLittle = \a -> a ++ ": dein rechter kleiner Finger."
         , allFourRight = \keys -> keys ++ ": alle vier zusammen. Hier wohnt deine rechte Hand."
+        , pair = \keys -> keys ++ ": die beiden Finger wechseln sich ab. Jeder bleibt auf seiner Taste."
         , stretch = \a b -> a ++ " und " ++ b ++ ": die Zeigefinger strecken sich eine Taste nach innen und kommen zurück."
+        , indexFingers = \keys -> keys ++ ": deine Zeigefinger, zu Hause und nach innen gestreckt."
+        , otherFingers = \keys -> keys ++ ": alle anderen Finger. Die Zeigefinger ruhen sich aus."
         , bothHands = \keys -> keys ++ ": beide Hände zusammen, mit dem Strecken. Die ganze Grundreihe!"
-        , goRound = "Noch eine Runde: linke Hand, rechte Hand, dann beide."
+        , goRound = "Noch eine Runde! Diesmal ohne die einzelnen Finger."
         , chooseTitle = "Wie schnell willst du fallen?"
         , chooseHint = "j / k zum Wählen · Enter zum Springen"
         , easyInfo = "Gemütlich fallen. Nach den Grundgläsern bist du unten."

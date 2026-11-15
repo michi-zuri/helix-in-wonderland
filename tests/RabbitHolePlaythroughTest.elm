@@ -143,7 +143,7 @@ lettersByStage layout =
             { layout = layout, difficulty = Mad, mistakeEvery = 0, letGoAtDepth = Nothing }
 
         collect fuel run seen =
-            if fuel <= 0 || run.model.stage > 11 then
+            if fuel <= 0 || run.model.landing /= Nothing then
                 seen
 
             else
@@ -167,7 +167,7 @@ lettersByStage layout =
                         seen
                     )
     in
-    collect 20000 start (List.repeat 12 [])
+    collect 20000 start (List.repeat (RabbitHole.lastStage + 1) [])
 
 
 lettersSeenInStages : Layout -> List Char
@@ -175,13 +175,38 @@ lettersSeenInStages layout =
     List.concat (lettersByStage layout)
 
 
-{-| A player who catches every jar until the last stage, reads its
-instruction, then stops.
+{-| On easy, a player who never misses lands before the last stage (the
+ground is at 108 jars, the stages before the whole home row have 114). This
+one makes a mistake now and then, so the last stage comes first; there they
+read its instruction, then stop.
 -}
 stuckInTheLastStage : Run RabbitHole.Model
 stuckInTheLastStage =
     chosen Easy
-        |> playUntil (\run -> run.model.stage >= 11 && not (Story.isTalking run.model.story)) (player Easy) 20000
+        |> playUntil (\run -> run.model.stage >= RabbitHole.lastStage && not (Story.isTalking run.model.story)) clumsy 20000
+
+
+clumsy : Player
+clumsy =
+    { layout = UsQwerty, difficulty = Easy, mistakeEvery = 7, letGoAtDepth = Nothing }
+
+
+{-| The stages a player goes through until the last one, in order.
+-}
+stagesUntilTheLast : Player -> Run RabbitHole.Model -> List Int
+stagesUntilTheLast who run =
+    let
+        go fuel current seen =
+            if fuel <= 0 || current.model.stage >= RabbitHole.lastStage then
+                List.reverse (current.model.stage :: seen)
+
+            else if Just current.model.stage == List.head seen then
+                go (fuel - 1) (step who fuel current) seen
+
+            else
+                go (fuel - 1) (step who fuel current) (current.model.stage :: seen)
+    in
+    go 20000 run []
 
 
 idle : Float -> Run RabbitHole.Model -> Run RabbitHole.Model
@@ -209,6 +234,32 @@ distinct letters =
         |> List.sort
 
 
+{-| The keys of each stage before the last, on a Swiss keyboard (#124).
+-}
+expectedStages : List (List Char)
+expectedStages =
+    [ [ 'f' ]
+    , [ 'd' ]
+    , [ 'd', 'f' ]
+    , [ 's' ]
+    , [ 'a' ]
+    , [ 'a', 's' ]
+    , [ 'd', 's' ]
+    , [ 'a', 'd', 'f', 's' ]
+    , [ 'j' ]
+    , [ 'k' ]
+    , [ 'j', 'k' ]
+    , [ 'l' ]
+    , [ 'ö' ]
+    , [ 'l', 'ö' ]
+    , [ 'k', 'l' ]
+    , [ 'j', 'k', 'l', 'ö' ]
+    , [ 'g', 'h' ]
+    , [ 'f', 'g', 'h', 'j' ]
+    , [ 'a', 'd', 'k', 'l', 's', 'ö' ]
+    ]
+
+
 suite : Test
 suite =
     describe "Chapter 1: Down the Rabbit Hole"
@@ -221,27 +272,26 @@ suite =
 fallTests : Test
 fallTests =
     describe "one long fall"
-        [ test "left hand finger by finger, all four; the right hand the same; G and H" <|
+        [ test "small steps (#124): each finger, pairs, the whole hand; the right hand the same; G H, the index fingers, the others" <|
+            \_ ->
+                -- Jars get random letters, so a key can be missing from a stage:
+                -- every letter seen must belong to the stage's keys.
+                lettersByStage SwissQwertz
+                    |> List.take RabbitHole.lastStage
+                    |> List.map2 (\keys seen -> not (List.isEmpty seen) && List.all (\letter -> List.member letter keys) seen) expectedStages
+                    |> Expect.equal (List.repeat RabbitHole.lastStage True)
+        , test "a stage of one or two keys shows them all" <|
             \_ ->
                 lettersByStage SwissQwertz
-                    |> List.take 11
-                    |> Expect.equal
-                        [ [ 'f' ]
-                        , [ 'd' ]
-                        , [ 's' ]
-                        , [ 'a' ]
-                        , [ 'a', 'd', 'f', 's' ]
-                        , [ 'j' ]
-                        , [ 'k' ]
-                        , [ 'l' ]
-                        , [ 'ö' ]
-                        , [ 'j', 'k', 'l', 'ö' ]
-                        , [ 'g', 'h' ]
-                        ]
-        , test "then both hands with G and H: only home-row keys, from both hands" <|
+                    |> List.take RabbitHole.lastStage
+                    |> List.map2 Tuple.pair expectedStages
+                    |> List.filter (\( keys, _ ) -> List.length keys <= 2)
+                    |> List.all (\( keys, seen ) -> keys == seen)
+                    |> Expect.equal True
+        , test "last, the whole home row: only home-row keys, from both hands" <|
             \_ ->
                 lettersByStage SwissQwertz
-                    |> List.drop 11
+                    |> List.drop RabbitHole.lastStage
                     |> List.concat
                     |> (\letters ->
                             ( List.all (\letter -> String.contains (String.fromChar letter) "asdfghjklö") letters
@@ -268,43 +318,42 @@ fallTests =
                 )
                 Keyboard.Layout.all
             )
-        , test "the stages add up to the basic jars: easy's ground" <|
-            \_ -> RabbitHole.groundDepth Easy |> Expect.equal RabbitHole.basicJars
+        , test "the stages before the whole home row have 114 jars; easy's ground is at 108, challenge's and mad's beyond" <|
+            \_ ->
+                [ RabbitHole.basicJars, RabbitHole.groundDepth Easy, RabbitHole.groundDepth Challenge, RabbitHole.groundDepth Mad ]
+                    |> Expect.equal [ 114, 108, 122, 160 ]
         , describe "stuck in the last stage"
-            [ test "just under a minute: still the last stage" <|
+            [ test "80 seconds: the stuck time is 80 s" <|
+                \_ -> RabbitHole.stuckMilliseconds |> Expect.equal 80000
+            , test "just under it: still the last stage" <|
                 \_ ->
                     stuckInTheLastStage
                         |> idle (RabbitHole.stuckMilliseconds - 1000)
-                        |> (\run -> run.model.stage >= 11)
+                        |> (\run -> run.model.stage >= RabbitHole.lastStage)
                         |> Expect.equal True
-            , test "after a minute: back to the whole left hand, with a word about it" <|
+            , test "after it: back to the first pair of fingers, with a word about it" <|
                 \_ ->
                     stuckInTheLastStage
                         |> idle (RabbitHole.stuckMilliseconds + 1000)
                         |> (\run -> ( run.model.stage, Story.isTalking run.model.story ))
-                        |> Expect.equal ( 4, True )
-            , test "then the whole right hand, then both hands again" <|
+                        |> Expect.equal ( 2, True )
+            , test "going round skips only the single fingers" <|
                 \_ ->
                     stuckInTheLastStage
                         |> idle (RabbitHole.stuckMilliseconds + 1000)
-                        |> playUntil (\run -> run.model.stage /= 4) (player Easy) 20000
-                        |> (\run -> ( run.model.stage, run ))
-                        |> (\( afterLeft, run ) ->
-                                playUntil (\r -> r.model.stage /= afterLeft) (player Easy) 20000 run
-                                    |> (\r -> [ afterLeft, r.model.stage ])
-                           )
-                        |> Expect.equal [ 9, 11 ]
+                        |> stagesUntilTheLast (player Easy)
+                        |> Expect.equal [ 2, 5, 6, 7, 10, 13, 14, 15, 16, 17, 18, 19 ]
             , test "only on easy: on challenge and mad the fall just goes on (#83)" <|
                 \_ ->
                     [ Challenge, Mad ]
                         |> List.map
                             (\difficulty ->
                                 chosen difficulty
-                                    |> playUntil (\run -> run.model.stage >= 11 && not (Story.isTalking run.model.story)) (player difficulty) 20000
+                                    |> playUntil (\run -> run.model.stage >= RabbitHole.lastStage && not (Story.isTalking run.model.story)) (player difficulty) 20000
                                     |> idle (RabbitHole.stuckMilliseconds + 1000)
                                     |> (\run -> ( run.model.stage, Story.isTalking run.model.story ))
                             )
-                        |> Expect.equal [ ( 11, False ), ( 11, False ) ]
+                        |> Expect.equal [ ( RabbitHole.lastStage, False ), ( RabbitHole.lastStage, False ) ]
             , test "a player who keeps going reaches the ground after going round" <|
                 \_ ->
                     stuckInTheLastStage
@@ -342,10 +391,25 @@ readingTests =
                     |> idle 10000
                     |> (\run -> ( Story.isTalking run.model.story, run.model.jars ))
                     |> Expect.equal ( True, [] )
-        , test "after the last stage (both hands), the fall goes on with the same keys: no dialog (#83)" <|
+        , test "while a dialog shows, everything stands still: the walls, Alice, the clock (#124)" <|
+            \_ ->
+                let
+                    reading =
+                        chosen Easy
+                            |> playUntil (\run -> run.model.stage == 1) (player Easy) 20000
+
+                    later =
+                        idle 5000 reading
+
+                    still run =
+                        ( run.model.scroll, run.model.aliceY, run.model.clock )
+                in
+                ( Story.isTalking later.model.story, still later )
+                    |> Expect.equal ( True, still reading )
+        , test "the last stage (the whole home row) never ends: the fall goes on with the same keys, no dialog (#83)" <|
             \_ ->
                 chosen Mad
-                    |> playUntil (\run -> run.model.stage == 12) (player Mad) 20000
+                    |> playUntil (\run -> run.model.hits >= RabbitHole.basicJars + 10) (player Mad) 20000
                     |> (\run -> ( Story.isTalking run.model.story, (RabbitHole.view (contextFor UsQwerty) run.model).status.pendingKeys ))
                     |> Expect.equal ( False, "A S D F G H J K L ;" )
         , test "no toasts any more: everything is said in dialogs" <|
@@ -359,7 +423,7 @@ readingTests =
                     |> playUntil (\run -> not (Story.isTalking run.model.story)) (player Easy) 100
                     |> (\run -> RabbitHole.view (contextFor UsQwerty) run.model)
                     |> (\view -> ( view.status.pendingKeys, view.status.position ))
-                    |> Expect.equal ( "F", "0/" ++ String.fromInt RabbitHole.basicJars )
+                    |> Expect.equal ( "F", "0/" ++ String.fromInt (RabbitHole.groundDepth Easy) )
         ]
 
 
@@ -367,11 +431,11 @@ mainTests : Test
 mainTests =
     describe "falling"
         [ describe "difficulties"
-            [ test "easy: the basic jars reach the ground, worth one tart" <|
+            [ test "easy: 108 jars without a mistake reach the ground, worth one tart" <|
                 \_ ->
                     playToTheEnd (player Easy)
                         |> (\run -> ( run.model.hits, Playthrough.finishedWith run ))
-                        |> Expect.equal ( RabbitHole.basicJars, Just 1 )
+                        |> Expect.equal ( RabbitHole.groundDepth Easy, Just 1 )
             , test "challenge: a few seconds beyond the basic jars, worth two tarts" <|
                 \_ ->
                     Expect.all
@@ -434,7 +498,7 @@ mainTests =
             , test "with mistakes, easy needs extra jars but still lands with one tart" <|
                 \_ ->
                     playToTheEnd { layout = UsQwerty, difficulty = Easy, mistakeEvery = 7, letGoAtDepth = Nothing }
-                        |> (\run -> ( run.model.hits > RabbitHole.basicJars, Playthrough.finishedWith run ))
+                        |> (\run -> ( run.model.hits > RabbitHole.groundDepth Easy, Playthrough.finishedWith run ))
                         |> Expect.equal ( True, Just 1 )
             ]
         , describe "letting go with Esc"

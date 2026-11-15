@@ -10,6 +10,7 @@ together, which only a browser could check before.
 
 import App
 import Chapter.RabbitHole as RabbitHole
+import Difficulty
 import Expect
 import Html.Attributes
 import Json.Decode as Decode
@@ -287,11 +288,11 @@ suite =
                     |> press [ "Enter" ]
                     |> readStory
                     |> press [ "1" ]
-                    |> ProgramTest.ensureViewHas [ text ("0/" ++ String.fromInt RabbitHole.basicJars) ]
+                    |> ProgramTest.ensureViewHas [ text ("0/" ++ String.fromInt (RabbitHole.groundDepth Difficulty.Easy)) ]
                     -- How to catch, how to let go, the first stage: the fall waits until they are read.
                     |> readStory
                     |> wait 1000
                     -- The first stage is the left index finger: F.
                     |> press [ "f" ]
-                    |> ProgramTest.expectViewHas [ text ("1/" ++ String.fromInt RabbitHole.basicJars) ]
+                    |> ProgramTest.expectViewHas [ text ("1/" ++ String.fromInt (RabbitHole.groundDepth Difficulty.Easy)) ]
         ]
