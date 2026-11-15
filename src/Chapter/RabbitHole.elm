@@ -391,7 +391,7 @@ type alias Model =
     , bestStreak : Int
     , spawnIn : Float
     , seed : Random.Seed
-    , lastLetter : Maybe Char
+    , bag : List Char
     , wobble : Float
     , aliceY : Float
     , landing : Maybe Landing
@@ -455,7 +455,7 @@ init seed =
     , bestStreak = 0
     , spawnIn = 400
     , seed = seed
-    , lastLetter = Nothing
+    , bag = []
     , wobble = 0
     , aliceY = topAliceY
     , landing = Nothing
@@ -695,6 +695,7 @@ newStage layout model effects =
                 , caughtThisStage = 0
                 , jars = []
                 , spawnIn = 800
+                , bag = []
                 , goingRound = model.goingRound && following /= lastStage
                 , inLastStage = 0
             }
@@ -779,6 +780,7 @@ watchForStuck layout difficulty milliseconds ( model, effects ) =
                     , caughtThisStage = 0
                     , jars = []
                     , spawnIn = 800
+                    , bag = []
                     , goingRound = True
                     , inLastStage = 0
                     , story =
@@ -849,14 +851,17 @@ spawnJar layout difficulty milliseconds model =
     in
     if countdown <= 0 && hasRoom then
         let
+            ( letter, bag, drawnSeed ) =
+                draw stage model.bag model.seed
+
             ( jar, seed ) =
-                Random.step (jarGenerator model.nextJarId (jarSpeed difficulty model.depth) stage.keys model.lastLetter) model.seed
+                Random.step (jarGenerator model.nextJarId (jarSpeed difficulty model.depth) letter) drawnSeed
         in
         { model
             | jars = model.jars ++ [ jar ]
             , seed = seed
             , nextJarId = model.nextJarId + 1
-            , lastLetter = Just jar.letter
+            , bag = bag
             , spawnIn = spawnGap difficulty model.depth
         }
 
@@ -864,12 +869,69 @@ spawnJar layout difficulty milliseconds model =
         { model | spawnIn = countdown }
 
 
-{-| A new jar at the bottom, at a random place, rising at about `speed`.
+{-| The next letter from the stage's shuffle bag (#126). An empty bag is
+filled again, freshly shuffled: at the start of a stage, after missed jars,
+and over and over in the last stage.
 -}
-jarGenerator : Int -> Float -> List Char -> Maybe Char -> Random.Generator Jar
-jarGenerator id speed keys lastLetter =
-    Random.map3
-        (\letter x variation ->
+draw : Stage -> List Char -> Random.Seed -> ( Char, List Char, Random.Seed )
+draw stage bag seed =
+    case bag of
+        letter :: rest ->
+            ( letter, rest, seed )
+
+        [] ->
+            let
+                ( shuffled, nextSeed ) =
+                    Random.step (shuffle (bagFor stage)) seed
+            in
+            case shuffled of
+                letter :: rest ->
+                    ( letter, rest, nextSeed )
+
+                [] ->
+                    ( 'f', [], nextSeed )
+
+
+{-| A stage's bag holds its keys equally often, as many letters as it has
+jars (`F` three times; `A S D K L ;` twice each). The last stage, which has
+no end, has a bag of `lastBagSize`: each key three times.
+-}
+bagFor : Stage -> List Char
+bagFor stage =
+    let
+        size =
+            if stage.catches > 0 then
+                stage.catches
+
+            else
+                lastBagSize
+    in
+    List.repeat size stage.keys |> List.concat |> List.take size
+
+
+lastBagSize : Int
+lastBagSize =
+    30
+
+
+shuffle : List a -> Random.Generator (List a)
+shuffle items =
+    Random.list (List.length items) (Random.float 0 1)
+        |> Random.map
+            (\rolls ->
+                List.map2 Tuple.pair rolls items
+                    |> List.sortBy Tuple.first
+                    |> List.map Tuple.second
+            )
+
+
+{-| A new jar at the bottom with `letter`, at a random place, rising at
+about `speed`.
+-}
+jarGenerator : Int -> Float -> Char -> Random.Generator Jar
+jarGenerator id speed letter =
+    Random.map2
+        (\x variation ->
             { id = id
             , letter = letter
             , x = x
@@ -877,37 +939,8 @@ jarGenerator id speed keys lastLetter =
             , speed = speed * variation
             }
         )
-        (letterGenerator keys lastLetter)
         (Random.float 72 222)
         (Random.float 1 1.15)
-
-
-{-| Usually a different letter than last time, so the same finger isn't
-asked twice in a row too often.
--}
-letterGenerator : List Char -> Maybe Char -> Random.Generator Char
-letterGenerator keys lastLetter =
-    let
-        others =
-            List.filter (\key -> Just key /= lastLetter) keys
-    in
-    case ( keys, others ) of
-        ( first :: rest, other :: moreOthers ) ->
-            Random.float 0 1
-                |> Random.andThen
-                    (\roll ->
-                        if roll < 0.7 then
-                            Random.uniform other moreOthers
-
-                        else
-                            Random.uniform first rest
-                    )
-
-        ( first :: rest, [] ) ->
-            Random.uniform first rest
-
-        ( [], _ ) ->
-            Random.constant 'f'
 
 
 

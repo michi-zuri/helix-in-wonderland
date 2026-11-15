@@ -158,8 +158,10 @@ order above holds. Read old issues with that in mind.
   `gh`6 `fghj`12 `asdkl;`12, then the whole home row with no end (the
   letters follow the layout). The stages before the last have 114 jars;
   the grounds are at 120 / 140 / 200 jars (a perfect
-  player spends about 20 s beyond the 114 on Challenge, 56 s on Mad). Jar letters are random, so a key can be
-  missing from a long stage. On Easy, a player who stays in the last stage
+  player spends about 20 s beyond the 114 on Challenge, 56 s on Mad). Jar letters come from a shuffle bag
+  (#126): each stage's keys equally often, as many as its jars; the last
+  stage's bag is 30 (each key 3 times); an empty bag refills with a fresh
+  shuffle (missed jars, the endless last stage). On Easy, a player who stays in the last stage
   for 80 s without reaching the ground goes round again, skipping only the
   8 single-finger stages (#72, #83, #124). While any dialog shows,
   everything stands still but the dialog's text (#124).
