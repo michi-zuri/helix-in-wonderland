@@ -160,14 +160,12 @@ wordsFor texts difficulty =
             texts.drinkMe.madWords
 
 
-{-| The first line stays empty, beside the bottle's label: from there, `e`
-selects the first stars, and `k` from the first word has a line to go to,
-so every word can be selected again.
+{-| The cursor starts on the first stars, so `e` selects them (#122).
 -}
 startWork : List String -> Work
 startWork words =
     { words = words
-    , session = Session.start (String.join "\n" ("" :: List.map (always placeholder) words))
+    , session = Session.start (String.join "\n" (List.map (always placeholder) words))
     }
 
 
@@ -188,7 +186,7 @@ isInsert session =
     Core.mode (Session.buffer session) == Insert
 
 
-{-| The lines as they are now, the empty first line included.
+{-| The lines as they are now.
 -}
 lines : Work -> List String
 lines work =
@@ -199,28 +197,19 @@ lines work =
 -}
 wordsRight : Work -> List Bool
 wordsRight work =
-    List.map2 (==) work.words (List.drop 1 (lines work) ++ List.repeat (List.length work.words) "")
+    List.map2 (==) work.words (lines work ++ List.repeat (List.length work.words) "")
 
 
 isDone : Work -> Bool
 isDone work =
-    not (isInsert work.session) && lines work == "" :: work.words
+    not (isInsert work.session) && lines work == work.words
 
 
 {-| The word of a line (1-based, as the status line counts), if it has one.
 -}
 wordOfLine : Work -> Int -> Maybe String
 wordOfLine work line =
-    List.drop (line - 2) work.words |> List.head |> Maybe.andThen (onlyIf (line >= 2))
-
-
-onlyIf : Bool -> a -> Maybe a
-onlyIf condition value =
-    if condition then
-        Just value
-
-    else
-        Nothing
+    List.drop (line - 1) work.words |> List.head
 
 
 cursorLine : Work -> Int
@@ -306,15 +295,16 @@ choose texts key model =
 
 
 {-| What the player knows by now: `h j k l` from chapter 2, `i` and `c`
-from chapter 3, and this chapter's `e` and `.`. Counts work but aren't
-needed.
+from chapter 3, this chapter's `e` and `.`, and `gg` to get back to the
+first word (#122). Counts work but aren't needed. Enter and Backspace work
+in INSERT as anywhere: a deleted line break can be typed back.
 -}
 isUnlocked : Command -> Bool
 isUnlocked command =
-    List.member command [ MoveLeft, MoveRight, MoveDown, MoveUp, SelectNextWordEnd, Change, InsertBefore, ExitInsert, RepeatLastChange, Backspace, CollapseSelection ]
+    List.member command [ MoveLeft, MoveRight, MoveDown, MoveUp, SelectNextWordEnd, Change, InsertBefore, ExitInsert, RepeatLastChange, Backspace, CollapseSelection, GotoFileStart ]
         || (case command of
-                TypeChar char ->
-                    char /= '\n'
+                TypeChar _ ->
+                    True
 
                 _ ->
                     False
@@ -326,27 +316,19 @@ edit texts key model =
     let
         work =
             currentWork texts model
-
-        atLineStart =
-            Tuple.second (Core.cursorLineColumn (Session.buffer work.session)) == 1
     in
-    if isInsert work.session && key == "Backspace" && atLineStart then
-        -- One word a line: Backspace doesn't join the lines.
-        ( model, [ PlaySound BumpSound ] )
+    case Session.press isUnlocked key work.session of
+        Session.Ran ran ->
+            notice ran.command ran.before { model | work = Just { work | session = ran.session } }
 
-    else
-        case Session.press isUnlocked key work.session of
-            Session.Ran ran ->
-                notice ran.command ran.before { model | work = Just { work | session = ran.session } }
+        Session.Waiting session ->
+            ( { model | work = Just { work | session = session } }, [] )
 
-            Session.Waiting session ->
-                ( { model | work = Just { work | session = session } }, [] )
+        Session.Locked session ->
+            ( dropCount work session model, [ ShowToast .notYet ] )
 
-            Session.Locked session ->
-                ( dropCount work session model, [ ShowToast .notYet ] )
-
-            Session.Ignored session ->
-                ( dropCount work session model, [] )
+        Session.Ignored session ->
+            ( dropCount work session model, [] )
 
 
 notice : Command -> Buffer -> Model -> ( Model, List Effect )
@@ -628,7 +610,7 @@ scene context model =
                     Html.text ""
 
                   else
-                    viewWords context.texts work model
+                    viewWords work model
                 ]
             , if model.difficulty == Nothing && Story.isPlaying model.story then
                 DifficultyChoice.view
@@ -664,12 +646,12 @@ viewEditor session =
 
 
 {-| The words, each next to its line, in a column as tall as the editor's
-lines; beside the empty first line, the bottle's label. A word turns green
+lines. A word turns green
 once its line reads right; while a change is made, a bar under its word
 shows the time left.
 -}
-viewWords : Texts -> Work -> Model -> Html msg
-viewWords texts work model =
+viewWords : Work -> Model -> Html msg
+viewWords work model =
     let
         line =
             cursorLine work
@@ -677,7 +659,7 @@ viewWords texts work model =
         timeBar index =
             case model.sip of
                 Just sip ->
-                    if index + 2 == line then
+                    if index + 1 == line then
                         [ Html.span
                             [ A.class "time-left"
                             , A.style "width" (String.fromFloat (100 * max 0 (1 - sip.elapsed / sip.limit)) ++ "%")
@@ -692,15 +674,14 @@ viewWords texts work model =
                     []
     in
     Html.div [ A.class "line-words" ]
-        (Html.div [ A.class "line-word label" ] [ Html.text texts.drinkMe.bottle ]
-            :: List.map3
-                (\index word right ->
-                    Html.div [ A.classList [ ( "line-word", True ), ( "right", right ) ] ]
-                        (Html.text word :: timeBar index)
-                )
-                (List.range 0 (List.length work.words - 1))
-                work.words
-                (wordsRight work)
+        (List.map3
+            (\index word right ->
+                Html.div [ A.classList [ ( "line-word", True ), ( "right", right ) ] ]
+                    (Html.text word :: timeBar index)
+            )
+            (List.range 0 (List.length work.words - 1))
+            work.words
+            (wordsRight work)
         )
 
 
