@@ -176,7 +176,7 @@ stageAt layout index =
 
 
 {-| The jars of all the stages before the whole home row together (114):
-challenge's and mad's grounds lie beyond them, easy's a little before (#124).
+every difficulty's ground lies beyond them (#124).
 -}
 basicJars : Int
 basicJars =
@@ -200,10 +200,8 @@ allKeys layout =
 
 {-| How each difficulty plays.
 
-  - `ground`: how deep the well is, in jars. Easy ends a little before the
-    basic jars (a mistake-free player lands in the stage before the whole
-    home row, #124), challenge a few seconds after them, mad nearly thirty
-    seconds at full speed.
+  - `ground`: how deep the well is, in jars (#124): easy 120, a little
+    into the whole home row after the 114 basic jars; challenge 140; mad 200.
   - `topSpeed`: how fast jars rise near the ground, in pixels per second.
   - `shortestGap`: the pause between two jars near the ground, in ms.
   - `mostJars`: how many jars may be on screen at once near the ground.
@@ -223,13 +221,13 @@ pace : Difficulty -> Pace
 pace difficulty =
     case difficulty of
         Easy ->
-            { ground = 108, topSpeed = 36, shortestGap = 1000, mostJars = 4 }
+            { ground = 120, topSpeed = 36, shortestGap = 1000, mostJars = 4 }
 
         Challenge ->
-            { ground = basicJars + 8, topSpeed = 60, shortestGap = 650, mostJars = 5 }
+            { ground = 140, topSpeed = 60, shortestGap = 650, mostJars = 5 }
 
         Mad ->
-            { ground = basicJars + 46, topSpeed = 100, shortestGap = 380, mostJars = 6 }
+            { ground = 200, topSpeed = 100, shortestGap = 380, mostJars = 6 }
 
 
 groundDepth : Difficulty -> Int

@@ -157,8 +157,8 @@ order above holds. Read old issues with that in mind.
   `as`6 `sd`6 `asdf`12, the right hand the same (`jk`, `l;`, `kl` as pairs),
   `gh`6 `fghj`12 `asdkl;`12, then the whole home row with no end (the
   letters follow the layout). The stages before the last have 114 jars;
-  Easy's ground is at 108 (a mistake-free Easy player never sees the whole
-  row), Challenge 122, Mad 160. Jar letters are random, so a key can be
+  the grounds are at 120 / 140 / 200 jars (a perfect
+  player spends about 20 s beyond the 114 on Challenge, 56 s on Mad). Jar letters are random, so a key can be
   missing from a long stage. On Easy, a player who stays in the last stage
   for 80 s without reaching the ground goes round again, skipping only the
   8 single-finger stages (#72, #83, #124). While any dialog shows,

@@ -175,20 +175,13 @@ lettersSeenInStages layout =
     List.concat (lettersByStage layout)
 
 
-{-| On easy, a player who never misses lands before the last stage (the
-ground is at 108 jars, the stages before the whole home row have 114). This
-one makes a mistake now and then, so the last stage comes first; there they
-read its instruction, then stop.
+{-| A player who catches every jar until the last stage, reads its
+instruction, then stops.
 -}
 stuckInTheLastStage : Run RabbitHole.Model
 stuckInTheLastStage =
     chosen Easy
-        |> playUntil (\run -> run.model.stage >= RabbitHole.lastStage && not (Story.isTalking run.model.story)) clumsy 20000
-
-
-clumsy : Player
-clumsy =
-    { layout = UsQwerty, difficulty = Easy, mistakeEvery = 7, letGoAtDepth = Nothing }
+        |> playUntil (\run -> run.model.stage >= RabbitHole.lastStage && not (Story.isTalking run.model.story)) (player Easy) 20000
 
 
 {-| The stages a player goes through until the last one, in order.
@@ -318,10 +311,10 @@ fallTests =
                 )
                 Keyboard.Layout.all
             )
-        , test "the stages before the whole home row have 114 jars; easy's ground is at 108, challenge's and mad's beyond" <|
+        , test "the stages before the whole home row have 114 jars; the grounds are at 120, 140 and 200" <|
             \_ ->
                 [ RabbitHole.basicJars, RabbitHole.groundDepth Easy, RabbitHole.groundDepth Challenge, RabbitHole.groundDepth Mad ]
-                    |> Expect.equal [ 114, 108, 122, 160 ]
+                    |> Expect.equal [ 114, 120, 140, 200 ]
         , describe "stuck in the last stage"
             [ test "80 seconds: the stuck time is 80 s" <|
                 \_ -> RabbitHole.stuckMilliseconds |> Expect.equal 80000
@@ -431,23 +424,26 @@ mainTests : Test
 mainTests =
     describe "falling"
         [ describe "difficulties"
-            [ test "easy: 108 jars without a mistake reach the ground, worth one tart" <|
+            [ test "easy: 120 jars without a mistake reach the ground, worth one tart" <|
                 \_ ->
                     playToTheEnd (player Easy)
                         |> (\run -> ( run.model.hits, Playthrough.finishedWith run ))
                         |> Expect.equal ( RabbitHole.groundDepth Easy, Just 1 )
-            , test "challenge: a few seconds beyond the basic jars, worth two tarts" <|
+            , test "challenge: 140 jars, worth two tarts" <|
+                \_ ->
+                    playToTheEnd (player Challenge)
+                        |> (\run -> ( run.model.hits, Playthrough.finishedWith run ))
+                        |> Expect.equal ( 140, Just 2 )
+            , test "mad: 200 jars, worth three tarts" <|
+                \_ ->
+                    playToTheEnd (player Mad)
+                        |> (\run -> ( run.model.hits, Playthrough.finishedWith run ))
+                        |> Expect.equal ( 200, Just 3 )
+            , test "beyond the basic jars, challenge goes on about 20 seconds, mad nearly a minute" <|
                 \_ ->
                     Expect.all
-                        [ \_ -> playToTheEnd (player Challenge) |> Playthrough.finishedWith |> Expect.equal (Just 2)
-                        , \_ -> secondsBeyondBasicJars Challenge |> Expect.all [ Expect.atLeast 3, Expect.atMost 10 ]
-                        ]
-                        ()
-            , test "mad: nearly thirty seconds beyond the basic jars, worth three tarts" <|
-                \_ ->
-                    Expect.all
-                        [ \_ -> playToTheEnd (player Mad) |> Playthrough.finishedWith |> Expect.equal (Just 3)
-                        , \_ -> secondsBeyondBasicJars Mad |> Expect.all [ Expect.atLeast 25, Expect.atMost 32 ]
+                        [ \_ -> secondsBeyondBasicJars Challenge |> Expect.all [ Expect.atLeast 15, Expect.atMost 25 ]
+                        , \_ -> secondsBeyondBasicJars Mad |> Expect.all [ Expect.atLeast 50, Expect.atMost 62 ]
                         ]
                         ()
             , test "the deeper Alice is, the faster the jars, and mad is the fastest" <|
