@@ -305,6 +305,14 @@ suite =
                         |> lines
                         |> List.take 2
                         |> Expect.equal [ "alas", "***" ]
+            , test "a count before g g goes to that line: 2 g g, then e and c (works, not told)" <|
+                \_ ->
+                    start "1"
+                        |> play (route [ "alas" ] ++ ("e" :: changeWord "sh"))
+                        |> play ([ "2", "g", "g", "e" ] ++ changeWord "she")
+                        |> lines
+                        |> List.take 3
+                        |> Expect.equal [ "alas", "she", "***" ]
             , test "a count back, like 5h, then e, works too" <|
                 \_ ->
                     start "1"

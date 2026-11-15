@@ -296,7 +296,7 @@ choose texts key model =
 
 {-| What the player knows by now: `h j k l` from chapter 2, `i` and `c`
 from chapter 3, this chapter's `e` and `.`, and `gg` to get back to the
-first word (#122). Counts work but aren't needed. Enter and Backspace work
+first word (#122), with a count to any line. Counts work but aren't needed. Enter and Backspace work
 in INSERT as anywhere: a deleted line break can be typed back.
 -}
 isUnlocked : Command -> Bool
@@ -304,6 +304,11 @@ isUnlocked command =
     List.member command [ MoveLeft, MoveRight, MoveDown, MoveUp, SelectNextWordEnd, Change, InsertBefore, ExitInsert, RepeatLastChange, Backspace, CollapseSelection, GotoFileStart ]
         || (case command of
                 TypeChar _ ->
+                    True
+
+                -- A count before gg goes to that line (`2gg`); it works, but
+                -- isn't mentioned.
+                GotoLineNumber _ ->
                     True
 
                 _ ->
