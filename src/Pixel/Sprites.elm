@@ -23,6 +23,7 @@ alicePalette =
     , ( 'b', "#6fa8dc" ) -- dress
     , ( 'B', "#3d6fa8" ) -- dress hem
     , ( 'w', "#f4f0ff" ) -- apron
+    , ( 'a', "#ff5743" ) -- hair ties (#130, #132)
     ]
 
 
@@ -33,7 +34,7 @@ aliceUpperBody =
     , "..yyyyyyyy.."
     , "..yssssssy.."
     , "..ysksskys.."
-    , "..yssssssy.."
+    , "..assssssa.."
     , "..yYsppsYy.."
     , "...bbwwbb..."
     , "..bbbwwbbb.."
@@ -67,26 +68,27 @@ aliceStepping =
         )
 
 
-{-| Arms up, dress puffed out, falling down the rabbit hole.
+{-| Falling down the rabbit hole: pigtails with their hair ties flying
+up, dress puffed out (#130).
 -}
 aliceFalling : Sprite
 aliceFalling =
     Sprite.fromRows alicePalette
-        [ "s...kkkk...s"
-        , "s..yyyyyy..s"
-        , "syyyyyyyyyys"
+        [ "yy..kkkk...y"
+        , ".yayyyyy.ayy"
+        , ".ayyyyyyyya."
         , ".yssssssssy."
         , "..ysksskys.."
         , "..yssssssy.."
-        , "..yYsppsYy.."
-        , "...bbwwbb..."
-        , "..bbbwwbbb.."
-        , ".bbbwwwwbbb."
-        , "bbbbwwwwbbbb"
-        , "BBBBBBBBBBBB"
-        , "...s....s..."
-        , "..s......s.."
-        , ".k........k."
+        , "bbyYsppsYy.."
+        , ".bbbbwwbbbbb"
+        , "..bbbwwbb..."
+        , ".bbbwwwwbb.."
+        , "bbbbwwwwbbb."
+        , "BBBBBBBBBBB."
+        , "...s...s...."
+        , "..s.....s..."
+        , ".kk.....kk.."
         ]
 
 
@@ -156,18 +158,18 @@ caterpillar =
         ]
 
 
-{-| The Mouse, swimming in the pool of tears.
+{-| The Mouse, swimming in the pool of tears (redrawn in #131).
 -}
 mouse : Sprite
 mouse =
     Sprite.fromRows
         [ ( 'g', "#9a86b0" ), ( 'k', "#120a18" ), ( 'p', "#e88aa8" ) ]
-        [ "..g........"
-        , ".ggg......."
-        , "gkgggggg..."
-        , "ggggggggg.."
-        , ".gggggggggp"
-        , "..g..g...pp"
+        [ "...g.g....."
+        , "..ggg......"
+        , "ggkggg....."
+        , ".ggggggg..p"
+        , ".gggggggpp."
+        , "..g..g....."
         ]
 
 
