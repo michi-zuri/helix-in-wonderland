@@ -113,8 +113,9 @@ The local folder may be called `helix-wonderland`, but the repository is
 
 **Keys, by chapter** (what's taught where; don't use untaught keys in hints or
 "Our best" routes)
-1. Home row typing in one long fall: left hand finger by finger, then the
-right hand, then `g h`, then both hands (#72). 2. `h j k l`, counts like `5j`,
+1. Home row typing in one long fall, in small steps: left hand finger by
+finger and in pairs, then the right hand, then `g h`, the index fingers
+`f g h j`, the others `a s d k l ;`, then the whole row (#72, #124). 2. `h j k l`, counts like `5j`,
 which also jump over dropped things (#89).
 3. Insert mode with the golden key: `i`, Esc, `c` on emojis that stand for
 words (#73, #107); typed letters are lowercase home row only. 4. `e`, `c` and `.` (repeat the last change) on words; typed letters
@@ -152,15 +153,21 @@ order above holds. Read old issues with that in mind.
   The golden key lies on the glass table with the bottle next to it (`K B`
   in the maps, both not walkable); walking into the key takes it and Alice
   stays in front of the table, and `Chapter.Hall.Route` knows that (#86).
-- Chapter 1: twelve stages in one fall; on Easy, a player who stays in the
-  last stage (both hands) for a minute without reaching the ground goes round
-  the whole left hand, the whole right hand and both hands again (#72, #83).
+- Chapter 1: twenty stages in one fall (#124): `f`3 `d`3 `df`6 `s`3 `a`3
+  `as`6 `sd`6 `asdf`12, the right hand the same (`jk`, `l;`, `kl` as pairs),
+  `gh`6 `fghj`12 `asdkl;`12, then the whole home row with no end (the
+  letters follow the layout). The stages before the last have 114 jars;
+  the grounds are at 120 / 140 / 200 jars (a perfect
+  player spends about 20 s beyond the 114 on Challenge, 56 s on Mad). Jar letters are random, so a key can be
+  missing from a long stage. On Easy, a player who stays in the last stage
+  for 80 s without reaching the ground goes round again, skipping only the
+  8 single-finger stages (#72, #83, #124). While any dialog shows,
+  everything stands still but the dialog's text (#124).
   No panel: test players missed instructions there, so each stage opens with
   a dialog that pauses the fall, the first one saying to press a jar's letter
   as soon as it shows; the status line keeps the stage's keys and the depth
   (#81). An empty panel is hidden in every chapter (`.panel:empty`). Keep the
-  dialogs few: Esc isn't announced, and the all-keys fall after the last
-  stage starts without one (#83).
+  dialogs few: Esc isn't announced (#83).
 - A chapter opens if the one before has a tart, or if it or any later chapter
   has one, so reordering never locks away what a player reached
   (`Progress.isOpen`). Retired save names (`rabbit-hole-right-hand`) count for

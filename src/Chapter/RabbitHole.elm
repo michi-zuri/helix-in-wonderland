@@ -1,12 +1,12 @@
-module Chapter.RabbitHole exposing (Model, Msg(..), basicJars, groundDepth, init, jarSpeed, stuckMilliseconds, update, view)
+module Chapter.RabbitHole exposing (Model, Msg(..), basicJars, groundDepth, init, jarSpeed, lastStage, stuckMilliseconds, update, view)
 
 {-| Chapter 1, "Down the Rabbit Hole": the home row. Alice falls down the
 well, a very long way; jars float up with a letter on their label, and
-pressing that letter catches the jar. Twelve stages introduce the left hand
-finger by finger, then the right hand, then g and h, then both hands
-together (`stages`). A player who stays in the last stage for a minute
-without reaching the ground goes round the left hand, the right hand and
-both hands again.
+pressing that letter catches the jar. Twenty stages introduce the left hand
+finger by finger and in pairs, then the right hand, then g and h, the index
+fingers, the other fingers, and the whole home row (`stages`). On easy, a
+player who stays in the last stage for 80 seconds without reaching the
+ground goes round again, without the single fingers (#124).
 
 The fall: every jar caught brings Alice one step closer to the ground.
 Every mistake, a wrong key or a jar that floats away, lifts her back up a
@@ -62,10 +62,11 @@ type alias Stage =
     }
 
 
-{-| The long fall, one hand at a time: the left hand finger by finger, then
-all four; the right hand the same way; the index fingers stretching inward
-for g and h; then both hands with g and h, the whole home row. Each step
-brings at most five new keys.
+{-| The long fall in small steps (#124): each finger of the left hand
+alone, then in pairs, then all four; the right hand the same way; the
+index fingers stretching inward for g and h, then with their home keys;
+the other fingers of both hands; and last the whole home row, with no end.
+Each step brings at most five new keys.
 -}
 stages : Layout -> List Stage
 stages layout =
@@ -79,8 +80,14 @@ stages layout =
         -- Finger 0 is the index finger, 3 the little finger.
         finger key describe =
             { keys = [ key ]
-            , catches = 6
+            , catches = 3
             , describe = \texts -> describe texts (upper key)
+            }
+
+        pair keys =
+            { keys = keys
+            , catches = 6
+            , describe = \texts -> texts.rabbitHole.pair (keyList keys)
             }
 
         left index =
@@ -96,49 +103,61 @@ stages layout =
 
                 _ ->
                     ( 'g', 'h' )
+
+        indexKeys =
+            [ left 0, stretchLeft, stretchRight, right 0 ]
+
+        otherKeys =
+            [ left 3, left 2, left 1, right 1, right 2, right 3 ]
     in
     [ finger (left 0) (.rabbitHole >> .leftIndex)
     , finger (left 1) (.rabbitHole >> .leftMiddle)
+    , pair [ left 1, left 0 ]
     , finger (left 2) (.rabbitHole >> .leftRing)
     , finger (left 3) (.rabbitHole >> .leftLittle)
-    , { keys = home.left, catches = 10, describe = \texts -> texts.rabbitHole.allFourLeft (keyList home.left) }
+    , pair [ left 3, left 2 ]
+    , pair [ left 2, left 1 ]
+    , { keys = home.left, catches = 12, describe = \texts -> texts.rabbitHole.allFourLeft (keyList home.left) }
     , finger (right 0) (.rabbitHole >> .rightIndex)
     , finger (right 1) (.rabbitHole >> .rightMiddle)
+    , pair [ right 0, right 1 ]
     , finger (right 2) (.rabbitHole >> .rightRing)
     , finger (right 3) (.rabbitHole >> .rightLittle)
-    , { keys = home.right, catches = 10, describe = \texts -> texts.rabbitHole.allFourRight (keyList home.right) }
+    , pair [ right 2, right 3 ]
+    , pair [ right 1, right 2 ]
+    , { keys = home.right, catches = 12, describe = \texts -> texts.rabbitHole.allFourRight (keyList home.right) }
     , { keys = [ stretchLeft, stretchRight ]
       , catches = 6
       , describe = \texts -> texts.rabbitHole.stretch (upper stretchLeft) (upper stretchRight)
       }
-    , { keys = allKeys layout, catches = 10, describe = \texts -> texts.rabbitHole.bothHands (keyList (allKeys layout)) }
+    , { keys = indexKeys, catches = 12, describe = \texts -> texts.rabbitHole.indexFingers (keyList indexKeys) }
+    , { keys = otherKeys, catches = 12, describe = \texts -> texts.rabbitHole.otherFingers (keyList otherKeys) }
+    , { keys = allKeys layout, catches = 0, describe = \texts -> texts.rabbitHole.bothHands (keyList (allKeys layout)) }
     ]
 
 
-{-| Where the stages for the whole left hand, the whole right hand and both
-hands together are: a player stuck too long goes round these again.
+{-| Going round again after being stuck skips only the stages of a single
+finger (#124).
 -}
-leftHandStage : Int
-leftHandStage =
-    4
+isSingleKey : Stage -> Bool
+isSingleKey stage =
+    List.length stage.keys == 1
 
 
-rightHandStage : Int
-rightHandStage =
-    9
-
-
+{-| The last stage: the whole home row, with no end. On easy, a player
+stuck there too long goes round again.
+-}
 lastStage : Int
 lastStage =
-    11
+    19
 
 
 {-| How long a player may stay in the last stage without reaching the ground
-before going round left hand, right hand and both again, in ms.
+before going round again, in ms.
 -}
 stuckMilliseconds : Float
 stuckMilliseconds =
-    60000
+    80000
 
 
 upper : Char -> String
@@ -156,7 +175,8 @@ stageAt layout index =
     stages layout |> List.drop index |> List.head
 
 
-{-| The jars of all the stages together.
+{-| The jars of all the stages before the whole home row together (114):
+every difficulty's ground lies beyond them (#124).
 -}
 basicJars : Int
 basicJars =
@@ -174,25 +194,14 @@ allKeys layout =
     home.left ++ Layout.stretchKeys layout ++ home.right
 
 
-{-| After the stages, jars keep coming with all the home-row keys, the same
-keys as the last stage, so nothing new is announced (#83).
--}
-allKeysStage : Layout -> Stage
-allKeysStage layout =
-    { keys = allKeys layout
-    , catches = 0
-    , describe = \texts -> texts.rabbitHole.bothHands (keyList (allKeys layout))
-    }
-
-
 
 -- DIFFICULTY
 
 
 {-| How each difficulty plays.
 
-  - `ground`: how deep the well is, in jars. Easy ends with the basic jars,
-    challenge adds a few seconds, mad nearly thirty seconds at full speed.
+  - `ground`: how deep the well is, in jars (#124): easy 120, a little
+    into the whole home row after the 114 basic jars; challenge 140; mad 200.
   - `topSpeed`: how fast jars rise near the ground, in pixels per second.
   - `shortestGap`: the pause between two jars near the ground, in ms.
   - `mostJars`: how many jars may be on screen at once near the ground.
@@ -212,13 +221,13 @@ pace : Difficulty -> Pace
 pace difficulty =
     case difficulty of
         Easy ->
-            { ground = basicJars, topSpeed = 40, shortestGap = 900, mostJars = 4 }
+            { ground = 120, topSpeed = 36, shortestGap = 1000, mostJars = 4 }
 
         Challenge ->
-            { ground = basicJars + 8, topSpeed = 60, shortestGap = 650, mostJars = 5 }
+            { ground = 140, topSpeed = 60, shortestGap = 650, mostJars = 5 }
 
         Mad ->
-            { ground = basicJars + 42, topSpeed = 95, shortestGap = 400, mostJars = 6 }
+            { ground = 200, topSpeed = 100, shortestGap = 380, mostJars = 6 }
 
 
 groundDepth : Difficulty -> Int
@@ -457,16 +466,23 @@ init seed =
     }
 
 
-{-| The stage being played; after the stages, all keys.
+{-| The stage being played.
 -}
 currentStage : Layout -> Model -> Stage
 currentStage layout model =
-    stageAt layout model.stage |> Maybe.withDefault (allKeysStage layout)
+    case stageAt layout (min lastStage model.stage) of
+        Just stage ->
+            stage
+
+        Nothing ->
+            { keys = allKeys layout, catches = 0, describe = \texts -> texts.rabbitHole.bothHands (keyList (allKeys layout)) }
 
 
-isBeyondStages : Layout -> Model -> Bool
-isBeyondStages layout model =
-    model.stage >= List.length (stages layout)
+{-| The last stage, the whole home row, has no end.
+-}
+isEndless : Model -> Bool
+isEndless model =
+    model.stage >= lastStage
 
 
 {-| The jar to catch next: the one that has floated highest.
@@ -625,7 +641,7 @@ caught layout difficulty jar model =
             [ PlaySound CorrectSound ]
 
         stageDone =
-            not (isBeyondStages layout model)
+            not (isEndless model)
                 && (catcher.caughtThisStage >= (currentStage layout model).catches)
     in
     if catcher.depth >= groundDepth difficulty then
@@ -638,28 +654,37 @@ caught layout difficulty jar model =
         ( catcher, effects )
 
 
-{-| On to the next stage. Going round again after being stuck, the whole
-left hand leads to the whole right hand, and that to both hands. After the
-last stage the fall just goes on with the same keys: no dialog, no pause.
+{-| On to the next stage, with its dialog. Going round again after being
+stuck skips the stages of a single finger (#124). The last stage never
+ends, so it never gets here.
 -}
 nextStage : Layout -> Model -> List Effect -> ( Model, List Effect )
-nextStage layout model effects =
-    if model.stage >= lastStage then
-        ( { model | stage = model.stage + 1, caughtThisStage = 0 }, effects )
+nextStage =
+    newStage
 
-    else
-        newStage layout model effects
+
+{-| The first stage from `index` on that isn't a single finger's.
+-}
+nextRoundStage : Layout -> Int -> Int
+nextRoundStage layout index =
+    case stageAt layout index of
+        Just stage ->
+            if isSingleKey stage && index < lastStage then
+                nextRoundStage layout (index + 1)
+
+            else
+                index
+
+        Nothing ->
+            lastStage
 
 
 newStage : Layout -> Model -> List Effect -> ( Model, List Effect )
 newStage layout model effects =
     let
         following =
-            if model.goingRound && model.stage == leftHandStage then
-                rightHandStage
-
-            else if model.goingRound && model.stage == rightHandStage then
-                lastStage
+            if model.goingRound then
+                nextRoundStage layout (model.stage + 1)
 
             else
                 model.stage + 1
@@ -686,8 +711,21 @@ startLanding model =
     )
 
 
+{-| Time passing. While a dialog shows, everything stands still but the
+dialog's text: the walls, Alice, the jars in flight (#124), so nothing
+distracts from what it says.
+-}
 frame : Layout -> Float -> Model -> ( Model, List Effect )
 frame layout milliseconds model =
+    if Story.isTalking model.story then
+        ( { model | story = Story.tick milliseconds model.story }, [] )
+
+    else
+        moving layout milliseconds model
+
+
+moving : Layout -> Float -> Model -> ( Model, List Effect )
+moving layout milliseconds model =
     let
         advanced =
             { model
@@ -737,7 +775,7 @@ watchForStuck layout difficulty milliseconds ( model, effects ) =
         let
             again =
                 { model
-                    | stage = leftHandStage
+                    | stage = nextRoundStage layout 0
                     , caughtThisStage = 0
                     , jars = []
                     , spawnIn = 800
@@ -745,7 +783,7 @@ watchForStuck layout difficulty milliseconds ( model, effects ) =
                     , inLastStage = 0
                     , story =
                         Story.tell (Dialog.say Narrator (.rabbitHole >> .goRound))
-                            [ Dialog.say Narrator (currentStage layout { model | stage = leftHandStage }).describe ]
+                            [ Dialog.say Narrator (currentStage layout { model | stage = nextRoundStage layout 0 }).describe ]
                             model.story
                 }
         in
@@ -807,7 +845,7 @@ spawnJar layout difficulty milliseconds model =
         hasRoom =
             List.length model.jars
                 < jarsAtOnce difficulty model.depth
-                && (isBeyondStages layout model || model.caughtThisStage + List.length model.jars < stage.catches)
+                && (isEndless model || model.caughtThisStage + List.length model.jars < stage.catches)
     in
     if countdown <= 0 && hasRoom then
         let
